@@ -32,7 +32,7 @@ const days: Record<DayKey, { name: string; icon: string; short: string; result: 
     result: "Flacidez, papada, contorno facial",
     how: "Ultrassom micro e macrofocado, sem cirurgia",
     expected: "Firmeza perceptível, sem afastamento da rotina",
-    cta: "Entender se o Ultraformer é indicado para mim",
+    cta: "Avaliar Ultraformer para meu caso",
   },
   botox: {
     name: "Botox Day",
