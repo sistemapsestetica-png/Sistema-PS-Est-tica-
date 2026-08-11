@@ -93,7 +93,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .day-card p { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 0; }
 .day-details { display: grid; gap: 11px; margin-bottom: 28px; }
 .day-details b { color: var(--espresso); font-weight: 700; }
-.day-card button { margin-top: auto; padding: 0; display: flex; justify-content: space-between; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--bronze-deep); font-size: 11px; font-weight: 700; line-height: 2.8; text-align: left; cursor: pointer; }
+.day-card button { min-height: 58px; margin-top: auto; padding: 10px 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--bronze-deep); font-size: 11px; font-weight: 700; line-height: 1.45; text-align: left; cursor: pointer; }
+.day-card button span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.day-card button span:last-child { align-self: center; }
 
 .experience-section { background: var(--espresso); color: #f5eadc; display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; }
 .experience-photo { min-height: 690px; position: relative; overflow: hidden; }
