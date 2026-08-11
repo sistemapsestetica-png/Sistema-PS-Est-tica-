@@ -53,6 +53,17 @@ type Settings = {
   pix_enabled: boolean;
 };
 
+type Booking = {
+  id: number;
+  status: string;
+  created_at: string;
+  lead_id: number;
+  slot_id: number;
+  leads: { name: string; phone: string } | null;
+  services: { name: string } | null;
+  slots: { starts_at: string; ends_at: string } | null;
+};
+
 const leadStatus: Record<string, string> = {
   new: "Novo",
   contacted: "Contatado",
@@ -66,6 +77,20 @@ const timingLabel: Record<string, string> = {
   quinzena: "Próximas 2 semanas",
   pesquisando: "Pesquisando",
 };
+
+const bookingStatus: Record<string, string> = {
+  pending: "Pendente",
+  awaiting_payment: "Aguardando pagamento",
+  confirmed: "Confirmado",
+  cancelled: "Cancelado",
+  completed: "Concluído",
+  no_show: "Não compareceu",
+};
+
+const weekdayOptions = [
+  [1, "Segunda-feira"], [2, "Terça-feira"], [3, "Quarta-feira"],
+  [4, "Quinta-feira"], [5, "Sexta-feira"], [6, "Sábado"], [0, "Domingo"],
+] as const;
 
 function formatMoney(cents: number | null) {
   if (cents === null) return "Não configurado";
@@ -115,22 +140,30 @@ export default function AdminPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [servicePriceDrafts, setServicePriceDrafts] = useState<Record<number, string>>({});
   const [slotServiceId, setSlotServiceId] = useState("");
   const [slotStart, setSlotStart] = useState("");
   const [slotNotes, setSlotNotes] = useState("");
+  const [recurringServiceId, setRecurringServiceId] = useState("");
+  const [recurringWeekday, setRecurringWeekday] = useState("1");
+  const [recurringTime, setRecurringTime] = useState("09:00");
+  const [recurringWeeks, setRecurringWeeks] = useState("8");
+  const [recurringSlotsPerDay, setRecurringSlotsPerDay] = useState("1");
+  const [recurringInterval, setRecurringInterval] = useState("60");
 
   async function loadDashboard() {
     setLoading(true);
-    const [serviceResult, leadResult, slotResult, settingsResult] = await Promise.all([
+    const [serviceResult, leadResult, slotResult, settingsResult, bookingResult] = await Promise.all([
       supabase.from("services").select("*").order("id"),
       supabase.from("leads").select("id,name,phone,service_slug,timing,status,created_at").order("created_at", { ascending: false }).limit(100),
       supabase.from("slots").select("id,service_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
       supabase.from("clinic_settings").select("deposit_percent,reschedule_notice_hours,payment_provider,pix_enabled").eq("id", true).single(),
+      supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone),services(name),slots(starts_at,ends_at)").order("created_at", { ascending: false }).limit(100),
     ]);
 
-    const firstError = serviceResult.error || leadResult.error || slotResult.error || settingsResult.error;
+    const firstError = serviceResult.error || leadResult.error || slotResult.error || settingsResult.error || bookingResult.error;
     if (firstError) setMessage(`Não foi possível carregar o painel: ${firstError.message}`);
     const loadedServices = (serviceResult.data ?? []) as Service[];
     setServices(loadedServices);
@@ -139,8 +172,12 @@ export default function AdminPage() {
     ));
     setLeads((leadResult.data ?? []) as Lead[]);
     setSlots((slotResult.data ?? []) as Slot[]);
+    setBookings((bookingResult.data ?? []) as unknown as Booking[]);
     setSettings(settingsResult.data as Settings | null);
-    if (serviceResult.data?.[0]) setSlotServiceId((current) => current || String(serviceResult.data[0].id));
+    if (serviceResult.data?.[0]) {
+      setSlotServiceId((current) => current || String(serviceResult.data[0].id));
+      setRecurringServiceId((current) => current || String(serviceResult.data[0].id));
+    }
     setLoading(false);
   }
 
@@ -274,10 +311,41 @@ export default function AdminPage() {
   }
 
   async function toggleSlot(slot: Slot) {
+    if (!["open", "blocked"].includes(slot.status)) return;
     const nextStatus = slot.status === "open" ? "blocked" : "open";
     const { error } = await supabase.from("slots").update({ status: nextStatus }).eq("id", slot.id);
     if (error) setMessage(`Erro ao alterar horário: ${error.message}`);
     else await loadDashboard();
+  }
+
+  async function createRecurringSlots(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    const { data, error } = await supabase.rpc("create_recurring_slots", {
+      p_service_id: Number(recurringServiceId),
+      p_weekday: Number(recurringWeekday),
+      p_start_time: recurringTime,
+      p_weeks: Number(recurringWeeks),
+      p_slots_per_day: Number(recurringSlotsPerDay),
+      p_interval_minutes: Number(recurringInterval),
+    });
+    if (error) {
+      setMessage(`Erro ao gerar agenda: ${error.message}`);
+      return;
+    }
+    setMessage(`${data ?? 0} horário(s) criado(s). Datas repetidas foram ignoradas.`);
+    await loadDashboard();
+  }
+
+  async function updateBookingStatus(id: number, status: string) {
+    const { error } = await supabase.from("bookings").update({ status }).eq("id", id);
+    if (error) {
+      setMessage(`Erro ao atualizar agendamento: ${error.message}`);
+      return;
+    }
+    setBookings((current) => current.map((booking) => booking.id === id ? { ...booking, status } : booking));
+    setMessage(status === "cancelled" ? "Agendamento cancelado e horário reaberto." : "Agendamento atualizado.");
+    await loadDashboard();
   }
 
   async function updateLeadStatus(id: number, status: string) {
@@ -288,6 +356,7 @@ export default function AdminPage() {
 
   const serviceNames = useMemo(() => Object.fromEntries(services.map((service) => [service.id, service.name])), [services]);
   const openSlots = slots.filter((slot) => slot.status === "open").length;
+  const activeBookings = bookings.filter((booking) => ["pending", "awaiting_payment", "confirmed"].includes(booking.status)).length;
   const pendingServices = services.filter((service) => !service.price_cents || !service.duration_minutes).length;
 
   if (!session) {
@@ -329,7 +398,7 @@ export default function AdminPage() {
       {message && <div className="admin-message banner" role="status">{message}<button onClick={() => setMessage("")}>×</button></div>}
 
       <section className="stats-grid" aria-label="Resumo">
-        <article><span>Leads recentes</span><b>{leads.length}</b><small>últimos 100 registros</small></article>
+        <article><span>Agendamentos ativos</span><b>{activeBookings}</b><small>pendentes e confirmados</small></article>
         <article><span>Horários abertos</span><b>{openSlots}</b><small>datas futuras</small></article>
         <article><span>Configuração</span><b>{pendingServices}</b><small>procedimentos pendentes</small></article>
         <article><span>Sinal</span><b>{settings?.deposit_percent ?? 10}%</b><small>remarcação até {settings?.reschedule_notice_hours ?? 48}h antes</small></article>
@@ -377,8 +446,34 @@ export default function AdminPage() {
           <div className="panel-heading"><div><p className="admin-eyebrow">Próximos</p><h2>Horários cadastrados</h2></div></div>
           <div className="slot-list">
             {slots.length === 0 && <p className="empty-state">Nenhum horário futuro cadastrado.</p>}
-            {slots.map((slot) => <article key={slot.id}><div><b>{serviceNames[slot.service_id] ?? "Procedimento"}</b><span>{formatDate(slot.starts_at)}</span></div><button className={slot.status} onClick={() => toggleSlot(slot)}>{slot.status === "open" ? "Aberto" : "Bloqueado"}</button></article>)}
+            {slots.map((slot) => <article key={slot.id}><div><b>{serviceNames[slot.service_id] ?? "Procedimento"}</b><span>{formatDate(slot.starts_at)}</span></div><button className={slot.status} disabled={!['open', 'blocked'].includes(slot.status)} onClick={() => toggleSlot(slot)}>{slot.status === "open" ? "Aberto" : slot.status === "reserved" ? "Reservado" : slot.status === "completed" ? "Concluído" : "Bloqueado"}</button></article>)}
           </div>
+        </div>
+      </section>
+
+      <section className="admin-panel">
+        <div className="panel-heading"><div><p className="admin-eyebrow">Automação</p><h2>Gerar horários recorrentes</h2></div><p>Cria a agenda semanal em lote e ignora automaticamente datas que já existem.</p></div>
+        <form className="recurring-form" onSubmit={createRecurringSlots}>
+          <label>Procedimento<select required value={recurringServiceId} onChange={(event) => setRecurringServiceId(event.target.value)}>{services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
+          <label>Dia da semana<select value={recurringWeekday} onChange={(event) => setRecurringWeekday(event.target.value)}>{weekdayOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label>Primeiro horário<input type="time" required value={recurringTime} onChange={(event) => setRecurringTime(event.target.value)} /></label>
+          <label>Semanas à frente<input type="number" min="1" max="52" value={recurringWeeks} onChange={(event) => setRecurringWeeks(event.target.value)} /></label>
+          <label>Horários por dia<input type="number" min="1" max="12" value={recurringSlotsPerDay} onChange={(event) => setRecurringSlotsPerDay(event.target.value)} /></label>
+          <label>Intervalo (min)<input type="number" min="5" max="720" step="5" value={recurringInterval} onChange={(event) => setRecurringInterval(event.target.value)} /></label>
+          <button type="submit">Gerar agenda</button>
+        </form>
+      </section>
+
+      <section className="admin-panel">
+        <div className="panel-heading"><div><p className="admin-eyebrow">Agenda</p><h2>Agendamentos</h2></div><p>Reservas feitas no quiz aparecem aqui. Ao cancelar, o horário volta à agenda automaticamente.</p></div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Cliente</th><th>Procedimento</th><th>Data reservada</th><th>Status</th><th>Contato</th></tr></thead>
+            <tbody>
+              {bookings.length === 0 && <tr><td colSpan={5} className="empty-state">Ainda não há agendamentos.</td></tr>}
+              {bookings.map((booking) => <tr key={booking.id}><td><b>{booking.leads?.name ?? "Cliente"}</b><small>{booking.leads?.phone ?? ""}</small></td><td>{booking.services?.name ?? "Procedimento"}</td><td>{booking.slots ? formatDate(booking.slots.starts_at) : "—"}</td><td><select value={booking.status} onChange={(event) => updateBookingStatus(booking.id, event.target.value)}>{Object.entries(bookingStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td>{booking.leads?.phone ? <a href={`https://wa.me/55${booking.leads.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a> : "—"}</td></tr>)}
+            </tbody>
+          </table>
         </div>
       </section>
 
