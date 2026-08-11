@@ -289,7 +289,7 @@ export default function Home() {
                 <p><b>Como:</b> {item.how}</p>
                 <p><b>Resultado esperado:</b> {item.expected}</p>
               </div>
-              <button onClick={() => startWithDay(key)}>{item.cta} <span>→</span></button>
+              <button onClick={() => startWithDay(key)}><span>{item.cta}</span><span aria-hidden="true">→</span></button>
             </article>
           ))}
         </div>
