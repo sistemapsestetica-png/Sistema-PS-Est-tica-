@@ -73,6 +73,15 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .whatsapp-button:hover { background: #1d6a3e; transform: translateY(-1px); }
 .restart { display: block; margin: 14px auto 0; }
 .save-notice { margin: -2px 0 13px; color: #8f5d38; font-size: 11px; line-height: 1.45; }
+.slot-loading { padding: 32px 0; color: var(--muted); text-align: center; }
+.slot-options { max-height: 330px; overflow-y: auto; display: grid; gap: 9px; padding-right: 4px; }
+.slot-option { width: 100%; min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--espresso); padding: 12px 15px; text-align: left; cursor: pointer; text-transform: capitalize; transition: .2s ease; }
+.slot-option:hover, .slot-option:focus-visible { border-color: var(--bronze); background: #fcf6ec; transform: translateX(3px); outline: none; }
+.slot-option:disabled { opacity: .55; cursor: wait; }
+.slot-option span:last-child { color: var(--bronze); }
+.no-slots { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--line); border-radius: 13px; background: #fbf3e7; color: var(--muted); font-size: 13px; line-height: 1.5; text-align: center; }
+.no-slots b { color: var(--espresso); font-family: Georgia, serif; font-size: 19px; font-weight: 400; }
+.availability.reserved { background: #eef7ec; border-color: #cfe2cb; }
 
 .trust-strip { max-width: 1110px; margin: -21px auto 42px; padding: 20px 35px; position: relative; z-index: 2; display: flex; justify-content: space-around; gap: 25px; background: var(--espresso); color: #f5eadc; border-radius: 16px; box-shadow: 0 20px 50px -35px #000; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 
