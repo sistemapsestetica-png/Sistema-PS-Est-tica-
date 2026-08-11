@@ -11,7 +11,7 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; background: var(--cream); color: var(--espresso); font-family: "Segoe UI", Arial, sans-serif; }
+body { margin: 0; overflow-x: clip; background: var(--cream); color: var(--espresso); font-family: "Segoe UI", Arial, sans-serif; }
 button, input { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 
