@@ -6,30 +6,42 @@ import { supabase } from "../lib/supabase";
 type DayKey = "lavieen" | "laser" | "ultraformer" | "botox";
 type Step = 1 | 2 | 3 | 4 | 5;
 
-const days: Record<DayKey, { name: string; icon: string; short: string; result: string }> = {
+const days: Record<DayKey, { name: string; icon: string; short: string; result: string; how: string; expected: string; cta: string }> = {
   lavieen: {
     name: "Lavieen Day",
     icon: "✦",
     short: "Manchas, poros ou textura irregular",
-    result: "Tecnologia para renovar a pele, suavizar manchas e melhorar poros e textura.",
+    result: "Manchas, poros dilatados, textura irregular",
+    how: "Renovação da pele em sessões, sem tempo de recuperação",
+    expected: "Pele mais uniforme já nas primeiras sessões",
+    cta: "Avaliar se o Lavieen serve para o meu caso",
   },
   laser: {
     name: "Laser Day",
     icon: "◉",
     short: "Pelos indesejados",
-    result: "Um plano de depilação a laser pensado para sua pele e as regiões que mais incomodam.",
+    result: "Depilação recorrente",
+    how: "Plano por tipo de pele e região tratada",
+    expected: "Redução progressiva com efeito de meses",
+    cta: "Montar meu plano de laser",
   },
   ultraformer: {
     name: "Ultraformer Day",
     icon: "⌁",
     short: "Flacidez, papada ou contorno",
-    result: "Ultrassom micro e macrofocado para firmeza, definição e estímulo de colágeno.",
+    result: "Flacidez, papada, contorno facial",
+    how: "Ultrassom micro e macrofocado, sem cirurgia",
+    expected: "Firmeza perceptível, sem afastamento da rotina",
+    cta: "Entender se o Ultraformer é indicado para mim",
   },
   botox: {
     name: "Botox Day",
     icon: "≈",
     short: "Rugas e linhas de expressão",
-    result: "Avaliação personalizada para suavizar linhas preservando uma aparência natural.",
+    result: "Rugas e linhas de expressão",
+    how: "Aplicação dosada por avaliação individual",
+    expected: "Expressão suavizada, sem efeito “congelado”",
+    cta: "Agendar avaliação para Botox",
   },
 };
 
@@ -160,14 +172,14 @@ export default function Home() {
         <div className="hero-ring" aria-hidden="true" />
         <div className="hero-copy">
           <p className="eyebrow hero-reveal hero-reveal-one">Diagnóstico estético personalizado</p>
-          <h1 className="hero-reveal hero-reveal-two">Descubra o tratamento que a sua pele está <em>pedindo.</em></h1>
+          <h1 className="hero-reveal hero-reveal-two">Qual dos <em>4 tratamentos</em> é o certo para você?</h1>
           <p className="lede hero-reveal hero-reveal-three">
-            Responda 3 perguntas rápidas e receba uma indicação inicial para o seu objetivo — com as próximas datas disponíveis.
+            Responda 4 perguntas sobre sua pele. Nossa equipe indica o protocolo e as próximas datas — sem consulta, sem espera.
           </p>
           <div className="proof-row hero-reveal hero-reveal-four">
-            <span><b>3 min</b><small>quiz rápido</small></span>
-            <span><b>4</b><small>protocolos</small></span>
-            <span><b>100%</b><small>personalizado</small></span>
+            <span><b>4 perguntas</b><small>leva 4 minutos</small></span>
+            <span><b>4 protocolos</b><small>Lavieen, Laser, Ultraformer, Botox</small></span>
+            <span><b>Resposta imediata</b><small>sem espera por retorno</small></span>
           </div>
           <p className="location hero-reveal hero-reveal-four"><span /> São Bernardo do Campo · SP</p>
         </div>
@@ -183,7 +195,7 @@ export default function Home() {
           {step === 1 && (
             <div className="quiz-step">
               <p className="quiz-kicker">Vamos começar</p>
-              <h2>O que mais incomoda você hoje?</h2>
+              <h2>O que você quer tratar primeiro?</h2>
               <div className="option-grid">
                 {(Object.entries(days) as [DayKey, (typeof days)[DayKey]][]).map(([key, item]) => (
                   <button className={`option ${day === key ? "selected" : ""}`} key={key} onClick={() => pickDay(key)}>
@@ -255,16 +267,16 @@ export default function Home() {
       </section>
 
       <section className="trust-strip" aria-label="Diferenciais" data-reveal>
-        <span>✦ Atendimento personalizado</span>
-        <span>✦ Tecnologia avançada</span>
-        <span>✦ Protocolos exclusivos</span>
+        <span>Avaliação profissional antes de qualquer protocolo</span>
+        <span>Agenda com data fixa semanal por tratamento</span>
+        <span>Sem pacote fechado sem avaliação prévia</span>
       </section>
 
       <section className="days-section" id="tratamentos">
         <div className="section-heading" data-reveal>
           <p className="eyebrow">Calendário recorrente</p>
-          <h2>Um Day para cada objetivo.<br /><em>Mais opções para sua agenda.</em></h2>
-          <p>Escolha por onde começar ou deixe o diagnóstico indicar o protocolo mais alinhado com você.</p>
+          <h2>4 tratamentos.<br /><em>4 dias fixos da semana.</em></h2>
+          <p>Escolha seu dia e entre na rotina — ou deixe o diagnóstico indicar o protocolo certo.</p>
         </div>
         <div className="days-grid">
           {(Object.entries(days) as [DayKey, (typeof days)[DayKey]][]).map(([key, item], index) => (
@@ -272,8 +284,12 @@ export default function Home() {
               <div className="day-card-top"><span>0{index + 1}</span><span className="date-chip"><i /> datas recorrentes</span></div>
               <div className="day-symbol">{item.icon}</div>
               <h3>{item.name}</h3>
-              <p>{item.result}</p>
-              <button onClick={() => startWithDay(key)}>Quero descobrir minha data <span>→</span></button>
+              <div className="day-details">
+                <p><b>O que resolve:</b> {item.result}</p>
+                <p><b>Como:</b> {item.how}</p>
+                <p><b>Resultado esperado:</b> {item.expected}</p>
+              </div>
+              <button onClick={() => startWithDay(key)}>{item.cta} <span>→</span></button>
             </article>
           ))}
         </div>
@@ -285,30 +301,28 @@ export default function Home() {
           <div className="photo-note"><img src="/ps-estetica-logo-oficial.png" width="246" height="80" alt="" /><p><b>Tecnologia com propósito</b><small>Cuidado em cada detalhe</small></p></div>
         </div>
         <div className="experience-copy" data-reveal="right">
-          <p className="eyebrow">Experiência PS</p>
-          <h2>Não é sobre mudar você.<br /><em>É sobre realçar o que já é seu.</em></h2>
-          <p>Na PS Estética, cada indicação começa ouvindo o que incomoda você. A tecnologia entra depois — dentro de um protocolo seguro, responsável e personalizado.</p>
+          <h2>Do diagnóstico à sessão,<br /><em>em 3 passos.</em></h2>
           <div className="feature-list">
-            <div><span>01</span><p><b>Diagnóstico inicial</b><small>Você conta seu objetivo em poucos passos.</small></p></div>
-            <div><span>02</span><p><b>Avaliação profissional</b><small>Nossa equipe confirma o protocolo ideal.</small></p></div>
-            <div><span>03</span><p><b>Data mais conveniente</b><small>Você escolhe entre as próximas oportunidades.</small></p></div>
+            <div><span>01</span><p><b>Diagnóstico inicial</b><small>Você responde 4 perguntas sobre seu objetivo.</small></p></div>
+            <div><span>02</span><p><b>Avaliação profissional</b><small>Nossa equipe confirma o protocolo — sem indicação automática.</small></p></div>
+            <div><span>03</span><p><b>Data mais conveniente</b><small>Você escolhe entre as datas já disponíveis na semana do seu Day.</small></p></div>
           </div>
-          <a href="#quiz" className="text-link">Fazer meu diagnóstico agora <span>→</span></a>
+          <a href="#quiz" className="text-link">Iniciar meu diagnóstico <span>→</span></a>
         </div>
       </section>
 
       <section className="social-proof" data-reveal>
         <p className="quote-mark">“</p>
-        <blockquote>Fiz o tratamento com Ultraformer e me surpreendi! Já senti diferença na pele logo na primeira sessão.</blockquote>
+        <blockquote>Fiz 3 sessões de Ultraformer. Na primeira já notei a pele mais firme, sem dor e sem parar a rotina. Hoje o Day é parte fixa da minha agenda.</blockquote>
         <p className="quote-author"><b>Ana Paula M.</b><span>Cliente PS Estética · São Bernardo do Campo</span></p>
       </section>
 
       <section className="final-section" data-reveal>
         <div>
           <p className="eyebrow">Seu próximo passo</p>
-          <h2>Sua melhor versão pode começar com <em>três perguntas.</em></h2>
+          <h2>4 perguntas. <em>1 indicação clara.</em> Datas já disponíveis.</h2>
         </div>
-        <a href="#quiz" className="final-button">Começar diagnóstico <span>→</span></a>
+        <a href="#quiz" className="final-button">Iniciar diagnóstico <span>→</span></a>
       </section>
 
       <footer>
@@ -318,7 +332,7 @@ export default function Home() {
         <p>© 2026 PS Estética. Todos os direitos reservados.</p>
       </footer>
 
-      <a className="mobile-whatsapp" href="#quiz">Fazer diagnóstico <span>→</span></a>
+      <a className="mobile-whatsapp" href="#quiz">Iniciar diagnóstico <span>→</span></a>
     </main>
   );
 }
