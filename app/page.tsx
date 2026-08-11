@@ -4,7 +4,21 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 type DayKey = "lavieen" | "laser" | "ultraformer" | "botox";
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
+
+type OpenSlot = {
+  slot_id: number;
+  service_name: string;
+  starts_at: string;
+  ends_at: string;
+};
+
+type BookingConfirmation = {
+  booking_id: number;
+  service_name: string;
+  starts_at: string;
+  ends_at: string;
+};
 
 const days: Record<DayKey, { name: string; icon: string; short: string; result: string; how: string; expected: string; cta: string }> = {
   lavieen: {
@@ -64,6 +78,17 @@ function formatBrazilianMobile(value: string) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
+function formatSlot(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 export default function Home() {
   const [step, setStep] = useState<Step>(1);
   const [day, setDay] = useState<DayKey | null>(null);
@@ -73,8 +98,11 @@ export default function Home() {
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState("");
+  const [slots, setSlots] = useState<OpenSlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [booking, setBooking] = useState<BookingConfirmation | null>(null);
 
-  const progress = step === 5 ? 100 : step * 25;
+  const progress = step === 6 ? 100 : step * 20;
   const result = day ? days[day] : null;
 
   useEffect(() => {
@@ -106,10 +134,12 @@ export default function Home() {
       `Prazo: ${timingLabels[timing] ?? "Não informado"}`,
       `Meu WhatsApp: ${phone}`,
       "",
-      "Quero conhecer as próximas datas e confirmar minha avaliação.",
+      booking
+        ? `Horário reservado: ${formatSlot(booking.starts_at)}. Quero confirmar minha avaliação.`
+        : "Não encontrei um horário ideal e quero falar com a equipe.",
     ].join("\n");
     return `https://wa.me/5511934580476?text=${encodeURIComponent(message)}`;
-  }, [experience, name, phone, result, timing]);
+  }, [booking, experience, name, phone, result, timing]);
 
   function pickDay(value: DayKey) {
     setDay(value);
@@ -122,10 +152,30 @@ export default function Home() {
     document.getElementById("quiz")?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  async function submitLead(event: FormEvent<HTMLFormElement>) {
+  async function loadOpenSlots() {
+    if (!day) return;
+    setLoadingSlots(true);
+    setSaveNotice("");
+    const { data, error } = await supabase.rpc("list_open_slots", { p_service_slug: day });
+    if (error) {
+      setSlots([]);
+      setSaveNotice("Não foi possível carregar a agenda agora. Fale com a equipe pelo WhatsApp.");
+    } else {
+      setSlots(((data ?? []) as OpenSlot[]).slice(0, 8));
+    }
+    setLoadingSlots(false);
+  }
+
+  async function continueToSlots(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!day || saving) return;
+    setSaveNotice("");
+    setStep(5);
+    await loadOpenSlots();
+  }
 
+  async function reserveSlot(slot: OpenSlot) {
+    if (!day || saving) return;
     setSaving(true);
     setSaveNotice("");
     const params = new URLSearchParams(window.location.search);
@@ -138,7 +188,7 @@ export default function Home() {
       referrer: document.referrer || null,
     };
 
-    const { error } = await supabase.rpc("capture_lead", {
+    const { data: leadId, error: leadError } = await supabase.rpc("capture_lead", {
       p_name: name.trim(),
       p_phone: phone.replace(/\D/g, ""),
       p_service_slug: day,
@@ -147,11 +197,27 @@ export default function Home() {
       p_source: source,
     });
 
-    if (error) {
-      setSaveNotice("Não conseguimos registrar agora, mas você ainda pode falar com a equipe pelo WhatsApp.");
+    if (leadError || !leadId) {
+      setSaveNotice("Não conseguimos registrar seus dados agora. Tente novamente ou fale com a equipe pelo WhatsApp.");
+      setSaving(false);
+      return;
     }
+
+    const { data, error } = await supabase.rpc("reserve_slot", {
+      p_lead_id: leadId,
+      p_slot_id: slot.slot_id,
+    });
+
+    if (error || !data?.[0]) {
+      setSaveNotice("Esse horário acabou de ficar indisponível. Escolha outra opção abaixo.");
+      await loadOpenSlots();
+      setSaving(false);
+      return;
+    }
+
+    setBooking(data[0] as BookingConfirmation);
     setSaving(false);
-    setStep(5);
+    setStep(6);
   }
 
   return (
@@ -187,7 +253,7 @@ export default function Home() {
         <div className="quiz-shell" id="quiz" aria-live="polite">
           <div className="quiz-aura" aria-hidden="true" />
           <div className="quiz-top">
-            <span>{step === 5 ? "Diagnóstico concluído" : `Etapa ${step} de 4`}</span>
+            <span>{step === 6 ? "Reserva concluída" : `Etapa ${step} de 5`}</span>
             <span>{progress}%</span>
           </div>
           <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
@@ -239,27 +305,57 @@ export default function Home() {
           )}
 
           {step === 4 && (
-            <form className="quiz-step" onSubmit={submitLead}>
+            <form className="quiz-step" onSubmit={continueToSlots}>
               <p className="quiz-kicker">Seu resultado está pronto</p>
               <h2>Para onde enviamos as próximas datas?</h2>
               <label>Seu nome<input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Como podemos chamar você?" autoComplete="name" /></label>
               <label>WhatsApp<input required value={phone} onChange={(e) => setPhone(formatBrazilianMobile(e.target.value))} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel" maxLength={15} minLength={15} pattern="\(\d{2}\) \d{5}-\d{4}" title="Digite um celular com DDD, por exemplo: (11) 90000-0000" /></label>
-              <button className="primary-button" type="submit" disabled={saving}>{saving ? "Salvando…" : "Ver meu diagnóstico"} <span>→</span></button>
+              <button className="primary-button" type="submit">Ver horários disponíveis <span>→</span></button>
               <button className="back" type="button" onClick={() => setStep(3)}>← Voltar</button>
               <p className="privacy">Seus dados serão usados somente para este atendimento.</p>
             </form>
           )}
 
           {step === 5 && result && (
+            <div className="quiz-step">
+              <p className="quiz-kicker">Agenda real</p>
+              <h2>Escolha seu melhor horário</h2>
+              {loadingSlots && <p className="slot-loading" role="status">Consultando a agenda…</p>}
+              {!loadingSlots && slots.length > 0 && (
+                <div className="slot-options">
+                  {slots.map((slot) => (
+                    <button key={slot.slot_id} className="slot-option" disabled={saving} onClick={() => reserveSlot(slot)}>
+                      <span>{formatSlot(slot.starts_at)}</span><span aria-hidden="true">→</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!loadingSlots && slots.length === 0 && (
+                <div className="no-slots">
+                  <b>Novos horários serão abertos em breve.</b>
+                  <span>Fale com a equipe para entrar na lista da próxima data.</span>
+                  <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer">Pedir próxima data <span>↗</span></a>
+                  <button className="restart" onClick={() => setStep(6)}>Ver minha indicação</button>
+                </div>
+              )}
+              {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
+              <button className="back" onClick={() => setStep(4)} disabled={saving}>← Voltar</button>
+            </div>
+          )}
+
+          {step === 6 && result && (
             <div className="quiz-step result-step">
               <div className="result-icon">{result.icon}</div>
               <p className="quiz-kicker">Sua indicação inicial</p>
               <h2>{result.name}</h2>
               <p className="result-copy">{result.result}</p>
-              <div className="availability"><span className="pulse" /><span><b>Agenda recorrente</b> com novas datas ao longo do mês</span></div>
+              <div className={`availability ${booking ? "reserved" : ""}`}>
+                <span className="pulse" />
+                <span>{booking ? <><b>Horário reservado</b> {formatSlot(booking.starts_at)}</> : <><b>Sem horário reservado</b> fale com a equipe para escolher uma data</>}</span>
+              </div>
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
-              <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer">Confirmar pelo WhatsApp <span>↗</span></a>
-              <button className="restart" onClick={() => { setStep(1); setDay(null); }}>Refazer o diagnóstico</button>
+              <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer">{booking ? "Confirmar reserva no WhatsApp" : "Pedir uma data no WhatsApp"} <span>↗</span></a>
+              <button className="restart" onClick={() => { setStep(1); setDay(null); setBooking(null); setSlots([]); }}>Refazer o diagnóstico</button>
               <p className="disclaimer">Indicação inicial. O protocolo ideal é definido após avaliação profissional.</p>
             </div>
           )}
