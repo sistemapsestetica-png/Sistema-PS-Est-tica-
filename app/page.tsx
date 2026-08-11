@@ -281,7 +281,7 @@ export default function Home() {
 
       <section className="experience-section">
         <div className="experience-photo" data-reveal="left">
-          <img src="https://psestetica.com.br/pri-ultraforme.jpg" alt="Procedimento estético realizado na PS Estética" />
+          <img src="https://psestetica.com.br/images/007.JPG" alt="Cliente recebendo tratamento facial na PS Estética" />
           <div className="photo-note"><img src="/ps-estetica-logo-oficial.png" width="246" height="80" alt="" /><p><b>Tecnologia com propósito</b><small>Cuidado em cada detalhe</small></p></div>
         </div>
         <div className="experience-copy" data-reveal="right">
