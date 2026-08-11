@@ -8,10 +8,10 @@
 .login-card h1 { font-size: 38px; }
 .login-card > p:not(.admin-eyebrow):not(.admin-message) { color: #756457; line-height: 1.6; }
 .login-card form, .slot-form { display: grid; gap: 14px; margin-top: 25px; }
-.login-card label, .slot-form label, .service-editor label { display: grid; gap: 6px; color: #765326; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
-.login-card input, .slot-form input, .slot-form select, .service-editor input, table select { width: 100%; border: 1px solid #e7ddcc; border-radius: 9px; background: #fff; color: #33241a; padding: 12px; outline: none; font: inherit; font-size: 13px; }
-.login-card input:focus, .slot-form input:focus, .slot-form select:focus, .service-editor input:focus { border-color: #9e753b; box-shadow: 0 0 0 3px rgba(158,117,59,.1); }
-.login-card form button, .slot-form button, .service-editor button { border: 0; border-radius: 9px; background: #33241a; color: #fff; padding: 13px 18px; font-weight: 700; cursor: pointer; }
+.login-card label, .slot-form label, .service-editor label, .recurring-form label { display: grid; gap: 6px; color: #765326; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.login-card input, .slot-form input, .slot-form select, .service-editor input, .recurring-form input, .recurring-form select, table select { width: 100%; border: 1px solid #e7ddcc; border-radius: 9px; background: #fff; color: #33241a; padding: 12px; outline: none; font: inherit; font-size: 13px; }
+.login-card input:focus, .slot-form input:focus, .slot-form select:focus, .service-editor input:focus, .recurring-form input:focus, .recurring-form select:focus { border-color: #9e753b; box-shadow: 0 0 0 3px rgba(158,117,59,.1); }
+.login-card form button, .slot-form button, .service-editor button, .recurring-form button { border: 0; border-radius: 9px; background: #33241a; color: #fff; padding: 13px 18px; font-weight: 700; cursor: pointer; }
 .login-card form button:disabled { opacity: .6; }
 .mode-switch { margin-top: 18px; border: 0; background: none; color: #765326; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
 .back-site { display: block; margin-top: 26px; color: #756457; font-size: 12px; text-decoration: none; }
@@ -50,6 +50,11 @@
 .slot-list button { min-width: 82px; border: 0; border-radius: 999px; padding: 8px 10px; font-size: 10px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
 .slot-list button.open { background: #e7f4e5; color: #39723a; }
 .slot-list button.blocked { background: #f1e9df; color: #756457; }
+.slot-list button.reserved { background: #fff1cf; color: #8b6217; }
+.slot-list button.completed { background: #e7e3ee; color: #60566e; }
+.slot-list button:disabled { cursor: default; }
+.recurring-form { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)) auto; gap: 12px; align-items: end; }
+.recurring-form button { min-height: 43px; white-space: nowrap; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th { padding: 10px; color: #9b8979; font-size: 9px; letter-spacing: .12em; text-align: left; text-transform: uppercase; border-bottom: 1px solid #e7ddcc; }
@@ -63,5 +68,5 @@ table select { min-width: 120px; padding: 8px; }
 .payment-note { display: flex; align-items: center; justify-content: space-between; gap: 30px; background: #efe2d2; }
 .payment-note p:last-child { margin: 8px 0 0; color: #756457; }
 .payment-note > span { padding: 10px 13px; border: 1px solid #cbb493; border-radius: 999px; color: #765326; font-size: 10px; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
-@media (max-width: 1050px) { .stats-grid, .service-editor { grid-template-columns: 1fr 1fr; } .split-panel { grid-template-columns: 1fr; } }
-@media (max-width: 650px) { .admin-page { padding: 22px 14px 50px; } .admin-header, .panel-heading, .payment-note { align-items: flex-start; flex-direction: column; } .admin-account { align-items: flex-end; flex-direction: column; gap: 6px; } .stats-grid, .service-editor { grid-template-columns: 1fr; } .panel-heading > p { text-align: left; } .admin-panel, .payment-note { padding: 19px; } .login-card { padding: 28px 22px; } }
+@media (max-width: 1050px) { .stats-grid, .service-editor { grid-template-columns: 1fr 1fr; } .split-panel { grid-template-columns: 1fr; } .recurring-form { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 650px) { .admin-page { padding: 22px 14px 50px; } .admin-header, .panel-heading, .payment-note { align-items: flex-start; flex-direction: column; } .admin-account { align-items: flex-end; flex-direction: column; gap: 6px; } .stats-grid, .service-editor, .recurring-form { grid-template-columns: 1fr; } .panel-heading > p { text-align: left; } .admin-panel, .payment-note { padding: 19px; } .login-card { padding: 28px 22px; } }
