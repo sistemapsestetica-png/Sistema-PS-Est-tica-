@@ -72,6 +72,29 @@ function formatMoney(cents: number | null) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 }
 
+function formatPriceInput(cents: number | null) {
+  if (cents === null) return "";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+function parsePriceInput(value: string) {
+  const sanitizedValue = value.replace(/[^\d,.-]/g, "").trim();
+  if (!sanitizedValue) return null;
+
+  const decimalParts = sanitizedValue.split(".");
+  const normalizedValue = sanitizedValue.includes(",")
+    ? sanitizedValue.replace(/\./g, "").replace(",", ".")
+    : decimalParts.length === 2 && decimalParts[1].length <= 2
+      ? sanitizedValue
+      : sanitizedValue.replace(/\./g, "");
+  const amount = Number(normalizedValue);
+
+  return Number.isFinite(amount) ? Math.round(amount * 100) : null;
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -93,6 +116,7 @@ export default function AdminPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [servicePriceDrafts, setServicePriceDrafts] = useState<Record<number, string>>({});
   const [slotServiceId, setSlotServiceId] = useState("");
   const [slotStart, setSlotStart] = useState("");
   const [slotNotes, setSlotNotes] = useState("");
@@ -108,7 +132,11 @@ export default function AdminPage() {
 
     const firstError = serviceResult.error || leadResult.error || slotResult.error || settingsResult.error;
     if (firstError) setMessage(`Não foi possível carregar o painel: ${firstError.message}`);
-    setServices((serviceResult.data ?? []) as Service[]);
+    const loadedServices = (serviceResult.data ?? []) as Service[];
+    setServices(loadedServices);
+    setServicePriceDrafts(Object.fromEntries(
+      loadedServices.map((service) => [service.id, formatPriceInput(service.price_cents)]),
+    ));
     setLeads((leadResult.data ?? []) as Lead[]);
     setSlots((slotResult.data ?? []) as Slot[]);
     setSettings(settingsResult.data as Settings | null);
@@ -176,24 +204,45 @@ export default function AdminPage() {
     setBusy(false);
   }
 
-  function updateServiceDraft(id: number, field: "price_cents" | "duration_minutes", value: string) {
+  function updateServiceDuration(id: number, value: string) {
     setServices((current) => current.map((service) => service.id === id ? {
       ...service,
-      [field]: value === "" ? null : field === "price_cents" ? Math.round(Number(value) * 100) : Number(value),
+      duration_minutes: value === "" ? null : Number(value),
     } : service));
+  }
+
+  function updateServicePrice(id: number, value: string) {
+    setServicePriceDrafts((current) => ({
+      ...current,
+      [id]: value.replace(/[^\d,.-]/g, ""),
+    }));
+  }
+
+  function normalizeServicePrice(id: number) {
+    setServicePriceDrafts((current) => {
+      const priceCents = parsePriceInput(current[id] ?? "");
+      return { ...current, [id]: formatPriceInput(priceCents) };
+    });
   }
 
   async function saveService(service: Service) {
     setMessage("");
-    if (!service.price_cents || !service.duration_minutes) {
+    const priceCents = parsePriceInput(servicePriceDrafts[service.id] ?? "");
+    if (priceCents === null || priceCents <= 0 || !service.duration_minutes) {
       setMessage("Informe preço e duração antes de salvar.");
       return;
     }
     const { error } = await supabase.from("services").update({
-      price_cents: service.price_cents,
+      price_cents: priceCents,
       duration_minutes: service.duration_minutes,
     }).eq("id", service.id);
-    setMessage(error ? `Erro ao salvar: ${error.message}` : `${service.name} atualizado.`);
+    if (error) {
+      setMessage(`Erro ao salvar: ${error.message}`);
+      return;
+    }
+    setServices((current) => current.map((item) => item.id === service.id ? { ...item, price_cents: priceCents } : item));
+    setServicePriceDrafts((current) => ({ ...current, [service.id]: formatPriceInput(priceCents) }));
+    setMessage(`${service.name} atualizado.`);
   }
 
   async function createSlot(event: FormEvent<HTMLFormElement>) {
@@ -292,8 +341,22 @@ export default function AdminPage() {
           {services.map((service) => (
             <article key={service.id}>
               <div><h3>{service.name}</h3><span>{service.slug}</span></div>
-              <label>Preço (R$)<input type="number" min="1" step="0.01" value={service.price_cents === null ? "" : service.price_cents / 100} onChange={(event) => updateServiceDraft(service.id, "price_cents", event.target.value)} placeholder="0,00" /></label>
-              <label>Duração (min)<input type="number" min="5" max="720" step="5" value={service.duration_minutes ?? ""} onChange={(event) => updateServiceDraft(service.id, "duration_minutes", event.target.value)} placeholder="60" /></label>
+              <label>
+                Preço
+                <span className="currency-input">
+                  <span aria-hidden="true">R$</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={servicePriceDrafts[service.id] ?? ""}
+                    onChange={(event) => updateServicePrice(service.id, event.target.value)}
+                    onBlur={() => normalizeServicePrice(service.id)}
+                    aria-label={`Preço de ${service.name} em reais`}
+                    placeholder="0,00"
+                  />
+                </span>
+              </label>
+              <label>Duração (min)<input type="number" min="5" max="720" step="5" value={service.duration_minutes ?? ""} onChange={(event) => updateServiceDuration(service.id, event.target.value)} placeholder="60" /></label>
               <button onClick={() => saveService(service)}>Salvar</button>
             </article>
           ))}
