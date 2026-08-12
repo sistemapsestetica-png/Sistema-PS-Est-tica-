@@ -101,6 +101,7 @@ export default function Home() {
   const [slots, setSlots] = useState<OpenSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [booking, setBooking] = useState<BookingConfirmation | null>(null);
+  const [leadId, setLeadId] = useState<number | null>(null);
 
   const progress = step === 6 ? 100 : step * 20;
   const result = day ? days[day] : null;
@@ -142,14 +143,45 @@ export default function Home() {
   }, [booking, experience, name, phone, result, timing]);
 
   function pickDay(value: DayKey) {
+    setLeadId(null);
     setDay(value);
     window.setTimeout(() => setStep(2), 160);
   }
 
   function startWithDay(value: DayKey) {
+    setLeadId(null);
     setDay(value);
     setStep(2);
     document.getElementById("quiz")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  async function captureLead() {
+    if (!day) return null;
+    if (leadId) return leadId;
+
+    const params = new URLSearchParams(window.location.search);
+    const source = {
+      utm_source: params.get("utm_source"),
+      utm_medium: params.get("utm_medium"),
+      utm_campaign: params.get("utm_campaign"),
+      utm_content: params.get("utm_content"),
+      utm_term: params.get("utm_term"),
+      referrer: document.referrer || null,
+    };
+
+    const { data, error } = await supabase.rpc("capture_lead", {
+      p_name: name.trim(),
+      p_phone: phone.replace(/\D/g, ""),
+      p_service_slug: day,
+      p_experience: experience,
+      p_timing: timing,
+      p_source: source,
+    });
+
+    if (error || !data) return null;
+    const capturedLeadId = Number(data);
+    setLeadId(capturedLeadId);
+    return capturedLeadId;
   }
 
   async function loadOpenSlots() {
@@ -170,41 +202,31 @@ export default function Home() {
     event.preventDefault();
     if (!day || saving) return;
     setSaveNotice("");
+    setSaving(true);
+    const capturedLeadId = await captureLead();
+    if (!capturedLeadId) {
+      setSaveNotice("Não conseguimos registrar seus dados agora. Tente novamente ou fale com a equipe pelo WhatsApp.");
+      setSaving(false);
+      return;
+    }
     setStep(5);
     await loadOpenSlots();
+    setSaving(false);
   }
 
   async function reserveSlot(slot: OpenSlot) {
     if (!day || saving) return;
     setSaving(true);
     setSaveNotice("");
-    const params = new URLSearchParams(window.location.search);
-    const source = {
-      utm_source: params.get("utm_source"),
-      utm_medium: params.get("utm_medium"),
-      utm_campaign: params.get("utm_campaign"),
-      utm_content: params.get("utm_content"),
-      utm_term: params.get("utm_term"),
-      referrer: document.referrer || null,
-    };
-
-    const { data: leadId, error: leadError } = await supabase.rpc("capture_lead", {
-      p_name: name.trim(),
-      p_phone: phone.replace(/\D/g, ""),
-      p_service_slug: day,
-      p_experience: experience,
-      p_timing: timing,
-      p_source: source,
-    });
-
-    if (leadError || !leadId) {
+    const capturedLeadId = await captureLead();
+    if (!capturedLeadId) {
       setSaveNotice("Não conseguimos registrar seus dados agora. Tente novamente ou fale com a equipe pelo WhatsApp.");
       setSaving(false);
       return;
     }
 
     const { data, error } = await supabase.rpc("reserve_slot", {
-      p_lead_id: leadId,
+      p_lead_id: capturedLeadId,
       p_slot_id: slot.slot_id,
     });
 
@@ -280,7 +302,7 @@ export default function Home() {
               <h2>Você já fez esse tipo de procedimento?</h2>
               <div className="option-grid compact">
                 {Object.entries(experienceLabels).map(([key, label]) => (
-                  <button key={key} className="option" onClick={() => { setExperience(key); setStep(3); }}>
+                  <button key={key} className="option" onClick={() => { setExperience(key); setLeadId(null); setStep(3); }}>
                     <span className="radio" /> <span>{label}</span><span className="option-arrow">→</span>
                   </button>
                 ))}
@@ -295,7 +317,7 @@ export default function Home() {
               <h2>Quando você gostaria de cuidar disso?</h2>
               <div className="option-grid compact">
                 {Object.entries(timingLabels).map(([key, label]) => (
-                  <button key={key} className="option" onClick={() => { setTiming(key); setStep(4); }}>
+                  <button key={key} className="option" onClick={() => { setTiming(key); setLeadId(null); setStep(4); }}>
                     <span className="radio" /> <span>{label}</span><span className="option-arrow">→</span>
                   </button>
                 ))}
@@ -308,9 +330,10 @@ export default function Home() {
             <form className="quiz-step" onSubmit={continueToSlots}>
               <p className="quiz-kicker">Seu resultado está pronto</p>
               <h2>Para onde enviamos as próximas datas?</h2>
-              <label>Seu nome<input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Como podemos chamar você?" autoComplete="name" /></label>
-              <label>WhatsApp<input required value={phone} onChange={(e) => setPhone(formatBrazilianMobile(e.target.value))} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel" maxLength={15} minLength={15} pattern="\(\d{2}\) \d{5}-\d{4}" title="Digite um celular com DDD, por exemplo: (11) 90000-0000" /></label>
-              <button className="primary-button" type="submit">Ver horários disponíveis <span>→</span></button>
+              <label>Seu nome<input required value={name} onChange={(e) => { setName(e.target.value); setLeadId(null); }} placeholder="Como podemos chamar você?" autoComplete="name" /></label>
+              <label>WhatsApp<input required value={phone} onChange={(e) => { setPhone(formatBrazilianMobile(e.target.value)); setLeadId(null); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel" maxLength={15} minLength={15} pattern="\(\d{2}\) \d{5}-\d{4}" title="Digite um celular com DDD, por exemplo: (11) 90000-0000" /></label>
+              <button className="primary-button" type="submit" disabled={saving}>{saving ? "Salvando seus dados…" : "Ver horários disponíveis"} <span>→</span></button>
+              {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
               <button className="back" type="button" onClick={() => setStep(3)}>← Voltar</button>
               <p className="privacy">Seus dados serão usados somente para este atendimento.</p>
             </form>
@@ -355,7 +378,7 @@ export default function Home() {
               </div>
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
               <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer">{booking ? "Confirmar reserva no WhatsApp" : "Pedir uma data no WhatsApp"} <span>↗</span></a>
-              <button className="restart" onClick={() => { setStep(1); setDay(null); setBooking(null); setSlots([]); }}>Refazer o diagnóstico</button>
+              <button className="restart" onClick={() => { setStep(1); setDay(null); setBooking(null); setSlots([]); setLeadId(null); }}>Refazer o diagnóstico</button>
               <p className="disclaimer">Indicação inicial. O protocolo ideal é definido após avaliação profissional.</p>
             </div>
           )}
