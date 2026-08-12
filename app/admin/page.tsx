@@ -6,8 +6,6 @@ import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import "./admin.css";
 
-const ADMIN_EMAIL = "sistemapsestetica@gmail.com";
-
 function getSiteUrl() {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL?.trim();
@@ -35,6 +33,9 @@ type Lead = {
   timing: string;
   status: string;
   created_at: string;
+  experience?: string;
+  source?: Record<string, string | null> | null;
+  notes?: string | null;
 };
 
 type Slot = {
@@ -76,6 +77,11 @@ const timingLabel: Record<string, string> = {
   semana: "Esta semana",
   quinzena: "Próximas 2 semanas",
   pesquisando: "Pesquisando",
+};
+
+const experienceLabel: Record<string, string> = {
+  primeira: "Será a primeira vez",
+  ja_fiz: "Já realizou o procedimento",
 };
 
 const bookingStatus: Record<string, string> = {
@@ -132,7 +138,7 @@ export default function AdminPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState(ADMIN_EMAIL);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -152,12 +158,16 @@ export default function AdminPage() {
   const [recurringWeeks, setRecurringWeeks] = useState("8");
   const [recurringSlotsPerDay, setRecurringSlotsPerDay] = useState("1");
   const [recurringInterval, setRecurringInterval] = useState("60");
+  const [leadSearch, setLeadSearch] = useState("");
+  const [leadStatusFilter, setLeadStatusFilter] = useState("all");
+  const [leadServiceFilter, setLeadServiceFilter] = useState("all");
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   async function loadDashboard() {
     setLoading(true);
     const [serviceResult, leadResult, slotResult, settingsResult, bookingResult] = await Promise.all([
       supabase.from("services").select("*").order("id"),
-      supabase.from("leads").select("id,name,phone,service_slug,timing,status,created_at").order("created_at", { ascending: false }).limit(100),
+      supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(250),
       supabase.from("slots").select("id,service_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
       supabase.from("clinic_settings").select("deposit_percent,reschedule_notice_hours,payment_provider,pix_enabled").eq("id", true).single(),
       supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone),services(name),slots(starts_at,ends_at)").order("created_at", { ascending: false }).limit(100),
@@ -218,12 +228,6 @@ export default function AdminPage() {
     setBusy(true);
     setMessage("");
     const normalizedEmail = email.trim().toLowerCase();
-
-    if (normalizedEmail !== ADMIN_EMAIL) {
-      setMessage("Este e-mail não está autorizado para administrar a clínica.");
-      setBusy(false);
-      return;
-    }
 
     if (authMode === "signup") {
       const { data, error } = await supabase.auth.signUp({
@@ -357,7 +361,12 @@ export default function AdminPage() {
   const serviceNames = useMemo(() => Object.fromEntries(services.map((service) => [service.id, service.name])), [services]);
   const openSlots = slots.filter((slot) => slot.status === "open").length;
   const activeBookings = bookings.filter((booking) => ["pending", "awaiting_payment", "confirmed"].includes(booking.status)).length;
-  const pendingServices = services.filter((service) => !service.price_cents || !service.duration_minutes).length;
+  const newLeads = leads.filter((lead) => lead.status === "new").length;
+  const filteredLeads = leads.filter((lead) => {
+    const query = leadSearch.trim().toLowerCase();
+    const matchesQuery = !query || lead.name.toLowerCase().includes(query) || lead.phone.includes(query.replace(/\D/g, ""));
+    return matchesQuery && (leadStatusFilter === "all" || lead.status === leadStatusFilter) && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter);
+  });
 
   if (!session) {
     return (
@@ -391,7 +400,10 @@ export default function AdminPage() {
   return (
     <main className="admin-page">
       <header className="admin-header">
-        <div><p className="admin-eyebrow">PS Estética</p><h1>Painel da clínica</h1></div>
+        <div className="admin-header-brand">
+          <Link className="admin-header-logo" href="/" aria-label="Voltar ao site da PS Estética"><img src="/ps-estetica-logo-oficial.png" width="246" height="80" alt="PS Estética Avançada" /></Link>
+          <div><p className="admin-eyebrow">Gestão PS Estética</p><h1>Painel da clínica</h1></div>
+        </div>
         <div className="admin-account"><span>{session.user.email}</span><button onClick={() => supabase.auth.signOut()}>Sair</button></div>
       </header>
 
@@ -400,7 +412,7 @@ export default function AdminPage() {
       <section className="stats-grid" aria-label="Resumo">
         <article><span>Agendamentos ativos</span><b>{activeBookings}</b><small>pendentes e confirmados</small></article>
         <article><span>Horários abertos</span><b>{openSlots}</b><small>datas futuras</small></article>
-        <article><span>Configuração</span><b>{pendingServices}</b><small>procedimentos pendentes</small></article>
+        <article><span>Leads novos</span><b>{newLeads}</b><small>aguardando primeiro contato</small></article>
         <article><span>Sinal</span><b>{settings?.deposit_percent ?? 10}%</b><small>remarcação até {settings?.reschedule_notice_hours ?? 48}h antes</small></article>
       </section>
 
@@ -479,12 +491,18 @@ export default function AdminPage() {
 
       <section className="admin-panel">
         <div className="panel-heading"><div><p className="admin-eyebrow">CRM</p><h2>Leads do quiz</h2></div><p>Os novos contatos aparecem automaticamente após o envio do diagnóstico.</p></div>
+        <div className="crm-toolbar">
+          <label className="crm-search">Buscar lead<input value={leadSearch} onChange={(event) => setLeadSearch(event.target.value)} placeholder="Nome ou WhatsApp" /></label>
+          <label>Status<select value={leadStatusFilter} onChange={(event) => setLeadStatusFilter(event.target.value)}><option value="all">Todos os status</option>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label>Procedimento<select value={leadServiceFilter} onChange={(event) => setLeadServiceFilter(event.target.value)}><option value="all">Todos</option>{services.map((service) => <option key={service.slug} value={service.slug}>{service.name}</option>)}</select></label>
+          <span className="crm-total">{filteredLeads.length} contato(s)</span>
+        </div>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Lead</th><th>Interesse</th><th>Prazo</th><th>Entrada</th><th>Status</th><th>Contato</th></tr></thead>
             <tbody>
-              {leads.length === 0 && <tr><td colSpan={6} className="empty-state">Ainda não há leads cadastrados.</td></tr>}
-              {leads.map((lead) => <tr key={lead.id}><td><b>{lead.name}</b><small>{lead.phone}</small></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td><select value={lead.status} onChange={(event) => updateLeadStatus(lead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td><a href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td></tr>)}
+              {filteredLeads.length === 0 && <tr><td colSpan={6} className="empty-state">Nenhum lead corresponde aos filtros.</td></tr>}
+              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td><select value={lead.status} onChange={(event) => updateLeadStatus(lead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td><a href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td></tr>)}
             </tbody>
           </table>
         </div>
@@ -494,6 +512,17 @@ export default function AdminPage() {
         <div><p className="admin-eyebrow">Próxima integração</p><h2>Pix automático</h2><p>Estrutura preparada para sinal de {settings?.deposit_percent ?? 10}% e regra de remarcação de {settings?.reschedule_notice_hours ?? 48} horas.</p></div>
         <span>{settings?.pix_enabled ? "Ativo" : "Aguardando escolha do provedor"}</span>
       </section>
+
+      {selectedLead && <div className="drawer-backdrop" onClick={() => setSelectedLead(null)} role="presentation">
+        <aside className="lead-drawer" onClick={(event) => event.stopPropagation()} aria-label={`Perfil de ${selectedLead.name}`}>
+          <button className="drawer-close" onClick={() => setSelectedLead(null)} aria-label="Fechar">×</button>
+          <p className="admin-eyebrow">Perfil da cliente</p><h2>{selectedLead.name}</h2>
+          <a className="drawer-whatsapp" href={`https://wa.me/55${selectedLead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">Conversar no WhatsApp ↗</a>
+          <dl><div><dt>Telefone</dt><dd>{selectedLead.phone}</dd></div><div><dt>Procedimento</dt><dd>{services.find((service) => service.slug === selectedLead.service_slug)?.name ?? selectedLead.service_slug}</dd></div><div><dt>Experiência</dt><dd>{selectedLead.experience ? (experienceLabel[selectedLead.experience] ?? selectedLead.experience) : "Não informada"}</dd></div><div><dt>Prazo</dt><dd>{timingLabel[selectedLead.timing] ?? selectedLead.timing}</dd></div><div><dt>Entrada</dt><dd>{formatDate(selectedLead.created_at)}</dd></div><div><dt>Status</dt><dd>{leadStatus[selectedLead.status] ?? selectedLead.status}</dd></div></dl>
+          <div className="source-card"><b>Origem da campanha</b><p>{selectedLead.source?.utm_source || "Acesso direto"}{selectedLead.source?.utm_campaign ? ` · ${selectedLead.source.utm_campaign}` : ""}</p><small>{selectedLead.source?.referrer || "Sem referência externa registrada"}</small></div>
+          <div className="drawer-note"><b>Observações</b><p>{selectedLead.notes || "Nenhuma observação registrada para esta cliente."}</p></div>
+        </aside>
+      </div>}
     </main>
   );
 }
