@@ -29,6 +29,7 @@ type Lead = {
   experience?: string;
   source?: Record<string, string | null> | null;
   notes?: string | null;
+  archived_at?: string | null;
 };
 
 type Slot = {
@@ -166,6 +167,7 @@ export default function AdminPage() {
   const [leadSearch, setLeadSearch] = useState("");
   const [leadStatusFilter, setLeadStatusFilter] = useState("all");
   const [leadServiceFilter, setLeadServiceFilter] = useState("all");
+  const [leadView, setLeadView] = useState<"active" | "archived">("active");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [invites, setInvites] = useState<StaffInvite[]>([]);
@@ -468,6 +470,28 @@ export default function AdminPage() {
     else setLeads((current) => current.map((lead) => lead.id === id ? { ...lead, status } : lead));
   }
 
+  async function archiveLead(lead: Lead) {
+    if (!window.confirm(`Arquivar ${lead.name}? O histórico será preservado e poderá ser restaurado.`)) return;
+    const archivedAt = new Date().toISOString();
+    const { error } = await supabase.from("leads").update({ archived_at: archivedAt }).eq("id", lead.id);
+    if (error) setMessage(`Não foi possível arquivar: ${error.message}`);
+    else { setLeads((current) => current.map((item) => item.id === lead.id ? { ...item, archived_at: archivedAt } : item)); setSelectedLead(null); setMessage(`${lead.name} foi arquivado.`); }
+  }
+
+  async function restoreLead(lead: Lead) {
+    const { error } = await supabase.from("leads").update({ archived_at: null }).eq("id", lead.id);
+    if (error) setMessage(`Não foi possível restaurar: ${error.message}`);
+    else { setLeads((current) => current.map((item) => item.id === lead.id ? { ...item, archived_at: null } : item)); setSelectedLead(null); setMessage(`${lead.name} voltou para a lista de leads ativos.`); }
+  }
+
+  async function permanentlyDeleteLead(lead: Lead) {
+    const confirmation = window.prompt(`Esta ação não pode ser desfeita. Digite EXCLUIR para apagar permanentemente ${lead.name}.`);
+    if (confirmation !== "EXCLUIR") { if (confirmation !== null) setMessage("Exclusão cancelada: digite exatamente EXCLUIR."); return; }
+    const { error } = await supabase.rpc("permanently_delete_lead", { p_lead_id: lead.id });
+    if (error) { setMessage(error.message.includes("agendamentos") ? "Este lead possui agendamentos e deve permanecer arquivado para preservar o histórico." : `Não foi possível excluir: ${error.message}`); return; }
+    setLeads((current) => current.filter((item) => item.id !== lead.id)); setSelectedLead(null); setMessage(`${lead.name} foi excluído permanentemente.`);
+  }
+
   async function inviteProfessional(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setMessage(""); setBusy(true);
     const { error } = await supabase.from("staff_invites").upsert({
@@ -556,11 +580,12 @@ export default function AdminPage() {
   const professionalNames = Object.fromEntries(allProfessionals.map((professional) => [professional.user_id, professional.full_name]));
   const openSlots = slots.filter((slot) => slot.status === "open").length;
   const activeBookings = bookings.filter((booking) => ["pending", "awaiting_payment", "confirmed"].includes(booking.status)).length;
-  const newLeads = leads.filter((lead) => lead.status === "new").length;
+  const newLeads = leads.filter((lead) => lead.status === "new" && !lead.archived_at).length;
   const filteredLeads = leads.filter((lead) => {
     const query = leadSearch.trim().toLowerCase();
     const matchesQuery = !query || lead.name.toLowerCase().includes(query) || lead.phone.includes(query.replace(/\D/g, ""));
-    return matchesQuery && (leadStatusFilter === "all" || lead.status === leadStatusFilter) && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter);
+    const matchesView = leadView === "archived" ? Boolean(lead.archived_at) : !lead.archived_at;
+    return matchesView && matchesQuery && (leadStatusFilter === "all" || lead.status === leadStatusFilter) && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter);
   });
 
   if (!session) {
@@ -739,6 +764,7 @@ export default function AdminPage() {
       <section className="admin-panel">
         <div className="panel-heading"><div><p className="admin-eyebrow">CRM</p><h2>Leads do quiz</h2></div><p>Os novos contatos aparecem automaticamente após o envio do diagnóstico.</p></div>
         <div className="crm-toolbar">
+          <div className="lead-view-tabs" role="group" aria-label="Visualização dos leads"><button className={leadView === "active" ? "active" : ""} onClick={() => setLeadView("active")}>Ativos</button><button className={leadView === "archived" ? "active" : ""} onClick={() => setLeadView("archived")}>Arquivados ({leads.filter((lead) => lead.archived_at).length})</button></div>
           <label className="crm-search">Buscar lead<input value={leadSearch} onChange={(event) => setLeadSearch(event.target.value)} placeholder="Nome ou WhatsApp" /></label>
           <label>Status<select value={leadStatusFilter} onChange={(event) => setLeadStatusFilter(event.target.value)}><option value="all">Todos os status</option>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label>Procedimento<select value={leadServiceFilter} onChange={(event) => setLeadServiceFilter(event.target.value)}><option value="all">Todos</option>{services.map((service) => <option key={service.slug} value={service.slug}>{service.name}</option>)}</select></label>
@@ -748,7 +774,7 @@ export default function AdminPage() {
           <table>
             <thead><tr><th>Lead</th><th>Interesse</th><th>Prazo</th><th>Entrada</th><th>Status</th><th>Contato</th></tr></thead>
             <tbody>
-              {filteredLeads.length === 0 && <tr><td colSpan={6} className="empty-state">Nenhum lead corresponde aos filtros.</td></tr>}
+              {filteredLeads.length === 0 && <tr><td colSpan={6} className="empty-state">{leadView === "archived" ? "Nenhum lead arquivado." : "Nenhum lead corresponde aos filtros."}</td></tr>}
               {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td><select value={lead.status} onChange={(event) => updateLeadStatus(lead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td><a href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td></tr>)}
             </tbody>
           </table>
@@ -768,6 +794,7 @@ export default function AdminPage() {
           <dl><div><dt>Telefone</dt><dd>{selectedLead.phone}</dd></div><div><dt>Procedimento</dt><dd>{services.find((service) => service.slug === selectedLead.service_slug)?.name ?? selectedLead.service_slug}</dd></div><div><dt>Experiência</dt><dd>{selectedLead.experience ? (experienceLabel[selectedLead.experience] ?? selectedLead.experience) : "Não informada"}</dd></div><div><dt>Prazo</dt><dd>{timingLabel[selectedLead.timing] ?? selectedLead.timing}</dd></div><div><dt>Entrada</dt><dd>{formatDate(selectedLead.created_at)}</dd></div><div><dt>Status</dt><dd>{leadStatus[selectedLead.status] ?? selectedLead.status}</dd></div></dl>
           <div className="source-card"><b>Origem da campanha</b><p>{selectedLead.source?.utm_source || "Acesso direto"}{selectedLead.source?.utm_campaign ? ` · ${selectedLead.source.utm_campaign}` : ""}</p><small>{selectedLead.source?.referrer || "Sem referência externa registrada"}</small></div>
           <div className="drawer-note"><b>Observações</b><p>{selectedLead.notes || "Nenhuma observação registrada para esta cliente."}</p></div>
+          <div className="lead-management"><b>Gerenciar cadastro</b><p>{selectedLead.archived_at ? `Arquivado em ${formatDate(selectedLead.archived_at)}. Você pode restaurar este contato ou acessar as opções avançadas.` : "Arquive contatos que não precisam aparecer na lista principal. O histórico e os agendamentos serão preservados."}</p><div className="lead-management-actions">{selectedLead.archived_at ? <button className="secondary-action" onClick={() => restoreLead(selectedLead)}>Restaurar lead</button> : <button className="secondary-action" onClick={() => archiveLead(selectedLead)}>Arquivar lead</button>}</div>{selectedLead.archived_at && <details className="advanced-options"><summary>Opções avançadas</summary><p>A exclusão permanente só é permitida para leads sem agendamentos vinculados.</p><button className="danger-button" onClick={() => permanentlyDeleteLead(selectedLead)}>Excluir permanentemente</button></details>}</div>
         </aside>
       </div>}
     </main>
