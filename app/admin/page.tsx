@@ -44,7 +44,10 @@ type Slot = {
 
 type Settings = {
   deposit_percent: number;
+  min_deposit_cents: number;
+  reservation_expiry_minutes: number;
   reschedule_notice_hours: number;
+  whatsapp: string;
   payment_provider: string | null;
   pix_enabled: boolean;
 };
@@ -204,7 +207,7 @@ export default function AdminPage() {
       supabase.from("services").select("*").order("id"),
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(250),
       supabase.from("slots").select("id,service_id,professional_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
-      supabase.from("clinic_settings").select("deposit_percent,reschedule_notice_hours,payment_provider,pix_enabled").eq("id", true).single(),
+      supabase.from("clinic_settings").select("deposit_percent,min_deposit_cents,reservation_expiry_minutes,reschedule_notice_hours,whatsapp,payment_provider,pix_enabled").eq("id", true).single(),
       supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(100),
       supabase.from("staff_profiles").select("user_id,full_name,email,role,active").order("full_name"),
       supabase.from("staff_invites").select("email,full_name,role,service_id,active,created_at").order("created_at", { ascending: false }),
@@ -376,6 +379,29 @@ export default function AdminPage() {
     setNewServiceName(""); setNewServiceDescription(""); setNewServicePrice(""); setNewServiceDuration("60");
     setMessage("Procedimento criado e disponível nas agendas.");
     await loadDashboard();
+  }
+
+  async function saveSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!settings || busy) return;
+    const whatsapp = settings.whatsapp.replace(/\D/g, "");
+    if (settings.deposit_percent < 1 || settings.deposit_percent > 100) return setMessage("O sinal padrão deve ficar entre 1% e 100%.");
+    if (settings.min_deposit_cents < 0) return setMessage("O valor mínimo do sinal não pode ser negativo.");
+    if (settings.reservation_expiry_minutes < 5 || settings.reservation_expiry_minutes > 1440) return setMessage("A reserva deve expirar entre 5 minutos e 24 horas.");
+    if (settings.reschedule_notice_hours < 0 || settings.reschedule_notice_hours > 720) return setMessage("O prazo de remarcação deve ficar entre 0 e 720 horas.");
+    if (!/^\d{10,13}$/.test(whatsapp)) return setMessage("Informe o WhatsApp da clínica com DDD e somente números.");
+    setBusy(true);
+    const { error } = await supabase.from("clinic_settings").update({
+      deposit_percent: settings.deposit_percent,
+      min_deposit_cents: settings.min_deposit_cents,
+      reservation_expiry_minutes: settings.reservation_expiry_minutes,
+      reschedule_notice_hours: settings.reschedule_notice_hours,
+      whatsapp,
+      updated_at: new Date().toISOString(),
+    }).eq("id", true);
+    setBusy(false);
+    if (error) setMessage(`Não foi possível salvar as configurações: ${error.message}`);
+    else { setSettings({ ...settings, whatsapp }); setMessage("Configurações salvas e aplicadas aos próximos agendamentos."); }
   }
 
   async function removeService(service: Service) {
@@ -834,13 +860,16 @@ export default function AdminPage() {
       </section>
 
       <section className="admin-panel settings-summary">
-        <div className="panel-heading"><div><p className="admin-eyebrow">Regras atuais</p><h2>Configuração da operação</h2></div><p>Resumo das regras aplicadas automaticamente no agendamento.</p></div>
-        <dl>
-          <div><dt>Sinal da reserva</dt><dd>{settings?.deposit_percent ?? 10}% do procedimento</dd></div>
-          <div><dt>Prazo para remarcação</dt><dd>{settings?.reschedule_notice_hours ?? 48} horas antes</dd></div>
-          <div><dt>Meio de pagamento</dt><dd>{settings?.payment_provider || "Mercado Pago"}</dd></div>
-          <div><dt>Pix</dt><dd>{settings?.pix_enabled ? "Ativo" : "Aguardando credenciais"}</dd></div>
-        </dl>
+        <div className="panel-heading"><div><p className="admin-eyebrow">Regras da clínica</p><h2>Configuração da operação</h2></div><p>As alterações passam a valer para novos procedimentos e agendamentos. Reservas existentes são preservadas.</p></div>
+        {settings && <form className="settings-form" onSubmit={saveSettings}>
+          <label>Sinal padrão (%)<input type="number" min="1" max="100" value={settings.deposit_percent} onChange={(event) => setSettings({ ...settings, deposit_percent: Number(event.target.value) })} /><small>Usado ao criar novos procedimentos.</small></label>
+          <label>Sinal mínimo (R$)<input type="number" min="0" step="0.01" value={(settings.min_deposit_cents / 100).toFixed(2)} onChange={(event) => setSettings({ ...settings, min_deposit_cents: Math.round(Number(event.target.value) * 100) })} /><small>Evita sinais muito baixos.</small></label>
+          <label>Expiração da reserva (min)<input type="number" min="5" max="1440" value={settings.reservation_expiry_minutes} onChange={(event) => setSettings({ ...settings, reservation_expiry_minutes: Number(event.target.value) })} /><small>Libera a vaga se o Pix não for pago.</small></label>
+          <label>Remarcação mínima (h)<input type="number" min="0" max="720" value={settings.reschedule_notice_hours} onChange={(event) => setSettings({ ...settings, reschedule_notice_hours: Number(event.target.value) })} /><small>Antecedência exigida da cliente.</small></label>
+          <label>WhatsApp da clínica<input inputMode="numeric" value={settings.whatsapp} onChange={(event) => setSettings({ ...settings, whatsapp: event.target.value.replace(/\D/g, "").slice(0, 13) })} /><small>País + DDD + número, sem símbolos.</small></label>
+          <div className="settings-provider"><span>Pagamento</span><b>{settings.payment_provider || "Mercado Pago"}</b><small>{settings.pix_enabled ? "Pix automático ativo" : "Aguardando credenciais"}</small></div>
+          <button type="submit" disabled={busy}>{busy ? "Salvando…" : "Salvar configurações"}</button>
+        </form>}
       </section>
       </>}
         </div>
