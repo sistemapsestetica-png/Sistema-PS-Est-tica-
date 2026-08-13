@@ -25,6 +25,7 @@ type BookingConfirmation = {
 };
 
 type PixPayment = { status: string; pix_copy_paste?: string; qr_code_base64?: string; ticket_url?: string; expires_at?: string };
+type LeadSession = { lead_id: number; reservation_token: string };
 
 const days: Record<DayKey, { name: string; icon: string; short: string; result: string; how: string; expected: string; cta: string }> = {
   lavieen: {
@@ -109,6 +110,7 @@ export default function Home() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [booking, setBooking] = useState<BookingConfirmation | null>(null);
   const [leadId, setLeadId] = useState<number | null>(null);
+  const [leadToken, setLeadToken] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<OpenSlot | null>(null);
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
@@ -154,12 +156,14 @@ export default function Home() {
 
   function pickDay(value: DayKey) {
     setLeadId(null);
+    setLeadToken(null);
     setDay(value);
     window.setTimeout(() => setStep(2), 160);
   }
 
   function startWithDay(value: DayKey) {
     setLeadId(null);
+    setLeadToken(null);
     setDay(value);
     setStep(2);
     document.getElementById("quiz")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -167,7 +171,7 @@ export default function Home() {
 
   async function captureLead() {
     if (!day) return null;
-    if (leadId) return leadId;
+    if (leadId && leadToken) return { lead_id: leadId, reservation_token: leadToken };
 
     const params = new URLSearchParams(window.location.search);
     const source = {
@@ -179,7 +183,7 @@ export default function Home() {
       referrer: document.referrer || null,
     };
 
-    const { data, error } = await supabase.rpc("capture_lead", {
+    const { data, error } = await supabase.rpc("capture_lead_session", {
       p_name: name.trim(),
       p_phone: phone.replace(/\D/g, ""),
       p_service_slug: day,
@@ -188,10 +192,11 @@ export default function Home() {
       p_source: source,
       p_email: email.trim().toLowerCase(),
     });
-    if (error || !data) return null;
-    const capturedLeadId = Number(data);
-    setLeadId(capturedLeadId);
-    return capturedLeadId;
+    const session = data?.[0] as LeadSession | undefined;
+    if (error || !session) return null;
+    setLeadId(Number(session.lead_id));
+    setLeadToken(session.reservation_token);
+    return session;
   }
 
   async function loadOpenSlots() {
@@ -213,8 +218,8 @@ export default function Home() {
     if (!day || saving) return;
     setSaveNotice("");
     setSaving(true);
-    const capturedLeadId = await captureLead();
-    if (!capturedLeadId) {
+    const leadSession = await captureLead();
+    if (!leadSession) {
       setSaveNotice("Não conseguimos registrar seus dados agora. Tente novamente ou fale com a equipe pelo WhatsApp.");
       setSaving(false);
       return;
@@ -228,15 +233,16 @@ export default function Home() {
     if (!day || saving) return;
     setSaving(true);
     setSaveNotice("");
-    const capturedLeadId = await captureLead();
-    if (!capturedLeadId) {
+    const leadSession = await captureLead();
+    if (!leadSession) {
       setSaveNotice("Não conseguimos registrar seus dados agora. Tente novamente ou fale com a equipe pelo WhatsApp.");
       setSaving(false);
       return;
     }
 
-    const { data, error } = await supabase.rpc("reserve_slot", {
-      p_lead_id: capturedLeadId,
+    const { data, error } = await supabase.rpc("reserve_slot_secure", {
+      p_lead_id: leadSession.lead_id,
+      p_reservation_token: leadSession.reservation_token,
       p_slot_id: slot.slot_id,
     });
     if (error || !data?.[0]) {
@@ -333,7 +339,7 @@ export default function Home() {
               <h2>Você já realizou esse tipo de tratamento?</h2>
               <div className="option-grid compact">
                 {Object.entries(experienceLabels).map(([key, label]) => (
-                  <button key={key} className="option" onClick={() => { setExperience(key); setLeadId(null); setStep(3); }}>
+                  <button key={key} className="option" onClick={() => { setExperience(key); setLeadId(null); setLeadToken(null); setStep(3); }}>
                     <span className="radio" /> <span>{label}</span><span className="option-arrow">→</span>
                   </button>
                 ))}
@@ -348,7 +354,7 @@ export default function Home() {
               <h2>Quando você gostaria de começar a cuidar disso?</h2>
               <div className="option-grid compact">
                 {Object.entries(timingLabels).map(([key, label]) => (
-                  <button key={key} className="option" onClick={() => { setTiming(key); setLeadId(null); setStep(4); }}>
+                  <button key={key} className="option" onClick={() => { setTiming(key); setLeadId(null); setLeadToken(null); setStep(4); }}>
                     <span className="radio" /> <span>{label}</span><span className="option-arrow">→</span>
                   </button>
                 ))}
@@ -361,9 +367,9 @@ export default function Home() {
             <form className="quiz-step" onSubmit={continueToSlots}>
               <p className="quiz-kicker">Sua indicação inicial está quase pronta</p>
               <h2>Preencha seus dados para liberar a agenda.</h2>
-              <label>Seu nome<input required value={name} onChange={(e) => { setName(e.target.value); setLeadId(null); }} placeholder="Como podemos chamar você?" autoComplete="name" /></label>
-              <label>WhatsApp<input required value={phone} onChange={(e) => { setPhone(formatBrazilianMobile(e.target.value)); setLeadId(null); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel" maxLength={15} minLength={15} pattern="\(\d{2}\) \d{5}-\d{4}" title="Digite um celular com DDD, por exemplo: (11) 90000-0000" /></label>
-              <label>E-mail para o Pix<input required type="email" value={email} onChange={(e) => { setEmail(e.target.value); setLeadId(null); }} placeholder="voce@exemplo.com" autoComplete="email" /></label>
+              <label>Seu nome<input required value={name} onChange={(e) => { setName(e.target.value); setLeadId(null); setLeadToken(null); }} placeholder="Como podemos chamar você?" autoComplete="name" /></label>
+              <label>WhatsApp<input required value={phone} onChange={(e) => { setPhone(formatBrazilianMobile(e.target.value)); setLeadId(null); setLeadToken(null); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel" maxLength={15} minLength={15} pattern="\(\d{2}\) \d{5}-\d{4}" title="Digite um celular com DDD, por exemplo: (11) 90000-0000" /></label>
+              <label>E-mail para o Pix<input required type="email" value={email} onChange={(e) => { setEmail(e.target.value); setLeadId(null); setLeadToken(null); }} placeholder="voce@exemplo.com" autoComplete="email" /></label>
               <button className="primary-button" type="submit" disabled={saving}>{saving ? "Preparando sua agenda…" : "Liberar horários disponíveis"} <span>→</span></button>
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
               <button className="back" type="button" onClick={() => setStep(3)}>← Voltar</button>
@@ -413,7 +419,7 @@ export default function Home() {
               {booking && pixPayment && !paymentConfirmed ? (
                 <div className="quiz-pix">
                   <div>
-                    <small>Sinal de 10% para confirmar</small>
+                    <small>Sinal via Pix para confirmar</small>
                     <strong>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(booking.deposit_cents / 100)}</strong>
                     <p>Escaneie o QR Code ou copie o código Pix. A confirmação acontece automaticamente após o pagamento.</p>
                   </div>
@@ -424,7 +430,7 @@ export default function Home() {
               {booking && paymentConfirmed ? <p className="payment-success" role="status">Pagamento aprovado. Seu horário está confirmado na agenda.</p> : null}
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
               <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer">{booking ? "Preciso de ajuda com a reserva" : "Pedir uma data no WhatsApp"} <span>↗</span></a>
-              <button className="restart" onClick={() => { setStep(1); setDay(null); setBooking(null); setSlots([]); setLeadId(null); setPixPayment(null); setPaymentConfirmed(false); setSaveNotice(""); }}>Refazer o diagnóstico</button>
+              <button className="restart" onClick={() => { setStep(1); setDay(null); setBooking(null); setSlots([]); setLeadId(null); setLeadToken(null); setPixPayment(null); setPaymentConfirmed(false); setSaveNotice(""); }}>Refazer o diagnóstico</button>
               <p className="disclaimer">Esta é uma indicação inicial. O protocolo, número de sessões e possíveis contraindicações serão definidos após avaliação profissional.</p>
             </div>
           )}
