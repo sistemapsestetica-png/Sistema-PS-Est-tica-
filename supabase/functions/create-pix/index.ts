@@ -63,7 +63,7 @@ Deno.serve(async (request) => {
     const notificationUrl = Deno.env.get("MERCADO_PAGO_WEBHOOK_URL");
     const paymentPayload: Record<string, unknown> = {
       transaction_amount: Number(booking.deposit_cents) / 100,
-      description: `Sinal de 10% — ${service?.name ?? "PS Estética"}`,
+      description: `Sinal de reserva — ${service?.name ?? "PS Estética"}`,
       payment_method_id: "pix",
       external_reference: `booking:${booking.id}`,
       date_of_expiration: booking.payment_expires_at,
