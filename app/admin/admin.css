@@ -159,5 +159,36 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 .link-list button { min-height: 36px; padding: 8px 11px; flex: 0 0 auto; font-size: 10px; }
 .payment-status { padding: 7px 9px; display: inline-block; border-radius: 999px; color: #836425; background: #f6eed8; font-size: 9px; font-weight: 800; text-transform: uppercase; }
 .payment-status.paid { color: #38624b; background: #e6f2ea; }
+
+.staff-card { align-items: flex-start !important; }
+.staff-card.pending { background: #fcf8ee; border-color: #d9c69c; }
+.staff-card.inactive,.link-list article.inactive,.service-editor article.archived { opacity: .72; background: #f5f1f2; }
+.staff-card-content { width: 100%; gap: 12px !important; }
+.staff-card-title { display: flex !important; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.staff-card-title > div { display: grid; gap: 4px; }
+.status-badge { width: max-content; padding: 6px 9px; border-radius: 999px; font-size: 8px !important; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
+.status-badge.active { color: #4d715c; background: #e7f0e9; }
+.status-badge.pending { color: var(--admin-gold-dark); background: #f3e8ce; }
+.status-badge.inactive { color: #756b70; background: #e8e2e5; }
+.staff-actions,.service-actions,.link-actions,.slot-actions { display: flex !important; flex-wrap: wrap; align-items: center; gap: 8px !important; }
+.staff-actions button,.secondary-action,.danger-button,.delete-slot { min-height: 34px; padding: 7px 11px; border: 1px solid var(--admin-line); border-radius: 2px 9px 2px 9px; background: #fff; color: var(--admin-plum); font-size: 10px; font-weight: 700; cursor: pointer; }
+.staff-actions .danger-link,.danger-button,.delete-slot { color: #8b4653; border-color: #d8bbc1; background: #fff8f9; }
+.service-checks { display: flex !important; flex-wrap: wrap; gap: 7px !important; }
+.service-checks label { padding: 7px 9px; display: flex; align-items: center; gap: 6px; color: var(--admin-plum); border: 1px solid var(--admin-line); border-radius: 999px; background: #faf7f8; font-size: 10px; cursor: pointer; }
+.service-checks input { accent-color: var(--admin-plum); }
+.link-actions { flex: 0 0 auto; }
+.link-actions .secondary-action { background: #fff; color: var(--admin-plum); }
+.link-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.new-service-form { margin: 0 0 22px; padding: 18px; display: grid; grid-template-columns: 1.05fr 1fr 1.35fr .65fr .65fr auto; gap: 11px; align-items: end; border: 1px solid #d7c79e; border-radius: 2px 15px 2px 15px; background: linear-gradient(135deg,#faf6eb,#fffdf9); }
+.new-service-form h3 { margin: 0; color: var(--admin-plum); font: 400 20px Georgia,serif; }
+.new-service-form label { display: grid; gap: 7px; color: var(--admin-plum-soft); font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.new-service-form input { min-height: 44px; padding: 11px 13px; color: var(--admin-ink); background: #fff; border: 1px solid var(--admin-line); border-radius: 2px 11px 2px 11px; }
+.new-service-form button { min-height: 44px; padding: 11px 15px; border: 0; border-radius: 2px 11px 2px 11px; background: var(--admin-plum); color: #fff; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.service-card-heading { min-height: 50px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.service-actions > button { flex: 1; }
+.service-actions .danger-button,.service-actions .secondary-action { min-height: 44px; }
+.slot-actions { justify-content: flex-end; }
+.slot-list .delete-slot { min-width: auto; border-radius: 2px 8px 2px 8px; text-transform: none; letter-spacing: 0; }
 @media(max-width:1000px){.team-layout{grid-template-columns:1fr}.team-layout>form{padding:0 0 30px;border-right:0;border-bottom:1px solid var(--admin-line)}.link-form{grid-template-columns:1fr 1fr}.link-list{grid-template-columns:1fr}}
-@media(max-width:650px){.link-form{grid-template-columns:1fr}.direct-links-panel .panel-heading{align-items:flex-start}.copy-master{width:100%}}
+@media(max-width:1150px){.new-service-form{grid-template-columns:1fr 1fr 1fr}.new-service-form>div{grid-column:1/-1}}
+@media(max-width:650px){.link-form,.new-service-form{grid-template-columns:1fr}.direct-links-panel .panel-heading{align-items:flex-start}.copy-master{width:100%}.staff-card-title,.link-list article{align-items:flex-start;flex-direction:column}.link-actions{width:100%}.link-actions button{flex:1}.slot-list article{align-items:flex-start;flex-direction:column}.slot-actions{width:100%;justify-content:space-between}}

@@ -62,6 +62,7 @@ type Booking = {
 };
 
 type StaffProfile = { user_id: string; full_name: string; email: string; role: "receptionist" | "professional"; active: boolean };
+type StaffInvite = { email: string; full_name: string; role: "receptionist" | "professional"; service_id: number | null; active: boolean; created_at: string };
 type Assignment = { professional_id: string; service_id: number };
 type BookingLink = { id: number; token: string; label: string; service_id: number | null; professional_id: string | null; active: boolean; uses: number; created_at: string };
 
@@ -134,6 +135,10 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function slugify(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
 export default function AdminPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -163,6 +168,7 @@ export default function AdminPage() {
   const [leadServiceFilter, setLeadServiceFilter] = useState("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [staff, setStaff] = useState<StaffProfile[]>([]);
+  const [invites, setInvites] = useState<StaffInvite[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [bookingLinks, setBookingLinks] = useState<BookingLink[]>([]);
   const [slotProfessionalId, setSlotProfessionalId] = useState("");
@@ -173,21 +179,26 @@ export default function AdminPage() {
   const [linkLabel, setLinkLabel] = useState("Agenda direta");
   const [linkServiceId, setLinkServiceId] = useState("");
   const [linkProfessionalId, setLinkProfessionalId] = useState("");
+  const [newServiceName, setNewServiceName] = useState("");
+  const [newServiceDescription, setNewServiceDescription] = useState("");
+  const [newServicePrice, setNewServicePrice] = useState("");
+  const [newServiceDuration, setNewServiceDuration] = useState("60");
 
   async function loadDashboard() {
     setLoading(true);
-    const [serviceResult, leadResult, slotResult, settingsResult, bookingResult, staffResult, assignmentResult, linkResult] = await Promise.all([
+    const [serviceResult, leadResult, slotResult, settingsResult, bookingResult, staffResult, inviteResult, assignmentResult, linkResult] = await Promise.all([
       supabase.from("services").select("*").order("id"),
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(250),
       supabase.from("slots").select("id,service_id,professional_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
       supabase.from("clinic_settings").select("deposit_percent,reschedule_notice_hours,payment_provider,pix_enabled").eq("id", true).single(),
       supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(100),
       supabase.from("staff_profiles").select("user_id,full_name,email,role,active").order("full_name"),
+      supabase.from("staff_invites").select("email,full_name,role,service_id,active,created_at").order("created_at", { ascending: false }),
       supabase.from("professional_services").select("professional_id,service_id").eq("active", true),
       supabase.from("booking_links").select("id,token,label,service_id,professional_id,active,uses,created_at").order("created_at", { ascending: false }).limit(50),
     ]);
 
-    const firstError = serviceResult.error || leadResult.error || slotResult.error || settingsResult.error || bookingResult.error || staffResult.error || assignmentResult.error || linkResult.error;
+    const firstError = serviceResult.error || leadResult.error || slotResult.error || settingsResult.error || bookingResult.error || staffResult.error || inviteResult.error || assignmentResult.error || linkResult.error;
     if (firstError) setMessage(`Não foi possível carregar o painel: ${firstError.message}`);
     const loadedServices = (serviceResult.data ?? []) as Service[];
     setServices(loadedServices);
@@ -199,13 +210,15 @@ export default function AdminPage() {
     setBookings((bookingResult.data ?? []) as unknown as Booking[]);
     setSettings(settingsResult.data as Settings | null);
     setStaff((staffResult.data ?? []) as StaffProfile[]);
+    setInvites((inviteResult.data ?? []) as StaffInvite[]);
     setAssignments((assignmentResult.data ?? []) as Assignment[]);
     setBookingLinks((linkResult.data ?? []) as BookingLink[]);
-    if (serviceResult.data?.[0]) {
-      setSlotServiceId((current) => current || String(serviceResult.data[0].id));
-      setRecurringServiceId((current) => current || String(serviceResult.data[0].id));
-      setInviteServiceId((current) => current || String(serviceResult.data[0].id));
-      setLinkServiceId((current) => current || String(serviceResult.data[0].id));
+    const firstActiveService = loadedServices.find((service) => service.active);
+    if (firstActiveService) {
+      setSlotServiceId((current) => current || String(firstActiveService.id));
+      setRecurringServiceId((current) => current || String(firstActiveService.id));
+      setInviteServiceId((current) => current || String(firstActiveService.id));
+      setLinkServiceId((current) => current || String(firstActiveService.id));
     }
     setLoading(false);
   }
@@ -220,9 +233,19 @@ export default function AdminPage() {
       .maybeSingle();
 
     if (error || !data) {
-      setAuthorized(false);
-      setLoading(false);
-      return;
+      const userId = (await supabase.auth.getUser()).data.user?.id ?? "";
+      const { data: receptionist } = await supabase
+        .from("staff_profiles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .eq("role", "receptionist")
+        .eq("active", true)
+        .maybeSingle();
+      if (!receptionist) {
+        setAuthorized(false);
+        setLoading(false);
+        return;
+      }
     }
     setAuthorized(true);
     await loadDashboard();
@@ -271,6 +294,10 @@ export default function AdminPage() {
     } : service));
   }
 
+  function updateServiceText(id: number, field: "name" | "description", value: string) {
+    setServices((current) => current.map((service) => service.id === id ? { ...service, [field]: value } : service));
+  }
+
   function updateServicePrice(id: number, value: string) {
     setServicePriceDrafts((current) => ({
       ...current,
@@ -293,6 +320,8 @@ export default function AdminPage() {
       return;
     }
     const { error } = await supabase.from("services").update({
+      name: service.name.trim(),
+      description: service.description.trim(),
       price_cents: priceCents,
       duration_minutes: service.duration_minutes,
     }).eq("id", service.id);
@@ -303,6 +332,59 @@ export default function AdminPage() {
     setServices((current) => current.map((item) => item.id === service.id ? { ...item, price_cents: priceCents } : item));
     setServicePriceDrafts((current) => ({ ...current, [service.id]: formatPriceInput(priceCents) }));
     setMessage(`${service.name} atualizado.`);
+  }
+
+  async function createService(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    const priceCents = parsePriceInput(newServicePrice);
+    const duration = Number(newServiceDuration);
+    const name = newServiceName.trim();
+    if (name.length < 2 || !priceCents || priceCents <= 0 || !duration || duration < 5) {
+      setMessage("Informe nome, preço e duração válidos para criar o procedimento.");
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.from("services").insert({
+      name,
+      slug: slugify(name),
+      description: newServiceDescription.trim(),
+      price_cents: priceCents,
+      duration_minutes: duration,
+      deposit_percent: settings?.deposit_percent ?? 10,
+      active: true,
+    });
+    setBusy(false);
+    if (error) {
+      setMessage(error.code === "23505" ? "Já existe um procedimento com esse nome." : `Erro ao criar procedimento: ${error.message}`);
+      return;
+    }
+    setNewServiceName(""); setNewServiceDescription(""); setNewServicePrice(""); setNewServiceDuration("60");
+    setMessage("Procedimento criado e disponível nas agendas.");
+    await loadDashboard();
+  }
+
+  async function removeService(service: Service) {
+    if (!window.confirm(`Remover ${service.name}? Se já houver histórico, ele será arquivado para preservar os agendamentos.`)) return;
+    setMessage("");
+    const { error } = await supabase.from("services").delete().eq("id", service.id);
+    if (!error) {
+      setMessage(`${service.name} excluído.`);
+      await loadDashboard();
+      return;
+    }
+    const { error: archiveError } = await supabase.from("services").update({ active: false }).eq("id", service.id);
+    if (archiveError) setMessage(`Não foi possível remover: ${archiveError.message}`);
+    else {
+      setMessage(`${service.name} possui histórico e foi arquivado. Ele não aparece mais para clientes.`);
+      await loadDashboard();
+    }
+  }
+
+  async function restoreService(service: Service) {
+    const { error } = await supabase.from("services").update({ active: true }).eq("id", service.id);
+    if (error) setMessage(`Não foi possível restaurar: ${error.message}`);
+    else { setMessage(`${service.name} restaurado.`); await loadDashboard(); }
   }
 
   async function createSlot(event: FormEvent<HTMLFormElement>) {
@@ -340,6 +422,13 @@ export default function AdminPage() {
     const { error } = await supabase.from("slots").update({ status: nextStatus }).eq("id", slot.id);
     if (error) setMessage(`Erro ao alterar horário: ${error.message}`);
     else await loadDashboard();
+  }
+
+  async function deleteSlot(slot: Slot) {
+    if (!['open', 'blocked'].includes(slot.status) || !window.confirm("Excluir este horário da agenda?")) return;
+    const { error } = await supabase.from("slots").delete().eq("id", slot.id);
+    if (error) setMessage(`Erro ao excluir horário: ${error.message}`);
+    else { setMessage("Horário excluído."); await loadDashboard(); }
   }
 
   async function createRecurringSlots(event: FormEvent<HTMLFormElement>) {
@@ -380,23 +469,74 @@ export default function AdminPage() {
   }
 
   async function inviteProfessional(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setMessage("");
+    event.preventDefault(); setMessage(""); setBusy(true);
     const { error } = await supabase.from("staff_invites").upsert({
       email: inviteEmail.trim().toLowerCase(), full_name: inviteName.trim(), role: "professional",
       service_id: Number(inviteServiceId), invited_by: session?.user.id, active: true,
     }, { onConflict: "email" });
+    setBusy(false);
     if (error) setMessage(`Erro ao autorizar profissional: ${error.message}`);
-    else { setMessage(`Profissional autorizado. Envie ${PROFESSIONAL_URL} para que crie a senha.`); setInviteName(""); setInviteEmail(""); }
+    else {
+      setMessage("Autorização criada. O profissional ficará pendente até criar a própria senha.");
+      setInviteName(""); setInviteEmail("");
+      await loadDashboard();
+    }
+  }
+
+  async function copyProfessionalAccess(invite: StaffInvite) {
+    const url = `${PROFESSIONAL_URL}?email=${encodeURIComponent(invite.email)}&primeiro=1`;
+    await navigator.clipboard.writeText(url);
+    setMessage(`Link de primeiro acesso de ${invite.full_name} copiado.`);
+  }
+
+  async function cancelInvite(invite: StaffInvite) {
+    if (!window.confirm(`Cancelar o acesso pendente de ${invite.full_name}?`)) return;
+    const { error } = await supabase.from("staff_invites").update({ active: false }).eq("email", invite.email);
+    if (error) setMessage(`Erro ao cancelar convite: ${error.message}`);
+    else { setMessage("Autorização pendente cancelada."); await loadDashboard(); }
+  }
+
+  async function toggleProfessionalActive(professional: StaffProfile) {
+    const nextActive = !professional.active;
+    if (!nextActive && !window.confirm(`Desativar ${professional.full_name}? A agenda existente será preservada, mas o acesso e novos vínculos ficarão indisponíveis.`)) return;
+    const { error } = await supabase.from("staff_profiles").update({ active: nextActive }).eq("user_id", professional.user_id);
+    if (error) setMessage(`Erro ao alterar profissional: ${error.message}`);
+    else { setMessage(nextActive ? "Profissional reativado." : "Profissional desativado."); await loadDashboard(); }
+  }
+
+  async function toggleProfessionalService(professional: StaffProfile, service: Service) {
+    const assigned = assignments.some((item) => item.professional_id === professional.user_id && item.service_id === service.id);
+    if (assigned) {
+      const hasFutureSlots = slots.some((slot) => slot.professional_id === professional.user_id && slot.service_id === service.id && slot.status !== "completed");
+      if (hasFutureSlots) {
+        setMessage(`Remova ou conclua os horários futuros de ${service.name} antes de retirar essa modalidade.`);
+        return;
+      }
+      const { error } = await supabase.from("professional_services").delete().eq("professional_id", professional.user_id).eq("service_id", service.id);
+      if (error) setMessage(`Erro ao retirar modalidade: ${error.message}`);
+      else { setMessage(`${service.name} removido da agenda de ${professional.full_name}.`); await loadDashboard(); }
+      return;
+    }
+    const { error } = await supabase.from("professional_services").upsert({ professional_id: professional.user_id, service_id: service.id, active: true });
+    if (error) setMessage(`Erro ao atribuir modalidade: ${error.message}`);
+    else { setMessage(`${service.name} adicionado à agenda de ${professional.full_name}.`); await loadDashboard(); }
   }
 
   async function createBookingLink(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setMessage("");
+    event.preventDefault(); setMessage(""); setBusy(true);
     const { data, error } = await supabase.from("booking_links").insert({
       label: linkLabel.trim() || "Agenda direta", service_id: linkServiceId ? Number(linkServiceId) : null,
       professional_id: linkProfessionalId || null, created_by: session?.user.id,
     }).select("id,token,label,service_id,professional_id,active,uses,created_at").single();
+    setBusy(false);
     if (error) setMessage(`Erro ao criar link: ${error.message}`);
     else if (data) { setBookingLinks((current) => [data as BookingLink, ...current]); setMessage("Link de agenda criado e pronto para envio."); }
+  }
+
+  async function toggleBookingLink(link: BookingLink) {
+    const { error } = await supabase.from("booking_links").update({ active: !link.active }).eq("id", link.id);
+    if (error) setMessage(`Erro ao alterar link: ${error.message}`);
+    else { setMessage(link.active ? "Link desativado." : "Link reativado."); await loadDashboard(); }
   }
 
   async function copyScheduleLink(token?: string) {
@@ -405,9 +545,15 @@ export default function AdminPage() {
   }
 
   const serviceNames = useMemo(() => Object.fromEntries(services.map((service) => [service.id, service.name])), [services]);
-  const professionals = staff.filter((member) => member.role === "professional" && member.active);
-  const professionalsFor = (serviceId: string) => professionals.filter((professional) => assignments.some((assignment) => assignment.professional_id === professional.user_id && assignment.service_id === Number(serviceId)));
-  const professionalNames = Object.fromEntries(professionals.map((professional) => [professional.user_id, professional.full_name]));
+  const activeServices = services.filter((service) => service.active);
+  const allProfessionals = staff.filter((member) => member.role === "professional");
+  const professionals = allProfessionals.filter((member) => member.active);
+  const professionalEmails = new Set(allProfessionals.map((member) => member.email.toLowerCase()));
+  const pendingInvites = invites.filter((invite) => invite.role === "professional" && invite.active && !professionalEmails.has(invite.email.toLowerCase()));
+  const professionalsFor = (serviceId: string) => serviceId
+    ? professionals.filter((professional) => assignments.some((assignment) => assignment.professional_id === professional.user_id && assignment.service_id === Number(serviceId)))
+    : professionals;
+  const professionalNames = Object.fromEntries(allProfessionals.map((professional) => [professional.user_id, professional.full_name]));
   const openSlots = slots.filter((slot) => slot.status === "open").length;
   const activeBookings = bookings.filter((booking) => ["pending", "awaiting_payment", "confirmed"].includes(booking.status)).length;
   const newLeads = leads.filter((lead) => lead.status === "new").length;
@@ -471,13 +617,25 @@ export default function AdminPage() {
           <form className="slot-form" onSubmit={inviteProfessional}>
             <label>Nome do profissional<input required minLength={2} value={inviteName} onChange={(event) => setInviteName(event.target.value)} placeholder="Nome completo" /></label>
             <label>E-mail de acesso<input required type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="profissional@email.com" /></label>
-            <label>Modalidade<select required value={inviteServiceId} onChange={(event) => setInviteServiceId(event.target.value)}>{services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
-            <button>Autorizar profissional</button>
-            <small className="form-help">Depois, envie: <b>{PROFESSIONAL_URL}</b></small>
+            <label>Modalidade inicial<select required value={inviteServiceId} onChange={(event) => setInviteServiceId(event.target.value)}>{activeServices.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
+            <button disabled={busy || activeServices.length === 0}>{busy ? "Salvando…" : "Autorizar profissional"}</button>
+            <small className="form-help">Após autorizar, copie o link individual de primeiro acesso.</small>
           </form>
           <div className="staff-list">
-            {professionals.length === 0 && <p className="empty-state">Nenhum profissional cadastrado ainda.</p>}
-            {professionals.map((professional) => <article key={professional.user_id}><span className="staff-avatar">{professional.full_name.slice(0,1)}</span><div><b>{professional.full_name}</b><small>{assignments.filter((item) => item.professional_id === professional.user_id).map((item) => serviceNames[item.service_id]).join(" · ") || "Sem modalidade"}</small></div><span className="staff-active">Ativo</span></article>)}
+            {pendingInvites.map((invite) => <article className="staff-card pending" key={invite.email}>
+              <span className="staff-avatar">{invite.full_name.slice(0,1)}</span>
+              <div className="staff-card-content"><div className="staff-card-title"><div><b>{invite.full_name}</b><small>{invite.email} · {invite.service_id ? serviceNames[invite.service_id] : "Sem modalidade"}</small></div><span className="status-badge pending">Aguardando senha</span></div>
+                <div className="staff-actions"><button onClick={() => copyProfessionalAccess(invite)}>Copiar primeiro acesso</button><button className="danger-link" onClick={() => cancelInvite(invite)}>Cancelar</button></div>
+              </div>
+            </article>)}
+            {allProfessionals.length === 0 && pendingInvites.length === 0 && <p className="empty-state">Nenhum profissional cadastrado ainda.</p>}
+            {allProfessionals.map((professional) => <article className={`staff-card ${professional.active ? "" : "inactive"}`} key={professional.user_id}>
+              <span className="staff-avatar">{professional.full_name.slice(0,1)}</span>
+              <div className="staff-card-content"><div className="staff-card-title"><div><b>{professional.full_name}</b><small>{professional.email}</small></div><span className={`status-badge ${professional.active ? "active" : "inactive"}`}>{professional.active ? "Ativo" : "Inativo"}</span></div>
+                <div className="service-checks" aria-label={`Modalidades de ${professional.full_name}`}>{activeServices.map((service) => { const checked = assignments.some((item) => item.professional_id === professional.user_id && item.service_id === service.id); return <label key={service.id}><input type="checkbox" checked={checked} disabled={!professional.active} onChange={() => toggleProfessionalService(professional, service)} />{service.name}</label>; })}</div>
+                <div className="staff-actions"><button className={professional.active ? "danger-link" : ""} onClick={() => toggleProfessionalActive(professional)}>{professional.active ? "Desativar profissional" : "Reativar profissional"}</button></div>
+              </div>
+            </article>)}
           </div>
         </div>
       </section>
@@ -486,19 +644,29 @@ export default function AdminPage() {
         <div className="panel-heading"><div><p className="admin-eyebrow">Agendamento sem quiz</p><h2>Links diretos da agenda</h2></div><button className="copy-master" onClick={() => copyScheduleLink()}>Copiar agenda geral</button></div>
         <form className="link-form" onSubmit={createBookingLink}>
           <label>Identificação<input value={linkLabel} onChange={(event) => setLinkLabel(event.target.value)} placeholder="Ex.: Agenda Laser da Ana" /></label>
-          <label>Modalidade<select value={linkServiceId} onChange={(event) => { setLinkServiceId(event.target.value); setLinkProfessionalId(""); }}><option value="">Todas</option>{services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
+          <label>Modalidade<select value={linkServiceId} onChange={(event) => { setLinkServiceId(event.target.value); setLinkProfessionalId(""); }}><option value="">Todas</option>{activeServices.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
           <label>Profissional<select value={linkProfessionalId} onChange={(event) => setLinkProfessionalId(event.target.value)}><option value="">Qualquer profissional</option>{professionalsFor(linkServiceId).map((professional) => <option key={professional.user_id} value={professional.user_id}>{professional.full_name}</option>)}</select></label>
-          <button>Criar link</button>
+          <button disabled={busy}>{busy ? "Criando…" : "Criar link"}</button>
         </form>
-        <div className="link-list">{bookingLinks.map((link) => <article key={link.id}><div><b>{link.label}</b><small>{link.service_id ? serviceNames[link.service_id] : "Todas as modalidades"}{link.professional_id ? ` · ${professionalNames[link.professional_id]}` : ""} · {link.uses} uso(s)</small></div><button onClick={() => copyScheduleLink(link.token)}>Copiar link</button></article>)}</div>
+        <div className="link-list">{bookingLinks.map((link) => <article className={link.active ? "" : "inactive"} key={link.id}><div><b>{link.label}</b><small>{link.service_id ? serviceNames[link.service_id] : "Todas as modalidades"}{link.professional_id ? ` · ${professionalNames[link.professional_id]}` : ""} · {link.uses} uso(s) · {link.active ? "ativo" : "desativado"}</small></div><div className="link-actions"><button disabled={!link.active} onClick={() => copyScheduleLink(link.token)}>Copiar</button><button className="secondary-action" onClick={() => toggleBookingLink(link)}>{link.active ? "Desativar" : "Reativar"}</button></div></article>)}</div>
       </section>
 
       <section className="admin-panel">
-        <div className="panel-heading"><div><p className="admin-eyebrow">Configuração</p><h2>Procedimentos</h2></div><p>Preço e duração são definidos aqui e usados para calcular o futuro sinal de 10%.</p></div>
+        <div className="panel-heading"><div><p className="admin-eyebrow">Configuração</p><h2>Procedimentos</h2></div><p>Crie, edite ou remova modalidades. Preço e duração alimentam a agenda e o cálculo automático do sinal.</p></div>
+        <form className="new-service-form" onSubmit={createService}>
+          <div><p className="admin-eyebrow">Novo procedimento</p><h3>Adicionar à agenda</h3></div>
+          <label>Nome<input required minLength={2} value={newServiceName} onChange={(event) => setNewServiceName(event.target.value)} placeholder="Ex.: Bioestimulador" /></label>
+          <label>Descrição<input value={newServiceDescription} onChange={(event) => setNewServiceDescription(event.target.value)} placeholder="Resumo para a cliente" /></label>
+          <label>Preço (R$)<input required inputMode="decimal" value={newServicePrice} onChange={(event) => setNewServicePrice(event.target.value.replace(/[^\d,.-]/g, ""))} placeholder="0,00" /></label>
+          <label>Duração (min)<input required type="number" min="5" max="720" step="5" value={newServiceDuration} onChange={(event) => setNewServiceDuration(event.target.value)} /></label>
+          <button disabled={busy}>{busy ? "Criando…" : "Criar procedimento"}</button>
+        </form>
         <div className="service-editor">
           {services.map((service) => (
-            <article key={service.id}>
-              <div><h3>{service.name}</h3><span>{service.slug}</span></div>
+            <article className={service.active ? "" : "archived"} key={service.id}>
+              <div className="service-card-heading"><div><h3>{service.name}</h3><span>{service.slug}</span></div>{!service.active && <span className="status-badge inactive">Arquivado</span>}</div>
+              <label>Nome<input value={service.name} onChange={(event) => updateServiceText(service.id, "name", event.target.value)} /></label>
+              <label>Descrição<input value={service.description ?? ""} onChange={(event) => updateServiceText(service.id, "description", event.target.value)} placeholder="Descrição curta" /></label>
               <label>
                 Preço
                 <span className="currency-input">
@@ -515,7 +683,7 @@ export default function AdminPage() {
                 </span>
               </label>
               <label>Duração (min)<input type="number" min="5" max="720" step="5" value={service.duration_minutes ?? ""} onChange={(event) => updateServiceDuration(service.id, event.target.value)} placeholder="60" /></label>
-              <button onClick={() => saveService(service)}>Salvar</button>
+              <div className="service-actions"><button onClick={() => saveService(service)}>Salvar</button>{service.active ? <button className="danger-button" onClick={() => removeService(service)}>Excluir</button> : <button className="secondary-action" onClick={() => restoreService(service)}>Restaurar</button>}</div>
             </article>
           ))}
         </div>
@@ -525,7 +693,7 @@ export default function AdminPage() {
         <div>
           <div className="panel-heading"><div><p className="admin-eyebrow">Agenda</p><h2>Abrir horário</h2></div></div>
           <form className="slot-form" onSubmit={createSlot}>
-            <label>Procedimento<select required value={slotServiceId} onChange={(event) => { setSlotServiceId(event.target.value); setSlotProfessionalId(""); }}>{services.map((service) => <option key={service.id} value={service.id}>{service.name} · {formatMoney(service.price_cents)}</option>)}</select></label>
+            <label>Procedimento<select required value={slotServiceId} onChange={(event) => { setSlotServiceId(event.target.value); setSlotProfessionalId(""); }}>{activeServices.map((service) => <option key={service.id} value={service.id}>{service.name} · {formatMoney(service.price_cents)}</option>)}</select></label>
             <label>Profissional<select value={slotProfessionalId} onChange={(event) => setSlotProfessionalId(event.target.value)}><option value="">Equipe / ainda não atribuído</option>{professionalsFor(slotServiceId).map((professional) => <option key={professional.user_id} value={professional.user_id}>{professional.full_name}</option>)}</select></label>
             <label>Início<input type="datetime-local" required value={slotStart} onChange={(event) => setSlotStart(event.target.value)} /></label>
             <label>Observação<input value={slotNotes} onChange={(event) => setSlotNotes(event.target.value)} placeholder="Opcional" /></label>
@@ -536,7 +704,7 @@ export default function AdminPage() {
           <div className="panel-heading"><div><p className="admin-eyebrow">Próximos</p><h2>Horários cadastrados</h2></div></div>
           <div className="slot-list">
             {slots.length === 0 && <p className="empty-state">Nenhum horário futuro cadastrado.</p>}
-            {slots.map((slot) => <article key={slot.id}><div><b>{serviceNames[slot.service_id] ?? "Procedimento"}</b><span>{professionalNames[slot.professional_id ?? ""] ?? "Equipe PS"} · {formatDate(slot.starts_at)}</span></div><button className={slot.status} disabled={!['open', 'blocked'].includes(slot.status)} onClick={() => toggleSlot(slot)}>{slot.status === "open" ? "Aberto" : slot.status === "reserved" ? "Reservado" : slot.status === "completed" ? "Concluído" : "Bloqueado"}</button></article>)}
+            {slots.map((slot) => <article key={slot.id}><div><b>{serviceNames[slot.service_id] ?? "Procedimento"}</b><span>{professionalNames[slot.professional_id ?? ""] ?? "Equipe PS"} · {formatDate(slot.starts_at)}</span></div><div className="slot-actions"><button className={slot.status} disabled={!['open', 'blocked'].includes(slot.status)} onClick={() => toggleSlot(slot)}>{slot.status === "open" ? "Aberto" : slot.status === "reserved" ? "Reservado" : slot.status === "completed" ? "Concluído" : "Bloqueado"}</button>{['open', 'blocked'].includes(slot.status) && <button className="delete-slot" onClick={() => deleteSlot(slot)} aria-label="Excluir horário">Excluir</button>}</div></article>)}
           </div>
         </div>
       </section>
@@ -544,7 +712,7 @@ export default function AdminPage() {
       <section className="admin-panel">
         <div className="panel-heading"><div><p className="admin-eyebrow">Automação</p><h2>Gerar horários recorrentes</h2></div><p>Cria a agenda semanal em lote e ignora automaticamente datas que já existem.</p></div>
         <form className="recurring-form" onSubmit={createRecurringSlots}>
-          <label>Procedimento<select required value={recurringServiceId} onChange={(event) => { setRecurringServiceId(event.target.value); setRecurringProfessionalId(""); }}>{services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
+          <label>Procedimento<select required value={recurringServiceId} onChange={(event) => { setRecurringServiceId(event.target.value); setRecurringProfessionalId(""); }}>{activeServices.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
           <label>Profissional<select value={recurringProfessionalId} onChange={(event) => setRecurringProfessionalId(event.target.value)}><option value="">Equipe</option>{professionalsFor(recurringServiceId).map((professional) => <option key={professional.user_id} value={professional.user_id}>{professional.full_name}</option>)}</select></label>
           <label>Dia da semana<select value={recurringWeekday} onChange={(event) => setRecurringWeekday(event.target.value)}>{weekdayOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label>Primeiro horário<input type="time" required value={recurringTime} onChange={(event) => setRecurringTime(event.target.value)} /></label>

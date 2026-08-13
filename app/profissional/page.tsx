@@ -51,6 +51,14 @@ export default function ProfessionalPage() {
   useEffect(() => {
     let active = true;
 
+    const params = new URLSearchParams(window.location.search);
+    queueMicrotask(() => {
+      if (!active) return;
+      const invitedEmail = params.get("email");
+      if (invitedEmail) setEmail(invitedEmail);
+      if (params.get("primeiro") === "1") setSignup(true);
+    });
+
     supabase.auth.getSession().then(({ data, error }) => {
       if (!active) return;
       if (error) setMessage("Não foi possível verificar seu acesso. Atualize a página e tente novamente.");
