@@ -4,6 +4,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "PS Estética | Diagnóstico Estético Personalizado",
   description: "Descubra qual tratamento da PS Estética combina com o seu objetivo e consulte as próximas datas.",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
