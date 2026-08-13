@@ -3,3 +3,7 @@ verify_jwt = false
 
 [functions.mercado-pago-webhook]
 verify_jwt = false
+
+[auth.email.template.confirmation]
+subject = "Confirme seu acesso à PS Estética"
+content_path = "./supabase/templates/confirmation.html"

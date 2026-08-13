@@ -1,0 +1,187 @@
+.confirmation-page {
+  --plum: #594052;
+  --plum-deep: #3f2c3a;
+  --gold: #c5aa73;
+  --cream: #f6efe5;
+  --ink: #3c3037;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 32px 20px;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(197, 170, 115, .18), transparent 27%),
+    linear-gradient(145deg, #f8f3ec 0%, #eee4dc 100%);
+  color: var(--ink);
+}
+
+.confirmation-glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.confirmation-glow-one {
+  width: 320px;
+  height: 320px;
+  top: -180px;
+  right: -80px;
+  background: rgba(89, 64, 82, .12);
+}
+
+.confirmation-glow-two {
+  width: 250px;
+  height: 250px;
+  bottom: -150px;
+  left: -70px;
+  background: rgba(197, 170, 115, .18);
+}
+
+.confirmation-card {
+  width: min(100%, 550px);
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: clamp(36px, 7vw, 62px);
+  border: 1px solid rgba(89, 64, 82, .12);
+  border-radius: 30px;
+  background: rgba(255, 253, 249, .94);
+  box-shadow: 0 30px 80px rgba(63, 44, 58, .14);
+  animation: confirmation-enter .6s cubic-bezier(.2, .75, .25, 1) both;
+}
+
+.confirmation-logo-wrap {
+  width: 172px;
+  margin: 0 auto 30px;
+}
+
+.confirmation-logo-wrap img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.confirmation-eyebrow {
+  margin: 0 0 18px;
+  color: var(--plum);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.confirmation-card h1 {
+  max-width: 420px;
+  margin: 18px auto 12px;
+  color: var(--plum-deep);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(34px, 7vw, 48px);
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: -.035em;
+}
+
+.confirmation-card > p:not(.confirmation-eyebrow) {
+  max-width: 410px;
+  margin: 0 auto;
+  color: #74686f;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.confirmation-card button,
+.confirmation-card > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  margin-top: 26px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--plum);
+  box-shadow: 0 12px 28px rgba(89, 64, 82, .22);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.confirmation-card button:hover,
+.confirmation-card > a:hover {
+  transform: translateY(-2px);
+  background: var(--plum-deep);
+  box-shadow: 0 16px 32px rgba(89, 64, 82, .28);
+}
+
+.confirmation-icon,
+.confirmation-loader {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  border-radius: 999px;
+}
+
+.confirmation-icon {
+  background: rgba(89, 64, 82, .09);
+  border: 1px solid rgba(89, 64, 82, .15);
+  color: var(--plum);
+  font-family: Georgia, serif;
+  font-size: 25px;
+}
+
+.confirmation-icon.error {
+  background: rgba(197, 170, 115, .14);
+  border-color: rgba(197, 170, 115, .3);
+  color: #8d6f37;
+}
+
+.confirmation-loader {
+  box-sizing: border-box;
+  border: 2px solid rgba(89, 64, 82, .13);
+  border-top-color: var(--gold);
+  animation: confirmation-spin .8s linear infinite;
+}
+
+.confirmation-divider {
+  width: 42px;
+  height: 1px;
+  margin: 34px auto 20px;
+  background: var(--gold);
+}
+
+.confirmation-card small {
+  color: #968991;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+@keyframes confirmation-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes confirmation-enter {
+  from { opacity: 0; transform: translateY(18px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 560px) {
+  .confirmation-card { border-radius: 24px; }
+  .confirmation-card h1 { font-size: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirmation-card { animation: none; }
+  .confirmation-card button,
+  .confirmation-card > a { transition: none; }
+}
