@@ -772,10 +772,10 @@ export default function AdminPage() {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Lead</th><th>Interesse</th><th>Prazo</th><th>Entrada</th><th>Status</th><th>Contato</th></tr></thead>
+            <thead><tr><th>Lead</th><th>Interesse</th><th>Prazo</th><th>Entrada</th><th>Status</th><th>Contato</th><th>Ações</th></tr></thead>
             <tbody>
-              {filteredLeads.length === 0 && <tr><td colSpan={6} className="empty-state">{leadView === "archived" ? "Nenhum lead arquivado." : "Nenhum lead corresponde aos filtros."}</td></tr>}
-              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td><select value={lead.status} onChange={(event) => updateLeadStatus(lead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td><a href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td></tr>)}
+              {filteredLeads.length === 0 && <tr><td colSpan={7} className="empty-state">{leadView === "archived" ? "Nenhum lead arquivado." : "Nenhum lead corresponde aos filtros."}</td></tr>}
+              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td><select value={lead.status} onChange={(event) => updateLeadStatus(lead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td><a href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td><td><div className="lead-row-actions"><button className={lead.archived_at ? "restore-lead" : "archive-lead"} onClick={() => lead.archived_at ? restoreLead(lead) : archiveLead(lead)}>{lead.archived_at ? "Restaurar" : "Arquivar"}</button><button className="view-lead" onClick={() => setSelectedLead(lead)}>Ver perfil</button></div></td></tr>)}
             </tbody>
           </table>
         </div>
