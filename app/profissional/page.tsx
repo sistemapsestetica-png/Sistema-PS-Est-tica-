@@ -49,9 +49,28 @@ export default function ProfessionalPage() {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
-    return () => data.subscription.unsubscribe();
+    let active = true;
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) setMessage("Não foi possível verificar seu acesso. Atualize a página e tente novamente.");
+      setSession(data.session);
+      if (!data.session) setLoading(false);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+      if (!active) return;
+      setSession(next);
+      if (!next) {
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
   useEffect(() => { if (session) queueMicrotask(() => void loadPanel()); }, [session]);
 
