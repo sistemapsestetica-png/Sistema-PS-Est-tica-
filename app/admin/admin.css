@@ -112,6 +112,11 @@ td b, td small { display: block; }
 td small { margin-top: 3px; color: var(--admin-muted); }
 td a { color: var(--admin-plum); font-weight: 700; text-decoration: underline; text-decoration-color: var(--admin-gold); text-underline-offset: 4px; }
 table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
+.lead-row-actions { display: flex; gap: 7px; }
+.lead-row-actions button { min-height: 36px; padding: 8px 11px; border-radius: 2px 9px 2px 9px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.archive-lead { color: #8b4653; border: 1px solid #d8bbc1; background: #fff8f9; }
+.restore-lead { color: #38624b; border: 1px solid #bad2c2; background: #f3faf5; }
+.view-lead { color: var(--admin-plum); border: 1px solid var(--admin-line); background: #fff; }
 .empty-state { padding: 26px !important; color: #8b8086; text-align: center; }
 
 .drawer-backdrop { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: flex-end; background: rgba(48,34,43,.5); backdrop-filter: blur(6px); animation: drawerFade .2s ease; }
