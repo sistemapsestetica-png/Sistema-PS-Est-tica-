@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { PANEL_URL } from "../lib/public-urls";
 
 type DayKey = "lavieen" | "laser" | "ultraformer" | "botox";
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
@@ -573,7 +574,7 @@ export default function Home() {
       <footer>
         <a className="wordmark footer-brand" href="#inicio"><img className="brand-logo" src="/ps-estetica-logo-oficial.png" width="246" height="80" alt="PS Estética Avançada" /></a>
         <div><b>São Bernardo do Campo</b><span>Av. Imperador Pedro II, 635 · Nova Petrópolis</span></div>
-        <div><b>Atendimento</b><a href="https://wa.me/5511934580476" target="_blank" rel="noreferrer">(11) 93458-0476</a><a className="admin-link" href="/admin">Área da equipe</a></div>
+        <div><b>Atendimento</b><a href="https://wa.me/5511934580476" target="_blank" rel="noreferrer">(11) 93458-0476</a><a className="admin-link" href={PANEL_URL}>Área da equipe</a></div>
         <p>© 2026 PS Estética. Todos os direitos reservados.</p>
       </footer>
 

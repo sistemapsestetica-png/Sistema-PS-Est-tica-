@@ -4,15 +4,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
+import { AGENDA_URL, PANEL_URL, PROFESSIONAL_URL, QUIZ_URL } from "../../lib/public-urls";
 import "./admin.css";
-
-function getSiteUrl() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL?.trim();
-  const url = configuredUrl || vercelUrl || (typeof window !== "undefined" ? window.location.origin : "https://ps-estetica-sbc.vercel.app");
-  const absoluteUrl = url.startsWith("http") ? url : `https://${url}`;
-  return absoluteUrl.replace(/\/$/, "");
-}
 
 type Service = {
   id: number;
@@ -259,7 +252,7 @@ export default function AdminPage() {
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
-        options: { emailRedirectTo: `${getSiteUrl()}/admin` },
+        options: { emailRedirectTo: PANEL_URL },
       });
       if (error) setMessage(error.message);
       else if (!data.session) setMessage("Cadastro iniciado. Confirme o e-mail recebido e depois entre no painel.");
@@ -393,7 +386,7 @@ export default function AdminPage() {
       service_id: Number(inviteServiceId), invited_by: session?.user.id, active: true,
     }, { onConflict: "email" });
     if (error) setMessage(`Erro ao autorizar profissional: ${error.message}`);
-    else { setMessage("Profissional autorizado. Envie o acesso /profissional para que crie a senha."); setInviteName(""); setInviteEmail(""); }
+    else { setMessage(`Profissional autorizado. Envie ${PROFESSIONAL_URL} para que crie a senha.`); setInviteName(""); setInviteEmail(""); }
   }
 
   async function createBookingLink(event: FormEvent<HTMLFormElement>) {
@@ -407,7 +400,7 @@ export default function AdminPage() {
   }
 
   async function copyScheduleLink(token?: string) {
-    const url = token ? `${getSiteUrl()}/agendar?convite=${token}` : `${getSiteUrl()}/agendar`;
+    const url = token ? `${AGENDA_URL}?convite=${token}` : AGENDA_URL;
     await navigator.clipboard.writeText(url); setMessage("Link da agenda copiado.");
   }
 
@@ -428,7 +421,7 @@ export default function AdminPage() {
     return (
       <main className="admin-login">
         <section className="login-card">
-          <Link className="admin-wordmark" href="/"><img src="/ps-estetica-logo-oficial.png" width="246" height="80" alt="PS Estética Avançada" /></Link>
+          <Link className="admin-wordmark" href={QUIZ_URL}><img src="/ps-estetica-logo-oficial.png" width="246" height="80" alt="PS Estética Avançada" /></Link>
           <p className="admin-eyebrow">Área restrita</p>
           <h1>{authMode === "login" ? "Entrar no painel" : "Criar primeiro acesso"}</h1>
           <p>Use o e-mail autorizado da clínica e uma senha segura.</p>
@@ -457,7 +450,7 @@ export default function AdminPage() {
     <main className="admin-page">
       <header className="admin-header">
         <div className="admin-header-brand">
-          <Link className="admin-header-logo" href="/" aria-label="Voltar ao site da PS Estética"><img src="/ps-estetica-logo-oficial.png" width="246" height="80" alt="PS Estética Avançada" /></Link>
+          <Link className="admin-header-logo" href={QUIZ_URL} aria-label="Voltar ao quiz da PS Estética"><img src="/ps-estetica-logo-oficial.png" width="246" height="80" alt="PS Estética Avançada" /></Link>
           <div><p className="admin-eyebrow">Gestão PS Estética</p><h1>Painel da clínica</h1></div>
         </div>
         <div className="admin-account"><span>{session.user.email}</span><button onClick={() => supabase.auth.signOut()}>Sair</button></div>
@@ -480,7 +473,7 @@ export default function AdminPage() {
             <label>E-mail de acesso<input required type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="profissional@email.com" /></label>
             <label>Modalidade<select required value={inviteServiceId} onChange={(event) => setInviteServiceId(event.target.value)}>{services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
             <button>Autorizar profissional</button>
-            <small className="form-help">Depois, envie: <b>{getSiteUrl()}/profissional</b></small>
+            <small className="form-help">Depois, envie: <b>{PROFESSIONAL_URL}</b></small>
           </form>
           <div className="staff-list">
             {professionals.length === 0 && <p className="empty-state">Nenhum profissional cadastrado ainda.</p>}
