@@ -22,6 +22,10 @@
 .slot-options.direct { max-height: 340px; overflow: auto; display: grid; gap: 9px; }
 .slot-options.direct button > span { display: grid; gap: 5px; text-transform: capitalize; }
 .slot-options.direct button small { font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.schedule-empty { padding: 24px; display: grid; gap: 8px; color: var(--schedule-muted); background: #f8f3f5; border: 1px solid var(--schedule-line); border-radius: 2px 14px 2px 14px; text-align: center; }
+.schedule-empty b { color: var(--schedule-plum); font: 400 20px Georgia,serif; }
+.schedule-empty span { font-size: 12px; line-height: 1.5; }
+.schedule-empty a { width: max-content; margin: 4px auto 0; color: var(--schedule-plum); font-size: 12px; font-weight: 800; }
 .client-form { display: grid; gap: 14px; }
 .client-form .schedule-step { margin-bottom: 5px; }
 .client-form label { display: grid; gap: 7px; color: var(--schedule-plum-soft); font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
