@@ -1002,6 +1002,26 @@ footer { background: #efede8; border-color: #ddd7cd; }
 .slot-option:focus-visible,
 .slot-option.selected-slot { border-color: #806273; background: #f5eff2; }
 
+.quiz-pix {
+  display: grid;
+  grid-template-columns: 1fr 132px;
+  gap: 20px;
+  align-items: center;
+  margin: 18px 0;
+  padding: 22px;
+  color: #fffaf7;
+  background: linear-gradient(145deg, #67495d, #493342);
+  border: 1px solid rgba(197,170,115,.46);
+  border-radius: 20px;
+  box-shadow: 0 20px 45px -30px rgba(73,51,66,.9);
+}
+.quiz-pix small { display: block; color: #dfcd9c; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.quiz-pix strong { display: block; margin: 6px 0; font-family: var(--font-display), Georgia, serif; font-size: 31px; font-weight: 500; }
+.quiz-pix p { margin: 0; color: rgba(255,250,247,.75); font-size: 13px; line-height: 1.55; }
+.quiz-pix img { grid-column: 2; grid-row: 1 / span 2; width: 132px; height: 132px; padding: 7px; background: #fff; border-radius: 14px; }
+.quiz-pix button { width: fit-content; min-height: 40px; margin-top: 14px; padding: 0 16px; color: #493342; background: #dfcd9c; border: 0; border-radius: 999px; font-size: 11px; font-weight: 800; cursor: pointer; }
+.payment-success { margin: 18px 0; padding: 15px 18px; color: #4a3442; background: #f2ead9; border: 1px solid #d4bd83; border-radius: 14px; font-weight: 700; }
+
 .motion-ready [data-reveal="scale"] { transform: translateY(28px) scale(.97); }
 .motion-ready [data-reveal="scale"].is-visible { transform: translate(0,0) scale(1); }
 .motion-ready .journey-grid .journey-card:nth-child(2),
@@ -1050,6 +1070,8 @@ footer { background: #efede8; border-color: #ddd7cd; }
   .faq-section h2 { font-size: 33px; }
   .day-card { min-height: 485px; padding: 28px 25px 25px; }
   .day-details dd { font-size: 14px; }
+  .quiz-pix { grid-template-columns: 1fr; }
+  .quiz-pix img { grid-column: 1; grid-row: auto; }
   .motion-ready .benefits-grid article,
   .motion-ready .results-grid .result-case,
   .motion-ready .journey-grid .journey-card { transition-delay: 0s !important; }

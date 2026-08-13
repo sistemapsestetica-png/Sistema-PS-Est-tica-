@@ -15,10 +15,15 @@ type OpenSlot = {
 
 type BookingConfirmation = {
   booking_id: number;
+  booking_token: string;
   service_name: string;
   starts_at: string;
   ends_at: string;
+  deposit_cents: number;
+  payment_expires_at: string;
 };
+
+type PixPayment = { status: string; pix_copy_paste?: string; qr_code_base64?: string; ticket_url?: string; expires_at?: string };
 
 const days: Record<DayKey, { name: string; icon: string; short: string; result: string; how: string; expected: string; cta: string }> = {
   lavieen: {
@@ -96,6 +101,7 @@ export default function Home() {
   const [timing, setTiming] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState("");
   const [slots, setSlots] = useState<OpenSlot[]>([]);
@@ -103,6 +109,8 @@ export default function Home() {
   const [booking, setBooking] = useState<BookingConfirmation | null>(null);
   const [leadId, setLeadId] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<OpenSlot | null>(null);
+  const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
 
   const progress = step === 6 ? 100 : step * 20;
   const result = day ? days[day] : null;
@@ -177,6 +185,7 @@ export default function Home() {
       p_experience: experience,
       p_timing: timing,
       p_source: source,
+      p_email: email.trim().toLowerCase(),
     });
     if (error || !data) return null;
     const capturedLeadId = Number(data);
@@ -236,10 +245,31 @@ export default function Home() {
       return;
     }
 
-    setBooking(data[0] as BookingConfirmation);
+    const nextBooking = data[0] as BookingConfirmation;
+    setBooking(nextBooking);
     setSelectedSlot(null);
-    setSaving(false);
     setStep(6);
+    const { data: pixData, error: pixError } = await supabase.functions.invoke("create-pix", { body: { bookingToken: nextBooking.booking_token } });
+    if (pixError || !pixData?.payment) {
+      setSaveNotice(pixData?.code === "mercado_pago_not_configured" ? "Sua vaga foi separada. O Pix será exibido assim que a clínica ativar o Mercado Pago." : (pixData?.error ?? "Não foi possível gerar o Pix agora."));
+    } else setPixPayment(pixData.payment as PixPayment);
+    setSaving(false);
+  }
+
+  useEffect(() => {
+    if (!booking?.booking_token || paymentConfirmed) return;
+    const timer = window.setInterval(async () => {
+      const { data } = await supabase.rpc("get_booking_public_status", { p_booking_token: booking.booking_token });
+      if (data?.[0]?.booking_status === "confirmed") { setPaymentConfirmed(true); window.clearInterval(timer); }
+      if (data?.[0]?.booking_status === "expired") { setSaveNotice("O Pix expirou e o horário foi liberado."); window.clearInterval(timer); }
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [booking?.booking_token, paymentConfirmed]);
+
+  async function copyQuizPix() {
+    if (!pixPayment?.pix_copy_paste) return;
+    await navigator.clipboard.writeText(pixPayment.pix_copy_paste);
+    setSaveNotice("Código Pix copiado.");
   }
 
   return (
@@ -332,6 +362,7 @@ export default function Home() {
               <h2>Preencha seus dados para liberar a agenda.</h2>
               <label>Seu nome<input required value={name} onChange={(e) => { setName(e.target.value); setLeadId(null); }} placeholder="Como podemos chamar você?" autoComplete="name" /></label>
               <label>WhatsApp<input required value={phone} onChange={(e) => { setPhone(formatBrazilianMobile(e.target.value)); setLeadId(null); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel" maxLength={15} minLength={15} pattern="\(\d{2}\) \d{5}-\d{4}" title="Digite um celular com DDD, por exemplo: (11) 90000-0000" /></label>
+              <label>E-mail para o Pix<input required type="email" value={email} onChange={(e) => { setEmail(e.target.value); setLeadId(null); }} placeholder="voce@exemplo.com" autoComplete="email" /></label>
               <button className="primary-button" type="submit" disabled={saving}>{saving ? "Preparando sua agenda…" : "Liberar horários disponíveis"} <span>→</span></button>
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
               <button className="back" type="button" onClick={() => setStep(3)}>← Voltar</button>
@@ -376,11 +407,23 @@ export default function Home() {
               <p className="result-copy">{result.result}</p>
               <div className={`availability ${booking ? "reserved" : ""}`}>
                 <span className="pulse" />
-                <span>{booking ? <><b>Pré-reserva criada</b> {formatSlot(booking.starts_at)}</> : <><b>Sem horário reservado</b> fale com a equipe para escolher uma data</>}</span>
+                <span>{booking ? <><b>{paymentConfirmed ? "Reserva confirmada" : "Vaga separada enquanto você conclui o Pix"}</b> {formatSlot(booking.starts_at)}</> : <><b>Sem horário reservado</b> fale com a equipe para escolher uma data</>}</span>
               </div>
+              {booking && pixPayment && !paymentConfirmed ? (
+                <div className="quiz-pix">
+                  <div>
+                    <small>Sinal de 10% para confirmar</small>
+                    <strong>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(booking.deposit_cents / 100)}</strong>
+                    <p>Escaneie o QR Code ou copie o código Pix. A confirmação acontece automaticamente após o pagamento.</p>
+                  </div>
+                  {pixPayment.qr_code_base64 ? <img src={`data:image/png;base64,${pixPayment.qr_code_base64}`} alt="QR Code do Pix para confirmar a reserva" /> : null}
+                  {pixPayment.pix_copy_paste ? <button type="button" onClick={copyQuizPix}>Copiar Pix copia e cola</button> : null}
+                </div>
+              ) : null}
+              {booking && paymentConfirmed ? <p className="payment-success" role="status">Pagamento aprovado. Seu horário está confirmado na agenda.</p> : null}
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
-              <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer">{booking ? "Confirmar pré-reserva no WhatsApp" : "Pedir uma data no WhatsApp"} <span>↗</span></a>
-              <button className="restart" onClick={() => { setStep(1); setDay(null); setBooking(null); setSlots([]); setLeadId(null); }}>Refazer o diagnóstico</button>
+              <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer">{booking ? "Preciso de ajuda com a reserva" : "Pedir uma data no WhatsApp"} <span>↗</span></a>
+              <button className="restart" onClick={() => { setStep(1); setDay(null); setBooking(null); setSlots([]); setLeadId(null); setPixPayment(null); setPaymentConfirmed(false); setSaveNotice(""); }}>Refazer o diagnóstico</button>
               <p className="disclaimer">Esta é uma indicação inicial. O protocolo, número de sessões e possíveis contraindicações serão definidos após avaliação profissional.</p>
             </div>
           )}
