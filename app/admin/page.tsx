@@ -66,6 +66,17 @@ type StaffProfile = { user_id: string; full_name: string; email: string; role: "
 type StaffInvite = { email: string; full_name: string; role: "receptionist" | "professional"; service_id: number | null; active: boolean; created_at: string };
 type Assignment = { professional_id: string; service_id: number };
 type BookingLink = { id: number; token: string; label: string; service_id: number | null; professional_id: string | null; active: boolean; uses: number; created_at: string };
+type AdminSection = "overview" | "agenda" | "clients" | "team" | "services" | "links" | "settings";
+
+const adminSections: { id: AdminSection; label: string; description: string }[] = [
+  { id: "overview", label: "Visão geral", description: "Resumo da operação e atalhos principais" },
+  { id: "agenda", label: "Agenda", description: "Horários, recorrências e agendamentos" },
+  { id: "clients", label: "Clientes", description: "Leads ativos, arquivados e histórico" },
+  { id: "team", label: "Equipe", description: "Profissionais, acessos e modalidades" },
+  { id: "services", label: "Procedimentos", description: "Catálogo, preços e duração" },
+  { id: "links", label: "Links", description: "Agendas diretas e compartilhamento" },
+  { id: "settings", label: "Configurações", description: "Pagamento e regras da clínica" },
+];
 
 const leadStatus: Record<string, string> = {
   new: "Novo",
@@ -141,6 +152,7 @@ function slugify(value: string) {
 }
 
 export default function AdminPage() {
+  const [activeSection, setActiveSection] = useState<AdminSection>("overview");
   const [session, setSession] = useState<Session | null>(null);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
@@ -587,6 +599,7 @@ export default function AdminPage() {
     const matchesView = leadView === "archived" ? Boolean(lead.archived_at) : !lead.archived_at;
     return matchesView && matchesQuery && (leadStatusFilter === "all" || lead.status === leadStatusFilter) && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter);
   });
+  const currentSection = adminSections.find((section) => section.id === activeSection) ?? adminSections[0];
 
   if (!session) {
     return (
@@ -629,6 +642,25 @@ export default function AdminPage() {
 
       {message && <div className="admin-message banner" role="status">{message}<button onClick={() => setMessage("")}>×</button></div>}
 
+      <div className="admin-shell">
+        <aside className="admin-sidebar">
+          <div className="admin-sidebar-heading"><p className="admin-eyebrow">Navegação</p><strong>Organize seu dia</strong></div>
+          <nav className="admin-nav" aria-label="Seções do painel">
+            {adminSections.map((section, index) => (
+              <button key={section.id} type="button" className={activeSection === section.id ? "active" : ""} onClick={() => setActiveSection(section.id)} aria-current={activeSection === section.id ? "page" : undefined}>
+                <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                <span><b>{section.label}</b><small>{section.description}</small></span>
+              </button>
+            ))}
+          </nav>
+          <div className="sidebar-shortcuts"><Link href={AGENDA_URL} target="_blank">Abrir agenda pública ↗</Link><Link href={QUIZ_URL} target="_blank">Abrir quiz ↗</Link></div>
+        </aside>
+
+        <div className="admin-content">
+          <header className="section-intro"><p className="admin-eyebrow">Painel / {currentSection.label}</p><h2>{currentSection.label}</h2><p>{currentSection.description}.</p></header>
+
+      {activeSection === "overview" && <>
+
       <section className="stats-grid" aria-label="Resumo">
         <article><span>Agendamentos ativos</span><b>{activeBookings}</b><small>pendentes e confirmados</small></article>
         <article><span>Horários abertos</span><b>{openSlots}</b><small>datas futuras</small></article>
@@ -636,6 +668,18 @@ export default function AdminPage() {
         <article><span>Sinal</span><b>{settings?.deposit_percent ?? 10}%</b><small>remarcação até {settings?.reschedule_notice_hours ?? 48}h antes</small></article>
       </section>
 
+      <section className="admin-panel overview-actions">
+        <div className="panel-heading"><div><p className="admin-eyebrow">Acesso rápido</p><h2>O que você quer fazer?</h2></div><p>As tarefas mais usadas ficam a um toque de distância.</p></div>
+        <div className="overview-action-grid">
+          <button type="button" onClick={() => setActiveSection("agenda")}><span>Agenda</span><b>Abrir ou bloquear horários</b><small>{openSlots} horário(s) aberto(s)</small></button>
+          <button type="button" onClick={() => setActiveSection("clients")}><span>Clientes</span><b>Acompanhar novos contatos</b><small>{newLeads} lead(s) novo(s)</small></button>
+          <button type="button" onClick={() => setActiveSection("team")}><span>Equipe</span><b>Gerenciar profissionais</b><small>{professionals.length} profissional(is) ativo(s)</small></button>
+          <button type="button" onClick={() => setActiveSection("links")}><span>Compartilhar</span><b>Copiar links da agenda</b><small>{bookingLinks.filter((link) => link.active).length} link(s) ativo(s)</small></button>
+        </div>
+      </section>
+      </>}
+
+      {activeSection === "team" &&
       <section className="admin-panel team-panel">
         <div className="panel-heading"><div><p className="admin-eyebrow">Equipe e permissões</p><h2>Agendas por profissional</h2></div><p>Cada profissional cria a própria senha e visualiza somente a modalidade atribuída. A recepção continua com controle master.</p></div>
         <div className="team-layout">
@@ -663,9 +707,9 @@ export default function AdminPage() {
             </article>)}
           </div>
         </div>
-      </section>
+      </section>}
 
-      <section className="admin-panel direct-links-panel">
+      {activeSection === "links" && <section className="admin-panel direct-links-panel">
         <div className="panel-heading"><div><p className="admin-eyebrow">Agendamento sem quiz</p><h2>Links diretos da agenda</h2></div><button className="copy-master" onClick={() => copyScheduleLink()}>Copiar agenda geral</button></div>
         <form className="link-form" onSubmit={createBookingLink}>
           <label>Identificação<input value={linkLabel} onChange={(event) => setLinkLabel(event.target.value)} placeholder="Ex.: Agenda Laser da Ana" /></label>
@@ -674,9 +718,9 @@ export default function AdminPage() {
           <button disabled={busy}>{busy ? "Criando…" : "Criar link"}</button>
         </form>
         <div className="link-list">{bookingLinks.map((link) => <article className={link.active ? "" : "inactive"} key={link.id}><div><b>{link.label}</b><small>{link.service_id ? serviceNames[link.service_id] : "Todas as modalidades"}{link.professional_id ? ` · ${professionalNames[link.professional_id]}` : ""} · {link.uses} uso(s) · {link.active ? "ativo" : "desativado"}</small></div><div className="link-actions"><button disabled={!link.active} onClick={() => copyScheduleLink(link.token)}>Copiar</button><button className="secondary-action" onClick={() => toggleBookingLink(link)}>{link.active ? "Desativar" : "Reativar"}</button></div></article>)}</div>
-      </section>
+      </section>}
 
-      <section className="admin-panel">
+      {activeSection === "services" && <section className="admin-panel">
         <div className="panel-heading"><div><p className="admin-eyebrow">Configuração</p><h2>Procedimentos</h2></div><p>Crie, edite ou remova modalidades. Preço e duração alimentam a agenda e o cálculo automático do sinal.</p></div>
         <form className="new-service-form" onSubmit={createService}>
           <div><p className="admin-eyebrow">Novo procedimento</p><h3>Adicionar à agenda</h3></div>
@@ -712,8 +756,9 @@ export default function AdminPage() {
             </article>
           ))}
         </div>
-      </section>
+      </section>}
 
+      {activeSection === "agenda" && <>
       <section className="admin-panel split-panel">
         <div>
           <div className="panel-heading"><div><p className="admin-eyebrow">Agenda</p><h2>Abrir horário</h2></div></div>
@@ -760,8 +805,9 @@ export default function AdminPage() {
           </table>
         </div>
       </section>
+      </>}
 
-      <section className="admin-panel">
+      {activeSection === "clients" && <section className="admin-panel">
         <div className="panel-heading"><div><p className="admin-eyebrow">CRM</p><h2>Leads do quiz</h2></div><p>Os novos contatos aparecem automaticamente após o envio do diagnóstico.</p></div>
         <div className="crm-toolbar">
           <div className="lead-view-tabs" role="group" aria-label="Visualização dos leads"><button className={leadView === "active" ? "active" : ""} onClick={() => setLeadView("active")}>Ativos</button><button className={leadView === "archived" ? "active" : ""} onClick={() => setLeadView("archived")}>Arquivados ({leads.filter((lead) => lead.archived_at).length})</button></div>
@@ -779,12 +825,26 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </section>}
 
+      {activeSection === "settings" && <>
       <section className="payment-note">
         <div><p className="admin-eyebrow">Pagamento integrado</p><h2>Pix automático</h2><p>Após escolher o horário, o sistema gera o Pix de {settings?.deposit_percent ?? 10}%, confirma pelo webhook e libera vagas expiradas sem ação da recepção.</p></div>
         <span>{settings?.pix_enabled ? "Mercado Pago ativo" : "Pronto para credenciais"}</span>
       </section>
+
+      <section className="admin-panel settings-summary">
+        <div className="panel-heading"><div><p className="admin-eyebrow">Regras atuais</p><h2>Configuração da operação</h2></div><p>Resumo das regras aplicadas automaticamente no agendamento.</p></div>
+        <dl>
+          <div><dt>Sinal da reserva</dt><dd>{settings?.deposit_percent ?? 10}% do procedimento</dd></div>
+          <div><dt>Prazo para remarcação</dt><dd>{settings?.reschedule_notice_hours ?? 48} horas antes</dd></div>
+          <div><dt>Meio de pagamento</dt><dd>{settings?.payment_provider || "Mercado Pago"}</dd></div>
+          <div><dt>Pix</dt><dd>{settings?.pix_enabled ? "Ativo" : "Aguardando credenciais"}</dd></div>
+        </dl>
+      </section>
+      </>}
+        </div>
+      </div>
 
       {selectedLead && <div className="drawer-backdrop" onClick={() => setSelectedLead(null)} role="presentation">
         <aside className="lead-drawer" onClick={(event) => event.stopPropagation()} aria-label={`Perfil de ${selectedLead.name}`}>
