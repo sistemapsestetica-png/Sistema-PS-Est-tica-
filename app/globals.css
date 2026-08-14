@@ -650,7 +650,7 @@ body {
 .faq-list summary span { color: #777777; }
 
 footer { background: #efede8; border-color: #ddd7cd; }
-.footer-brand .brand-logo { filter: none; opacity: 1; }
+.footer-brand .brand-logo { filter: saturate(.45) brightness(1.15); opacity: .92; }
 .mobile-whatsapp { background: #181818; }
 
 @media (max-width: 900px) {
