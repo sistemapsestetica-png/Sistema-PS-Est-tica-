@@ -38,7 +38,7 @@
 .admin-header { max-width: none; margin: 0 calc(max(22px, 4vw) * -1) 30px; padding: 22px max(22px, 4vw); display: flex; align-items: center; justify-content: space-between; gap: 25px; color: #fffdf9; background: rgba(24,24,24,.98); border-bottom: 1px solid rgba(255,255,255,.11); box-shadow: 0 14px 38px rgba(20,20,20,.13); }
 .admin-header-brand { display: flex; align-items: center; gap: 30px; }
 .admin-header-logo { display: flex; padding-right: 30px; border-right: 1px solid rgba(255,255,255,.16); }
-.admin-header-logo img { width: 150px; height: auto; filter: none; }
+.admin-header-logo img { width: 150px; height: auto; filter: saturate(.45) brightness(1.15); }
 .admin-header .admin-eyebrow { color: #dbc48f; }
 .admin-header h1 { font-size: clamp(28px, 3vw, 40px); line-height: 1; }
 .admin-account { display: flex; align-items: center; gap: 15px; color: rgba(255,255,255,.7); font-size: 11px; }
