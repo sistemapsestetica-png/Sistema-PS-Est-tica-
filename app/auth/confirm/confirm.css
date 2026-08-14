@@ -1,6 +1,6 @@
 .confirmation-page {
-  --plum: #594052;
-  --plum-deep: #3f2c3a;
+  --plum: #171619;
+  --plum-deep: #111012;
   --gold: #c5aa73;
   --cream: #f6efe5;
   --ink: #3c3037;
@@ -28,7 +28,7 @@
   height: 320px;
   top: -180px;
   right: -80px;
-  background: rgba(89, 64, 82, .12);
+  background: rgba(23, 22, 25, .12);
 }
 
 .confirmation-glow-two {
@@ -45,10 +45,10 @@
   z-index: 1;
   text-align: center;
   padding: clamp(36px, 7vw, 62px);
-  border: 1px solid rgba(89, 64, 82, .12);
+  border: 1px solid rgba(23, 22, 25, .12);
   border-radius: 30px;
   background: rgba(255, 253, 249, .94);
-  box-shadow: 0 30px 80px rgba(63, 44, 58, .14);
+  box-shadow: 0 30px 80px rgba(31, 30, 33, .14);
   animation: confirmation-enter .6s cubic-bezier(.2, .75, .25, 1) both;
 }
 
@@ -102,7 +102,7 @@
   border: 0;
   border-radius: 999px;
   background: var(--plum);
-  box-shadow: 0 12px 28px rgba(89, 64, 82, .22);
+  box-shadow: 0 12px 28px rgba(23, 22, 25, .22);
   color: #fff;
   cursor: pointer;
   font: inherit;
@@ -118,7 +118,7 @@
 .confirmation-card > a:hover {
   transform: translateY(-2px);
   background: var(--plum-deep);
-  box-shadow: 0 16px 32px rgba(89, 64, 82, .28);
+  box-shadow: 0 16px 32px rgba(23, 22, 25, .28);
 }
 
 .confirmation-icon,
@@ -132,8 +132,8 @@
 }
 
 .confirmation-icon {
-  background: rgba(89, 64, 82, .09);
-  border: 1px solid rgba(89, 64, 82, .15);
+  background: rgba(23, 22, 25, .09);
+  border: 1px solid rgba(23, 22, 25, .15);
   color: var(--plum);
   font-family: Georgia, serif;
   font-size: 25px;
@@ -147,7 +147,7 @@
 
 .confirmation-loader {
   box-sizing: border-box;
-  border: 2px solid rgba(89, 64, 82, .13);
+  border: 2px solid rgba(23, 22, 25, .13);
   border-top-color: var(--gold);
   animation: confirmation-spin .8s linear infinite;
 }
