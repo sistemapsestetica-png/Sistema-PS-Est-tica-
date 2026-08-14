@@ -981,11 +981,12 @@ footer { background: #efede8; border-color: #ddd7cd; }
 
 .option-icon,
 .result-icon {
-  color: #fffdf9;
-  background: linear-gradient(145deg, #363636, #181818 72%);
-  border: 1px solid rgba(255,255,255,.35);
-  box-shadow: 0 12px 25px -17px rgba(24,24,24,.85);
+  color: #181818;
+  background: #c5aa73;
+  border: 1px solid rgba(154,124,64,.42);
+  box-shadow: 0 12px 25px -17px rgba(154,124,64,.7);
 }
+.option.selected .option-icon { background: #9a7c40; }
 .option:hover,
 .option:focus-visible,
 .option.selected {
