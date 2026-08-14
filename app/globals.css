@@ -575,7 +575,7 @@ body {
   border-bottom-color: rgba(255,255,255,.1);
   box-shadow: 0 12px 34px rgba(20,20,20,.12);
 }
-.topbar .brand-logo { filter: none; opacity: 1; }
+.topbar .brand-logo { filter: saturate(.45) brightness(1.15); opacity: 1; }
 .header-nav > a { color: rgba(255,255,255,.78); }
 .header-nav > a:hover { color: #fff; }
 .header-link { color: #fff !important; border-color: rgba(229,207,164,.55); background: rgba(255,255,255,.06); }
