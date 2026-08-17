@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
+import { trackMetaEvent } from "../../lib/meta-pixel";
 import "./agendar.css";
 
 type Service = { id: number; slug: string; name: string; description: string; price_cents: number; deposit_percent: number };
@@ -39,6 +40,9 @@ export default function DirectSchedulePage() {
   const [pix, setPix] = useState<Pix | null>(null);
   const [bookingToken, setBookingToken] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [bookingId, setBookingId] = useState<number | null>(null);
+  const trackedPurchaseId = useRef<number | null>(null);
+  const chosenService = useMemo(() => services.find((service) => service.slug === serviceSlug), [services, serviceSlug]);
 
   useEffect(() => {
     async function initialize() {
@@ -76,13 +80,24 @@ export default function DirectSchedulePage() {
     if (!bookingToken || confirmed) return;
     const timer = window.setInterval(async () => {
       const { data: status } = await supabase.rpc("get_booking_public_status", { p_booking_token: bookingToken });
-      if (status?.[0]?.booking_status === "confirmed") { setConfirmed(true); window.clearInterval(timer); }
+      if (status?.[0]?.booking_status === "confirmed") {
+        setConfirmed(true);
+        if (bookingId && trackedPurchaseId.current !== bookingId) {
+          trackedPurchaseId.current = bookingId;
+          trackMetaEvent("Purchase", {
+            content_name: chosenService?.name ?? "Agendamento PS Estética",
+            content_ids: [serviceSlug],
+            content_type: "product",
+            currency: "BRL",
+            value: (selected?.deposit_cents ?? 0) / 100,
+          }, `booking-${bookingId}-purchase`);
+        }
+        window.clearInterval(timer);
+      }
       if (status?.[0]?.booking_status === "expired") { setNotice("O Pix expirou e o horário foi liberado novamente."); window.clearInterval(timer); }
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [bookingToken, confirmed]);
-
-  const chosenService = useMemo(() => services.find((service) => service.slug === serviceSlug), [services, serviceSlug]);
+  }, [bookingId, bookingToken, chosenService?.name, confirmed, selected?.deposit_cents, serviceSlug]);
 
   async function reserve(event: FormEvent) {
     event.preventDefault();
@@ -98,11 +113,26 @@ export default function DirectSchedulePage() {
     });
     if (error || !data?.[0]) { setNotice(error?.message ?? "Não foi possível criar a reserva."); setBusy(false); return; }
     const token = data[0].booking_token as string;
+    const nextBookingId = Number(data[0].booking_id);
     setBookingToken(token);
+    setBookingId(nextBookingId);
+    trackMetaEvent("Lead", {
+      content_name: "Agenda direta",
+      content_category: serviceSlug,
+    });
     const { data: pixData, error: pixError } = await supabase.functions.invoke("create-pix", { body: { bookingToken: token } });
     if (pixError || !pixData?.payment) {
       setNotice(pixData?.code === "mercado_pago_not_configured" ? "Sua vaga foi separada. O Pix automático será liberado assim que a clínica concluir a configuração do Mercado Pago." : (pixData?.error ?? "A vaga foi separada, mas não foi possível gerar o Pix agora."));
-    } else setPix(pixData.payment as Pix);
+    } else {
+      setPix(pixData.payment as Pix);
+      trackMetaEvent("InitiateCheckout", {
+        content_name: chosenService?.name ?? "Agendamento PS Estética",
+        content_ids: [serviceSlug],
+        content_type: "product",
+        currency: "BRL",
+        value: selected.deposit_cents / 100,
+      });
+    }
     setBusy(false);
   }
 

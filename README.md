@@ -15,9 +15,12 @@ O sinal é calculado pelo percentual salvo no serviço (10% por padrão). A vaga
 
 1. Copie `.env.example` para `.env.local`.
 2. Preencha as variáveis públicas do Supabase.
-3. Execute `npm install` e `npm run dev`.
+3. Informe o ID do Meta Pixel em `NEXT_PUBLIC_META_PIXEL_ID`.
+4. Execute `npm install` e `npm run dev`.
 
-## Única configuração externa: Mercado Pago
+O Pixel dispara `PageView`, `Lead`, `InitiateCheckout` e `Purchase` no navegador. Para confirmar a compra também pelo servidor, configure `META_CONVERSIONS_API_TOKEN` nos secrets do Supabase. O token nunca deve ser salvo em `.env` público ou enviado ao GitHub.
+
+## Configuração do Mercado Pago
 
 Depois do deploy da migração e das Edge Functions, cadastre estes secrets no projeto Supabase:
 

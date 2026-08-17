@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { MetaPixel } from "./meta-pixel";
 
 export const metadata: Metadata = {
   title: "PS Estética | Diagnóstico Estético Personalizado",
@@ -11,9 +12,15 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const configuredPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() || "1633028891341714";
+  const pixelId = configuredPixelId && /^\d+$/.test(configuredPixelId) ? configuredPixelId : null;
+
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        {children}
+        {pixelId && <MetaPixel pixelId={pixelId} />}
+      </body>
     </html>
   );
 }

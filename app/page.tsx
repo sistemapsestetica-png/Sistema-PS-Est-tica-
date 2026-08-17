@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { PANEL_URL } from "../lib/public-urls";
+import { trackMetaEvent } from "../lib/meta-pixel";
 
 type DayKey = "lavieen" | "laser" | "ultraformer" | "botox";
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
@@ -96,6 +97,11 @@ function formatSlot(value: string) {
   }).format(new Date(value));
 }
 
+function readCookie(name: string) {
+  const prefix = `${name}=`;
+  return document.cookie.split(";").map((item) => item.trim()).find((item) => item.startsWith(prefix))?.slice(prefix.length) ?? null;
+}
+
 export default function Home() {
   const [step, setStep] = useState<Step>(1);
   const [day, setDay] = useState<DayKey | null>(null);
@@ -114,6 +120,8 @@ export default function Home() {
   const [selectedSlot, setSelectedSlot] = useState<OpenSlot | null>(null);
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const trackedLeadId = useRef<number | null>(null);
+  const trackedPurchaseId = useRef<number | null>(null);
 
   const progress = step === 6 ? 100 : step * 20;
   const result = day ? days[day] : null;
@@ -181,6 +189,8 @@ export default function Home() {
       utm_content: params.get("utm_content"),
       utm_term: params.get("utm_term"),
       referrer: document.referrer || null,
+      fbp: readCookie("_fbp"),
+      fbc: readCookie("_fbc"),
     };
 
     const { data, error } = await supabase.rpc("capture_lead_session", {
@@ -196,6 +206,13 @@ export default function Home() {
     if (error || !session) return null;
     setLeadId(Number(session.lead_id));
     setLeadToken(session.reservation_token);
+    if (trackedLeadId.current !== Number(session.lead_id)) {
+      trackedLeadId.current = Number(session.lead_id);
+      trackMetaEvent("Lead", {
+        content_name: "Quiz estético",
+        content_category: day,
+      });
+    }
     return session;
   }
 
@@ -259,7 +276,16 @@ export default function Home() {
     const { data: pixData, error: pixError } = await supabase.functions.invoke("create-pix", { body: { bookingToken: nextBooking.booking_token } });
     if (pixError || !pixData?.payment) {
       setSaveNotice(pixData?.code === "mercado_pago_not_configured" ? "Sua vaga foi separada. O Pix será exibido assim que a clínica ativar o Mercado Pago." : (pixData?.error ?? "Não foi possível gerar o Pix agora."));
-    } else setPixPayment(pixData.payment as PixPayment);
+    } else {
+      setPixPayment(pixData.payment as PixPayment);
+      trackMetaEvent("InitiateCheckout", {
+        content_name: nextBooking.service_name,
+        content_ids: [day],
+        content_type: "product",
+        currency: "BRL",
+        value: nextBooking.deposit_cents / 100,
+      });
+    }
     setSaving(false);
   }
 
@@ -267,11 +293,24 @@ export default function Home() {
     if (!booking?.booking_token || paymentConfirmed) return;
     const timer = window.setInterval(async () => {
       const { data } = await supabase.rpc("get_booking_public_status", { p_booking_token: booking.booking_token });
-      if (data?.[0]?.booking_status === "confirmed") { setPaymentConfirmed(true); window.clearInterval(timer); }
+      if (data?.[0]?.booking_status === "confirmed") {
+        setPaymentConfirmed(true);
+        if (trackedPurchaseId.current !== booking.booking_id) {
+          trackedPurchaseId.current = booking.booking_id;
+          trackMetaEvent("Purchase", {
+            content_name: booking.service_name,
+            content_ids: [day ?? "estetica"],
+            content_type: "product",
+            currency: "BRL",
+            value: booking.deposit_cents / 100,
+          }, `booking-${booking.booking_id}-purchase`);
+        }
+        window.clearInterval(timer);
+      }
       if (data?.[0]?.booking_status === "expired") { setSaveNotice("O Pix expirou e o horário foi liberado."); window.clearInterval(timer); }
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [booking?.booking_token, paymentConfirmed]);
+  }, [booking, day, paymentConfirmed]);
 
   async function copyQuizPix() {
     if (!pixPayment?.pix_copy_paste) return;

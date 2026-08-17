@@ -17,6 +17,83 @@ async function validSignature(request: Request, dataId: string, secret: string) 
   return hex(digest) === parts.v1;
 }
 
+async function sha256(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return hex(digest);
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+async function sendMetaPurchase(
+  supabase: ReturnType<typeof createClient>,
+  bookingId: number,
+  approvedAt: string | undefined,
+) {
+  const pixelId = Deno.env.get("META_PIXEL_ID") ?? "1633028891341714";
+  const accessToken = Deno.env.get("META_CONVERSIONS_API_TOKEN");
+  if (!accessToken) {
+    console.warn("Meta Conversions API not configured");
+    return;
+  }
+
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("id,booking_source,deposit_cents,leads(name,email,phone,source),services(id,name,slug)")
+    .eq("id", bookingId)
+    .single();
+  if (error || !booking) throw error ?? new Error("Booking not found for Meta event");
+
+  const lead = firstRelation(booking.leads);
+  const service = firstRelation(booking.services);
+  const email = String(lead?.email ?? "").trim().toLowerCase();
+  const localPhone = String(lead?.phone ?? "").replace(/\D/g, "");
+  const phone = localPhone && !localPhone.startsWith("55") ? `55${localPhone}` : localPhone;
+  const source = lead?.source && typeof lead.source === "object" ? lead.source as Record<string, unknown> : {};
+  const userData: Record<string, string | string[]> = {};
+  if (email) userData.em = [await sha256(email)];
+  if (phone) userData.ph = [await sha256(phone)];
+  if (typeof source.fbp === "string" && source.fbp) userData.fbp = source.fbp;
+  if (typeof source.fbc === "string" && source.fbc) userData.fbc = source.fbc;
+  if (!userData.em && !userData.ph) throw new Error("Meta event has no matching user data");
+
+  const graphVersion = Deno.env.get("META_GRAPH_API_VERSION") ?? "v23.0";
+  const event = {
+    event_name: "Purchase",
+    event_time: Math.floor(new Date(approvedAt ?? Date.now()).getTime() / 1000),
+    event_id: `booking-${booking.id}-purchase`,
+    event_source_url: booking.booking_source === "direct"
+      ? "https://agenda.psestetica.com.br"
+      : "https://quiz.psestetica.com.br",
+    action_source: "website",
+    user_data: userData,
+    custom_data: {
+      currency: "BRL",
+      value: Number(booking.deposit_cents) / 100,
+      content_name: service?.name ?? "Agendamento PS Estética",
+      content_ids: [String(service?.slug ?? service?.id ?? booking.id)],
+      content_type: "product",
+      order_id: String(booking.id),
+    },
+  };
+  const testEventCode = Deno.env.get("META_TEST_EVENT_CODE");
+  const response = await fetch(
+    `https://graph.facebook.com/${graphVersion}/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        data: [event],
+        ...(testEventCode ? { test_event_code: testEventCode } : {}),
+      }),
+    },
+  );
+  if (!response.ok) {
+    console.error("Meta Conversions API failed", response.status, await response.text());
+  }
+}
+
 Deno.serve(async (request) => {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const url = new URL(request.url);
@@ -51,6 +128,11 @@ Deno.serve(async (request) => {
 
   if (payment.status === "approved") {
     await supabase.from("bookings").update({ status: "confirmed", updated_at: new Date().toISOString() }).eq("id", bookingId);
+    try {
+      await sendMetaPurchase(supabase, bookingId, payment.date_approved);
+    } catch (error) {
+      console.error("Meta Purchase event failed", error);
+    }
   } else if (["rejected", "cancelled"].includes(payment.status)) {
     const { data: booking } = await supabase.from("bookings").select("slot_id").eq("id", bookingId).single();
     await supabase.from("bookings").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", bookingId).eq("status", "awaiting_payment");
