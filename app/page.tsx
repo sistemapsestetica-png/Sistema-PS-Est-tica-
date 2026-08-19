@@ -336,7 +336,7 @@ export default function Home() {
         <div className="hero-ring" aria-hidden="true" />
         <div className="hero-copy">
           <p className="eyebrow hero-reveal hero-reveal-one">Quiz estético + agenda online</p>
-          <h1 className="hero-reveal hero-reveal-two">Descubra seu protocolo. <em>Escolha sua data.</em></h1>
+          <h1 className="hero-reveal hero-reveal-two">Descubra o tratamento ideal para você. <em>Escolha sua melhor data.</em></h1>
           <p className="lede hero-reveal hero-reveal-three">
             Responda perguntas rápidas, receba uma indicação inicial e pré-reserve sua avaliação na PS Estética.
           </p>

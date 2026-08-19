@@ -1210,3 +1210,140 @@ footer { background: #efede8; border-color: #ddd7cd; }
   .result-case,
   .proof-placeholders article { transition: none !important; }
 }
+
+/* Mobile first: o diagnóstico começa imediatamente após o cabeçalho */
+@media (max-width: 700px) {
+  .topbar {
+    height: 60px;
+    padding: 0 12px;
+  }
+  .brand-logo {
+    width: 142px;
+    height: auto;
+  }
+  .header-nav { gap: 0; }
+  .header-nav > a:first-child { display: none; }
+  .header-link {
+    padding: 8px 10px;
+    border-radius: 999px;
+    font-size: 9px !important;
+    letter-spacing: .02em;
+  }
+
+  .hero {
+    min-height: 0;
+    padding: 8px 12px 48px;
+    gap: 38px;
+    align-items: start;
+    overflow: visible;
+  }
+  .hero .quiz-shell {
+    order: 1;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 18px 14px 20px;
+    border-radius: 3px 22px 3px 22px;
+    box-shadow: 0 24px 55px -34px rgba(24,24,24,.38);
+    animation-delay: 0s;
+  }
+  .quiz-shell::before {
+    inset: 7px;
+    border-radius: 2px 17px 2px 17px;
+  }
+  .quiz-top { font-size: 9px; }
+  .progress-track { margin: 9px 0 19px; }
+  .quiz-kicker {
+    font-size: 9px;
+    line-height: 1.4;
+    letter-spacing: .13em;
+  }
+  .quiz-step h2 {
+    margin: 5px 0 16px;
+    font-size: clamp(24px, 7.3vw, 29px);
+    line-height: 1.08;
+  }
+  .option-grid { gap: 7px; }
+  .option {
+    min-height: 56px;
+    grid-template-columns: 32px minmax(0, 1fr) 16px;
+    gap: 10px;
+    padding: 8px 11px;
+    border-radius: 3px 12px 3px 12px;
+    font-size: 13px;
+    line-height: 1.25;
+  }
+  .option:hover,
+  .option:focus-visible,
+  .option.selected { transform: none; }
+  .option-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+  .quiz-step label { margin-bottom: 10px; }
+  .quiz-step input { padding: 12px 13px; }
+  .primary-button,
+  .whatsapp-button { min-height: 48px; padding: 13px 15px; }
+  .slot-options { max-height: 44vh; }
+  .prebook-copy { margin-bottom: 15px; }
+  .quiz-pix { padding: 16px; }
+
+  .hero-copy {
+    order: 2;
+    text-align: left;
+  }
+  .hero .eyebrow {
+    justify-content: flex-start;
+    margin: 0 0 14px;
+  }
+  .hero h1 {
+    max-width: 520px;
+    font-size: clamp(36px, 10.8vw, 45px);
+    line-height: .98;
+  }
+  .lede {
+    margin: 18px 0 21px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .proof-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin: 0;
+  }
+  .proof-row span {
+    min-width: 0;
+    margin: 0;
+    padding: 11px 0;
+  }
+  .proof-row span + span {
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+  .location {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .trust-strip { margin-top: 0; }
+  .journey-section,
+  .results-section,
+  .days-section { padding-left: 16px; padding-right: 16px; }
+  .experience-copy,
+  .benefits-section { padding-left: 18px; padding-right: 18px; }
+  .faq-section { padding-left: 18px; padding-right: 18px; }
+  .comparison-pair img { width: 100%; height: 260px; }
+  .final-section { margin-left: 12px; margin-right: 12px; }
+}
+
+@media (max-width: 370px) {
+  .topbar { height: 56px; }
+  .brand-logo { width: 128px; }
+  .header-link { padding: 7px 9px; font-size: 8px !important; }
+  .hero { padding: 6px 9px 44px; }
+  .hero .quiz-shell { padding: 16px 12px 18px; }
+  .quiz-step h2 { font-size: 23px; }
+  .option { min-height: 53px; font-size: 12.5px; }
+}
