@@ -1211,10 +1211,10 @@ footer { background: #efede8; border-color: #ddd7cd; }
   .proof-placeholders article { transition: none !important; }
 }
 
-/* Mobile first: o diagnóstico começa imediatamente após o cabeçalho */
+/* Mobile first: promessa e diagnóstico compartilham a primeira dobra */
 @media (max-width: 700px) {
   .topbar {
-    height: 60px;
+    height: 58px;
     padding: 0 12px;
   }
   .brand-logo {
@@ -1224,21 +1224,48 @@ footer { background: #efede8; border-color: #ddd7cd; }
   .header-nav { gap: 0; }
   .header-nav > a:first-child { display: none; }
   .header-link {
-    padding: 8px 10px;
+    padding: 8px 11px;
     border-radius: 999px;
-    font-size: 9px !important;
+    font-size: 9.5px !important;
     letter-spacing: .02em;
   }
 
   .hero {
     min-height: 0;
-    padding: 8px 12px 48px;
-    gap: 38px;
+    padding: 14px 12px 48px;
+    gap: 16px;
     align-items: start;
     overflow: visible;
   }
-  .hero .quiz-shell {
+  .hero-copy {
     order: 1;
+    text-align: left;
+  }
+  .hero .eyebrow {
+    justify-content: flex-start;
+    margin: 0 0 8px;
+    font-size: 8.5px;
+    letter-spacing: .14em;
+  }
+  .hero .eyebrow::before { width: 24px; }
+  .hero h1 {
+    max-width: 520px;
+    font-size: clamp(30px, 8.7vw, 37px);
+    line-height: 1;
+    letter-spacing: -.04em;
+  }
+  .hero h1 em { display: block; }
+  .lede {
+    max-width: 480px;
+    margin: 10px 0 0;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .proof-row,
+  .location { display: none; }
+
+  .hero .quiz-shell {
+    order: 2;
     width: 100%;
     min-height: 0;
     margin: 0;
@@ -1289,44 +1316,6 @@ footer { background: #efede8; border-color: #ddd7cd; }
   .prebook-copy { margin-bottom: 15px; }
   .quiz-pix { padding: 16px; }
 
-  .hero-copy {
-    order: 2;
-    text-align: left;
-  }
-  .hero .eyebrow {
-    justify-content: flex-start;
-    margin: 0 0 14px;
-  }
-  .hero h1 {
-    max-width: 520px;
-    font-size: clamp(36px, 10.8vw, 45px);
-    line-height: .98;
-  }
-  .lede {
-    margin: 18px 0 21px;
-    font-size: 15px;
-    line-height: 1.6;
-  }
-  .proof-row {
-    display: grid;
-    grid-template-columns: 1fr;
-    margin: 0;
-  }
-  .proof-row span {
-    min-width: 0;
-    margin: 0;
-    padding: 11px 0;
-  }
-  .proof-row span + span {
-    padding-left: 0;
-    border-top: 1px solid var(--line);
-    border-left: 0;
-  }
-  .location {
-    justify-content: flex-start;
-    text-align: left;
-  }
-
   .trust-strip { margin-top: 0; }
   .journey-section,
   .results-section,
@@ -1339,10 +1328,12 @@ footer { background: #efede8; border-color: #ddd7cd; }
 }
 
 @media (max-width: 370px) {
-  .topbar { height: 56px; }
+  .topbar { height: 54px; }
   .brand-logo { width: 128px; }
   .header-link { padding: 7px 9px; font-size: 8px !important; }
-  .hero { padding: 6px 9px 44px; }
+  .hero { padding: 10px 9px 44px; gap: 13px; }
+  .hero h1 { font-size: 28px; }
+  .lede { font-size: 12px; }
   .hero .quiz-shell { padding: 16px 12px 18px; }
   .quiz-step h2 { font-size: 23px; }
   .option { min-height: 53px; font-size: 12.5px; }

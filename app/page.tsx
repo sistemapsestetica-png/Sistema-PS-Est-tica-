@@ -326,7 +326,7 @@ export default function Home() {
         </a>
         <nav className="header-nav" aria-label="Navegação principal">
           <a href="#tratamentos">Tratamentos</a>
-          <a className="header-link" href="https://wa.me/5511934580476" target="_blank" rel="noreferrer">Falar com a equipe <span aria-hidden="true">↗</span></a>
+          <a className="header-link" href="https://wa.me/5511934580476" target="_blank" rel="noreferrer">Falar com a equipe</a>
         </nav>
       </header>
 
@@ -336,7 +336,7 @@ export default function Home() {
         <div className="hero-ring" aria-hidden="true" />
         <div className="hero-copy">
           <p className="eyebrow hero-reveal hero-reveal-one">Quiz estético + agenda online</p>
-          <h1 className="hero-reveal hero-reveal-two">Descubra o tratamento ideal para você. <em>Escolha sua melhor data.</em></h1>
+          <h1 className="hero-reveal hero-reveal-two">Descubra qual tratamento combina com você. <em>Veja as próximas datas.</em></h1>
           <p className="lede hero-reveal hero-reveal-three">
             Responda perguntas rápidas, receba uma indicação inicial e pré-reserve sua avaliação na PS Estética.
           </p>
