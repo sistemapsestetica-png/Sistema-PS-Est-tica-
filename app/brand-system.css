@@ -44,11 +44,11 @@ body { color: var(--ps-ink); background: var(--ps-paper); }
 
 /* Primeira dobra da home */
 .hero {
-  min-height: calc(100svh - 76px);
+  min-height: auto;
   max-width: none;
-  padding: clamp(58px, 7vw, 104px) max(24px, calc((100vw - 1240px) / 2));
+  padding: clamp(42px, 5vw, 68px) max(24px, calc((100vw - 1240px) / 2)) clamp(48px, 5.5vw, 76px);
   grid-template-columns: minmax(0, 1.05fr) minmax(430px, .72fr);
-  gap: clamp(58px, 8vw, 130px);
+  gap: clamp(42px, 6vw, 92px);
   color: var(--ps-ink);
   background: var(--ps-paper);
 }
@@ -69,7 +69,7 @@ body { color: var(--ps-ink); background: var(--ps-paper); }
 .hero-ring { display: none; }
 .hero .eyebrow { margin-bottom: 20px; color: var(--ps-gold-dark); }
 .hero .eyebrow::before { background: var(--ps-gold); }
-.hero h1 { max-width: 730px; font-size: clamp(55px, 6vw, 84px); line-height: .98; letter-spacing: -.045em; text-shadow: none; }
+.hero h1 { max-width: 690px; font-size: clamp(48px, 5vw, 70px); line-height: .98; letter-spacing: -.045em; text-shadow: none; }
 .hero h1 em { display: block; color: var(--ps-gold-dark); }
 .hero h1 em::after { display: none; }
 .lede { max-width: 630px; margin: 28px 0 30px; color: var(--ps-copy); font-size: 17px; line-height: 1.72; }
@@ -80,8 +80,8 @@ body { color: var(--ps-ink); background: var(--ps-paper); }
 .location > span { background: var(--ps-gold); }
 
 .hero .quiz-shell {
-  min-height: 570px;
-  padding: 36px 38px 40px;
+  min-height: 535px;
+  padding: 31px 34px 35px;
   color: var(--ps-ink);
   background: var(--ps-white);
   border: 1px solid var(--ps-line);
@@ -113,6 +113,15 @@ body { color: var(--ps-ink); background: var(--ps-paper); }
 }
 .primary-button:hover, .final-button:hover { background: var(--ps-ink-soft); }
 .progress-track span { background: linear-gradient(90deg, var(--ps-gold-dark), var(--ps-gold-light)); }
+.mobile-main-intro { display: none; }
+
+@media (min-width: 701px) {
+  .quiz-shell:has(.desktop-main-first) .progress-track span { width: 20% !important; }
+  .quiz-shell:has(.desktop-main-first) .quiz-top span:first-child,
+  .quiz-shell:has(.desktop-main-first) .quiz-top span:last-child { font-size: 0; }
+  .quiz-shell:has(.desktop-main-first) .quiz-top span:first-child::after { content: "Etapa 1 de 5"; font-size: 10px; }
+  .quiz-shell:has(.desktop-main-first) .quiz-top span:last-child::after { content: "20%"; font-size: 10px; }
+}
 
 /* Faixa e blocos editoriais */
 .trust-strip {
@@ -253,13 +262,18 @@ body > main > footer:not([class]) .brand-logo { filter: none; }
   .topbar { height: 58px; padding: 0 12px; }
   .topbar .brand-logo { width: 142px; }
   .topbar .header-link { padding: 8px 11px; }
-  .hero { min-height: 0; padding: 14px 12px 48px; gap: 16px; }
+  .hero { min-height: calc(100svh - 58px); padding: 14px 12px 42px; display: block; }
   .hero::before { display: none; }
-  .hero h1 { font-size: clamp(30px, 8.7vw, 37px); line-height: 1; }
-  .lede { margin: 10px 0 0; font-size: 13px; line-height: 1.45; }
-  .hero .quiz-shell { min-height: 0; padding: 18px 14px 20px; border-radius: 3px 22px 3px 22px; }
+  .hero-copy { display: none; }
+  .desktop-main-first { display: none; }
+  .mobile-main-intro { display: block; }
+  .hero .quiz-shell { width: 100%; min-height: 0; margin: 0; padding: 22px 15px 25px; border-radius: 3px 22px 3px 22px; }
   .hero .quiz-shell::before { inset: 7px; border-radius: 2px 17px 2px 17px; }
-  .quiz-step h2 { font-size: clamp(24px, 7.3vw, 29px); }
+  .quiz-step h2 { font-size: clamp(27px, 8vw, 34px); }
+  .mobile-main-intro h2 { max-width: 430px; font-size: clamp(32px, 9.2vw, 40px); line-height: 1.02; }
+  .mobile-main-intro-copy { margin: -5px 0 22px; color: var(--ps-copy); font-size: 13px; line-height: 1.5; }
+  .mobile-main-intro-trust { margin: 18px 0 0; display: flex; flex-direction: column; gap: 3px; color: #858078; font-size: 9px; line-height: 1.45; }
+  .mobile-main-intro-trust b { color: #5f5a52; font-size: 8.5px; letter-spacing: .055em; text-transform: uppercase; }
   .journey-section, .days-section, .results-section, .proof-ready, .faq-section { padding: 82px 16px; }
   .journey-grid, .days-grid, .proof-placeholders { grid-template-columns: 1fr; }
   .journey-card, .journey-card + .journey-card, .day-card, .proof-placeholders article {

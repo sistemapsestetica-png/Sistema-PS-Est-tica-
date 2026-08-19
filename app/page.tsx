@@ -6,7 +6,7 @@ import { PANEL_URL } from "../lib/public-urls";
 import { trackMetaEvent } from "../lib/meta-pixel";
 
 type DayKey = "lavieen" | "laser" | "ultraformer" | "botox";
-type Step = 1 | 2 | 3 | 4 | 5 | 6;
+type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 type OpenSlot = {
   slot_id: number;
@@ -103,7 +103,7 @@ function readCookie(name: string) {
 }
 
 export default function Home() {
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>(0);
   const [day, setDay] = useState<DayKey | null>(null);
   const [experience, setExperience] = useState("");
   const [timing, setTiming] = useState("");
@@ -351,13 +351,23 @@ export default function Home() {
         <div className="quiz-shell" id="quiz" aria-live="polite">
           <div className="quiz-aura" aria-hidden="true" />
           <div className="quiz-top">
-            <span>{step === 6 ? "Pré-reserva criada" : step === 5 ? "Escolha da data" : `Etapa ${step} de 5`}</span>
+            <span>{step === 0 ? "Pronto para começar" : step === 6 ? "Pré-reserva criada" : step === 5 ? "Escolha da data" : `Etapa ${step} de 5`}</span>
             <span>{progress}%</span>
           </div>
           <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
 
-          {step === 1 && (
-            <div className="quiz-step">
+          {step === 0 && (
+            <div className="quiz-step mobile-main-intro">
+              <p className="quiz-kicker">Quiz estético + agenda online</p>
+              <h2>Descubra qual tratamento combina com você.</h2>
+              <p className="mobile-main-intro-copy">Responda perguntas rápidas, receba uma indicação inicial e veja as próximas datas disponíveis na PS Estética.</p>
+              <button className="primary-button" type="button" onClick={() => setStep(1)}>Começar o quiz <span>›</span></button>
+              <p className="mobile-main-intro-trust"><b>PS Estética • São Bernardo do Campo</b><span>Avaliação individualizada antes da definição do protocolo</span></p>
+            </div>
+          )}
+
+          {(step === 0 || step === 1) && (
+            <div className={`quiz-step ${step === 0 ? "desktop-main-first" : ""}`}>
               <p className="quiz-kicker">Comece pelo que mais incomoda você</p>
               <h2>Se pudesse melhorar uma coisa primeiro, qual seria?</h2>
               <div className="option-grid">
