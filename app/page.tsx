@@ -29,11 +29,12 @@ type BookingConfirmation = {
 type PixPayment = { status: string; pix_copy_paste?: string; qr_code_base64?: string; ticket_url?: string; expires_at?: string };
 type LeadSession = { lead_id: number; reservation_token: string };
 
-const days: Record<DayKey, { name: string; icon: string; image: string; short: string; result: string; how: string; expected: string; cta: string }> = {
+const days: Record<DayKey, { name: string; icon: string; image: string; tone: string; short: string; result: string; how: string; expected: string; cta: string }> = {
   lavieen: {
     name: "Lavieen Day",
     icon: "✦",
     image: "/quiz-concerns/sunspots.png",
+    tone: "amber",
     short: "Manchas, poros ou textura irregular",
     result: "Manchas, poros aparentes e textura irregular",
     how: "Laser fracionado que estimula a renovação da pele",
@@ -44,6 +45,7 @@ const days: Record<DayKey, { name: string; icon: string; image: string; short: s
     name: "Laser Day",
     icon: "◉",
     image: "/quiz-concerns/unwanted-hair.png",
+    tone: "blue",
     short: "Pelos indesejados",
     result: "Pelos indesejados em diferentes regiões",
     how: "Plano personalizado conforme região, pele e objetivo",
@@ -54,6 +56,7 @@ const days: Record<DayKey, { name: string; icon: string; image: string; short: s
     name: "Ultraformer Day",
     icon: "⌁",
     image: "/quiz-concerns/facial-contour.png",
+    tone: "sage",
     short: "Flacidez, papada ou contorno",
     result: "Flacidez, papada e perda de definição do contorno",
     how: "Ultrassom micro e macrofocado aplicado de forma personalizada",
@@ -64,6 +67,7 @@ const days: Record<DayKey, { name: string; icon: string; image: string; short: s
     name: "Botox Day",
     icon: "≈",
     image: "/quiz-concerns/fine-lines.png",
+    tone: "taupe",
     short: "Rugas e linhas de expressão",
     result: "Rugas dinâmicas e linhas de expressão",
     how: "Aplicação planejada após análise individual da expressão",
@@ -377,8 +381,8 @@ export default function Home() {
               <h2>Se pudesse melhorar uma coisa primeiro, qual seria?</h2>
               <div className="option-grid">
                 {(Object.entries(days) as [DayKey, (typeof days)[DayKey]][]).map(([key, item]) => (
-                  <button className={`option visual-option ${day === key ? "selected" : ""}`} key={key} onClick={() => pickDay(key)}>
-                    <Image className="option-image" src={item.image} width={64} height={64} sizes="(max-width: 700px) 52px, 64px" alt="" />
+                  <button className={`option visual-option ${day === key ? "selected" : ""}`} data-tone={item.tone} key={key} onClick={() => pickDay(key)}>
+                    <Image className="option-image" src={item.image} width={76} height={76} sizes="(max-width: 700px) 64px, 76px" alt="" />
                     <span>{item.short}</span>
                     <span className="option-arrow">→</span>
                   </button>
