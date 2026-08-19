@@ -1,14 +1,14 @@
 :root {
-  --admin-cream: #f5f4f1;
-  --admin-paper: #fffdf9;
-  --admin-black: #181818;
-  --admin-black-soft: #282828;
-  --admin-black-light: #363636;
-  --admin-gold: #c5aa73;
-  --admin-gold-dark: #82683b;
-  --admin-ink: #404040;
-  --admin-muted: #7a7a7a;
-  --admin-line: #ddd9d2;
+  --admin-cream: #f7f4ee;
+  --admin-paper: #fffdf8;
+  --admin-black: #171715;
+  --admin-black-soft: #2d2c29;
+  --admin-black-light: #3c3934;
+  --admin-gold: #b6995c;
+  --admin-gold-dark: #816b3f;
+  --admin-ink: #3f3c37;
+  --admin-muted: #68635c;
+  --admin-line: #d8cfbf;
 }
 * { box-sizing: border-box; }
 .admin-page, .admin-login, .admin-loading { min-height: 100vh; color: var(--admin-ink); background: radial-gradient(circle at 8% 3%, rgba(45,45,45,.11), transparent 28rem), var(--admin-cream); font-family: "Segoe UI", Arial, sans-serif; }

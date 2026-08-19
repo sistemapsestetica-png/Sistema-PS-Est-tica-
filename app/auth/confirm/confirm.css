@@ -1,9 +1,9 @@
 .confirmation-page {
-  --black: #181818;
-  --black-deep: #111111;
-  --gold: #c5aa73;
-  --cream: #f6efe5;
-  --ink: #404040;
+  --black: #171715;
+  --black-deep: #0f0f0e;
+  --gold: #b6995c;
+  --cream: #f7f4ee;
+  --ink: #3f3c37;
   min-height: 100vh;
   display: grid;
   place-items: center;

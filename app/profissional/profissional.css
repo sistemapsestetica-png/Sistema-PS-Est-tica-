@@ -1,4 +1,4 @@
-.professional-page { --admin-black:#181818; }
+.professional-page { --admin-black:#171715; --admin-gold:#b6995c; --admin-cream:#f7f4ee; --admin-paper:#fffdf8; }
 .professional-stats { grid-template-columns: repeat(4,1fr); }
 .payment-pill { padding: 7px 10px; display: inline-block; border-radius: 999px; color: #7b5d26; background: #f5eedc; font-size: 9px; font-weight: 800; text-transform: uppercase; }
 .payment-pill.paid { color: #365d49; background: #e5f1e9; }

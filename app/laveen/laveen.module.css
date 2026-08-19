@@ -6,10 +6,22 @@
   --gold: #b6995c;
   --gold-light: #dbc99f;
   min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   color: var(--ink);
   background: var(--paper);
   overflow: hidden;
 }
+
+.header { order: 0; }
+.hero { order: 1; width: 100%; }
+.benefits { order: 2; width: 100%; }
+.fit { order: 3; width: 100%; }
+.how { order: 4; width: 100%; }
+.confidence { order: 5; width: 100%; }
+.quizSection { order: 6; width: 100%; }
+.footer { order: 7; width: 100%; }
 
 .header {
   position: relative;
@@ -193,6 +205,8 @@
 .quizBody input:focus { border-color: #947b48; box-shadow: 0 0 0 3px rgba(182, 153, 92, .12); }
 .quizBody form + .primary, .quizBody > .primary { margin-top: 6px; }
 .privacy { display: block; margin-top: 15px; color: #858078; font-size: 10px; line-height: 1.5; }
+.cardTrust { margin: 19px 0 0; color: #5f5a52; font-size: 9px; font-weight: 800; letter-spacing: .055em; line-height: 1.55; text-transform: uppercase; }
+.cardTrust span { color: #858078; font-weight: 400; letter-spacing: 0; text-transform: none; }
 .notice { margin: 16px 0 0; padding: 12px 14px; color: #5a5140; background: #f3ecdd; border: 1px solid #ddcda9; border-radius: 10px; font-size: 12px; line-height: 1.5; }
 .resultLabel { width: fit-content; padding: 8px 11px; color: #fff; background: #8f7541; border-radius: 999px; }
 .resultText { margin-top: 0; }
@@ -241,16 +255,17 @@
   .header { height: 58px; padding: 0 12px; }
   .header img { width: 137px; }
   .headerCta { padding: 8px 10px; font-size: 8.5px; letter-spacing: .02em; }
-  .hero { min-height: calc(100svh - 58px); padding: 21px 15px 30px; gap: 18px; align-content: start; }
+  .hero { display: none; }
   .hero::before { width: 360px; height: 360px; right: -250px; }
   .eyebrow { margin-bottom: 9px; font-size: 8.5px; letter-spacing: .14em; }
   .eyebrow::before { width: 23px; }
   .hero h1 { font-size: clamp(36px, 10.7vw, 46px); line-height: .98; }
   .heroText { margin: 13px 0 16px; font-size: 13px; line-height: 1.48; }
   .primary { min-height: 49px; padding: 0 17px 0 19px; gap: 23px; font-size: 10px; }
+  .heroCopy > .primary { display: none; }
   .heroTrust { margin-top: 13px; gap: 3px; font-size: 9.5px; }
   .heroTrust b { font-size: 8.5px; }
-  .heroPanel { min-height: 0; padding: 15px 17px; display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; border-radius: 3px 20px 3px 20px; }
+  .heroPanel { display: none; }
   .heroPanel::after, .orbit, .heroPanel ul { display: none; }
   .heroPanel > p { margin: 0; align-self: end; font-size: 8px; }
   .heroPanel strong { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: 28px; }
@@ -269,12 +284,17 @@
   .confidence { padding: 78px 18px; }
   .confidence h2 { font-size: 40px; }
   .confidence > p:not(.eyebrow) { font-size: 14px; }
-  .quizSection { gap: 35px; scroll-margin-top: 0; }
-  .quizIntro > p:last-child { font-size: 14px; }
+  .quizSection { order: 1; min-height: calc(100svh - 58px); padding: 14px 12px 42px; align-content: start; gap: 0; scroll-margin-top: 0; }
+  .benefits { order: 2; }
+  .fit { order: 3; }
+  .how { order: 4; }
+  .confidence { order: 5; }
+  .quizIntro { display: none; }
   .quizCard { padding: 22px 15px 25px; border-radius: 3px 22px 3px 22px; }
   .quizCard::before { inset: 6px; border-radius: 2px 17px 2px 17px; }
   .progress { margin-bottom: 25px; }
-  .quizBody h3 { font-size: 29px; }
+  .quizBody h3 { font-size: clamp(31px, 9vw, 39px); line-height: 1.02; }
+  .quizBody .quizText { margin-top: -6px; font-size: 13px; line-height: 1.5; }
   .options button, .slots button { min-height: 57px; padding: 10px 13px; font-size: 13px; }
   .answerSummary { flex-direction: column; gap: 5px; }
   .answerSummary strong { text-align: left; }

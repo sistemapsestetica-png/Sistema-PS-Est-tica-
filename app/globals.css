@@ -1,12 +1,12 @@
 :root {
-  --cream: #faf5ee;
-  --paper: #fffdfa;
-  --bronze: #9e753b;
-  --bronze-deep: #765326;
-  --espresso: #33241a;
-  --accent: #b79b61;
-  --line: #e7ddcc;
-  --muted: #756457;
+  --cream: #f7f4ee;
+  --paper: #fffdf8;
+  --bronze: #b6995c;
+  --bronze-deep: #816b3f;
+  --espresso: #171715;
+  --accent: #dbc99f;
+  --line: #d8cfbf;
+  --muted: #56534e;
 }
 
 * { box-sizing: border-box; }
@@ -1337,4 +1337,80 @@ footer { background: #efede8; border-color: #ddd7cd; }
   .hero .quiz-shell { padding: 16px 12px 18px; }
   .quiz-step h2 { font-size: 23px; }
   .option { min-height: 53px; font-size: 12.5px; }
+}
+
+/* Identidade PS Estética — sistema visual Lavieen */
+.topbar {
+  max-width: none;
+  padding-left: max(22px, calc((100vw - 1240px) / 2));
+  padding-right: max(22px, calc((100vw - 1240px) / 2));
+  position: relative;
+  z-index: 30;
+  background: rgba(247,244,238,.93);
+  border-bottom: 1px solid rgba(23,23,21,.1);
+  backdrop-filter: blur(18px);
+}
+.brand-logo { width: 174px; height: auto; }
+.header-link {
+  padding: 10px 16px;
+  color: var(--espresso);
+  border: 1px solid rgba(23,23,21,.38);
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.hero {
+  max-width: 1240px;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+.hero::after { height: 1px; background: linear-gradient(90deg, var(--bronze), transparent); }
+.hero h1 em { color: var(--bronze-deep); }
+.quiz-shell {
+  background: rgba(255,253,248,.97);
+  border-color: var(--line);
+  border-radius: 4px 35px 4px 35px;
+  box-shadow: 0 32px 70px -50px rgba(0,0,0,.55);
+}
+.quiz-shell::before { border-radius: 3px 28px 3px 28px; }
+.option,
+.slot-option,
+.quiz-step input {
+  background: #fbf9f4;
+  border-color: var(--line);
+  border-radius: 2px 13px 2px 13px;
+}
+.option:hover,
+.option:focus-visible,
+.option.selected,
+.slot-option:hover,
+.slot-option:focus-visible,
+.slot-option.selected-slot {
+  border-color: var(--bronze);
+  background: #f0eadc;
+}
+.primary-button,
+.whatsapp-button,
+.final-button {
+  border: 1px solid rgba(182,153,92,.5);
+  border-radius: 2px 15px 2px 15px;
+  background: var(--espresso);
+}
+.trust-strip { border-radius: 3px 22px 3px 22px; }
+.day-card { background: rgba(255,253,248,.5); }
+.day-card:hover { background: var(--paper); }
+.final-section {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 4px 35px 4px 35px;
+}
+
+@media (max-width: 700px) {
+  .topbar { padding-left: 12px; padding-right: 12px; }
+  .brand-logo { width: 142px; }
+  .header-link { padding: 8px 11px; }
+  .hero { padding-left: 12px; padding-right: 12px; }
+  .hero .quiz-shell { border-radius: 3px 22px 3px 22px; }
+  .quiz-shell::before { border-radius: 2px 17px 2px 17px; }
 }
