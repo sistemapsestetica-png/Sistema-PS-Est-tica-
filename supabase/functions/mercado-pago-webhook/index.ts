@@ -1,5 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
+import {
+  type BookingEmailDetails,
+  firstRelation,
+  sendCustomerPaymentConfirmedEmail,
+  sendProfessionalPaymentConfirmedEmail,
+} from "../_shared/booking-emails.ts";
 
 function hex(buffer: ArrayBuffer) {
   return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -20,10 +26,6 @@ async function validSignature(request: Request, dataId: string, secret: string) 
 async function sha256(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return hex(digest);
-}
-
-function firstRelation<T>(value: T | T[] | null | undefined) {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 async function sendMetaPurchase(
@@ -94,6 +96,40 @@ async function sendMetaPurchase(
   }
 }
 
+async function sendPaymentConfirmationEmails(
+  supabase: ReturnType<typeof createClient>,
+  bookingId: number,
+) {
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("id,deposit_cents,leads(name,email,phone),services(name),slots(starts_at),professional:staff_profiles!bookings_professional_id_fkey(full_name,email)")
+    .eq("id", bookingId)
+    .single();
+  if (error || !booking) throw error ?? new Error("Booking not found for confirmation emails");
+
+  const lead = firstRelation(booking.leads);
+  const service = firstRelation(booking.services);
+  const slot = firstRelation(booking.slots);
+  const professional = firstRelation(booking.professional);
+  if (!lead?.email || !slot?.starts_at) throw new Error("Booking has no customer email or scheduled time");
+
+  const details: BookingEmailDetails = {
+    bookingId: booking.id,
+    customerName: lead.name?.trim() || "Cliente",
+    customerEmail: lead.email,
+    customerPhone: lead.phone,
+    serviceName: service?.name || "Avaliação na PS Estética",
+    startsAt: slot.starts_at,
+    professionalName: professional?.full_name,
+    professionalEmail: professional?.email,
+    depositCents: booking.deposit_cents,
+  };
+  await Promise.all([
+    sendCustomerPaymentConfirmedEmail(details),
+    sendProfessionalPaymentConfirmedEmail(details),
+  ]);
+}
+
 Deno.serve(async (request) => {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const url = new URL(request.url);
@@ -128,6 +164,11 @@ Deno.serve(async (request) => {
 
   if (payment.status === "approved") {
     await supabase.from("bookings").update({ status: "confirmed", updated_at: new Date().toISOString() }).eq("id", bookingId);
+    try {
+      await sendPaymentConfirmationEmails(supabase, bookingId);
+    } catch (error) {
+      console.error("Payment confirmation emails failed", error);
+    }
     try {
       await sendMetaPurchase(supabase, bookingId, payment.date_approved);
     } catch (error) {

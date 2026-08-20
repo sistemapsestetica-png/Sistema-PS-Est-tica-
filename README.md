@@ -32,7 +32,7 @@ supabase secrets set \
   SITE_URL="https://ps-estetica-sbc.vercel.app"
 ```
 
-Para enviar a confirmação de pré-reserva por e-mail, configure também o Resend nos secrets das Edge Functions:
+Para enviar os e-mails transacionais de pré-reserva e pagamento confirmado ao cliente e ao profissional responsável, configure também o Resend nos secrets das Edge Functions:
 
 ```bash
 supabase secrets set \
@@ -41,7 +41,14 @@ supabase secrets set \
   RESEND_REPLY_TO="contato@psestetica.com.br"
 ```
 
-O domínio do endereço remetente precisa estar validado no Resend. O envio usa uma chave de idempotência por reserva para evitar mensagens duplicadas.
+O domínio do endereço remetente precisa estar validado no Resend. Cada uma das quatro mensagens usa uma chave de idempotência própria por reserva para evitar duplicidade:
+
+- pré-reserva recebida pelo cliente;
+- nova pré-reserva para o profissional;
+- pagamento e horário confirmados para o cliente;
+- atendimento confirmado para o profissional.
+
+Os e-mails de autenticação (confirmação de cadastro, convite, recuperação, magic link, alteração de e-mail e reautenticação) usam o SMTP e os templates declarados em `supabase/config.toml` e `supabase/templates`.
 
 No painel do Mercado Pago, configure o webhook de pagamentos para:
 

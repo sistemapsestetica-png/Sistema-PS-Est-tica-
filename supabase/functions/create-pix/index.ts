@@ -1,5 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
+import {
+  type BookingEmailDetails,
+  firstRelation,
+  sendCustomerPaymentConfirmedEmail,
+  sendCustomerPrebookingEmail,
+  sendProfessionalPaymentConfirmedEmail,
+  sendProfessionalPrebookingEmail,
+} from "../_shared/booking-emails.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": Deno.env.get("SITE_URL") ?? "*",
@@ -12,64 +20,23 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   headers: { ...corsHeaders, "content-type": "application/json; charset=utf-8" },
 });
 
-function firstRelation<T>(value: T | T[] | null | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
-  })[character] ?? character);
-}
-
-function bookingDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-async function sendPrebookingEmail(booking: Record<string, unknown>) {
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  const from = Deno.env.get("RESEND_FROM_EMAIL");
-  if (!apiKey || !from) {
-    console.warn("Resend booking email not configured");
-    return false;
-  }
-
-  const lead = firstRelation(booking.leads as { name?: string; email?: string } | { name?: string; email?: string }[] | null);
+function emailDetails(booking: Record<string, unknown>): BookingEmailDetails | null {
+  const lead = firstRelation(booking.leads as { name?: string; email?: string; phone?: string } | { name?: string; email?: string; phone?: string }[] | null);
   const service = firstRelation(booking.services as { name?: string } | { name?: string }[] | null);
   const slot = firstRelation(booking.slots as { starts_at?: string } | { starts_at?: string }[] | null);
-  if (!lead?.email || !slot?.starts_at) return false;
-
-  const name = escapeHtml(lead.name?.trim() || "Cliente");
-  const procedure = escapeHtml(service?.name || "Avaliação na PS Estética");
-  const scheduledFor = escapeHtml(bookingDate(slot.starts_at));
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": `booking-${booking.id}-prebooking`,
-    },
-    body: JSON.stringify({
-      from,
-      to: [lead.email.trim().toLowerCase()],
-      reply_to: Deno.env.get("RESEND_REPLY_TO") || undefined,
-      subject: "Recebemos sua pré-reserva | PS Estética",
-      html: `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f4f0e8;color:#24221f;font-family:Arial,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:32px 14px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fffdf8;border:1px solid #d8cfbf;border-radius:4px 28px 4px 28px"><tr><td style="padding:38px 34px"><p style="margin:0 0 12px;color:#8b7040;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase">PS Estética • São Bernardo do Campo</p><h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:34px;font-weight:400;line-height:1.08">Recebemos sua pré-reserva</h1><p style="margin:0 0 22px;color:#5f5a52;font-size:15px;line-height:1.65">Olá, ${name}. Seu horário foi separado temporariamente enquanto você conclui a confirmação.</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3ecdd;border:1px solid #ddcda9;border-radius:3px 16px 3px 16px"><tr><td style="padding:20px"><p style="margin:0 0 6px;color:#7a746a;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Procedimento</p><p style="margin:0 0 16px;font-size:16px;font-weight:700">${procedure}</p><p style="margin:0 0 6px;color:#7a746a;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase">Data e horário</p><p style="margin:0;font-size:16px;font-weight:700;text-transform:capitalize">${scheduledFor}</p></td></tr></table><p style="margin:22px 0 0;color:#6f6960;font-size:13px;line-height:1.6">A confirmação definitiva acontece após a conclusão do sinal dentro do prazo exibido na página. Se precisar de ajuda, responda este e-mail.</p></td></tr></table></td></tr></table></body></html>`,
-    }),
-  });
-  if (!response.ok) {
-    console.error("Resend booking email failed", response.status, await response.text());
-    return false;
-  }
-  return true;
+  const professional = firstRelation(booking.professional as { full_name?: string; email?: string } | { full_name?: string; email?: string }[] | null);
+  if (!lead?.email || !slot?.starts_at) return null;
+  return {
+    bookingId: Number(booking.id),
+    customerName: lead.name?.trim() || "Cliente",
+    customerEmail: lead.email,
+    customerPhone: lead.phone,
+    serviceName: service?.name || "Avaliação na PS Estética",
+    startsAt: slot.starts_at,
+    professionalName: professional?.full_name,
+    professionalEmail: professional?.email,
+    depositCents: Number(booking.deposit_cents),
+  };
 }
 
 Deno.serve(async (request) => {
@@ -90,7 +57,7 @@ Deno.serve(async (request) => {
     await supabase.rpc("release_expired_reservations");
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
-      .select("id,status,deposit_cents,payment_expires_at,public_token,leads(name,email),services(name),slots(starts_at,ends_at)")
+      .select("id,status,deposit_cents,payment_expires_at,public_token,leads(name,email,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name,email)")
       .eq("public_token", bookingToken)
       .single();
 
@@ -100,9 +67,14 @@ Deno.serve(async (request) => {
     const service = firstRelation(booking.services);
     if (!lead?.email) return json({ error: "Informe um e-mail válido para gerar o Pix." }, 422);
 
+    const details = emailDetails(booking as unknown as Record<string, unknown>);
     let emailSent = false;
-    if (request.method === "POST" && booking.status === "awaiting_payment" && new Date(booking.payment_expires_at) > new Date()) {
-      emailSent = await sendPrebookingEmail(booking as unknown as Record<string, unknown>);
+    let professionalEmailSent = false;
+    if (request.method === "POST" && booking.status === "awaiting_payment" && new Date(booking.payment_expires_at) > new Date() && details) {
+      [emailSent, professionalEmailSent] = await Promise.all([
+        sendCustomerPrebookingEmail(details),
+        sendProfessionalPrebookingEmail(details),
+      ]);
     }
 
     const { data: currentPayment } = await supabase
@@ -112,7 +84,7 @@ Deno.serve(async (request) => {
       .maybeSingle();
 
     if (request.method === "GET" || currentPayment?.pix_copy_paste) {
-      return json({ bookingStatus: booking.status, payment: currentPayment, emailSent });
+      return json({ bookingStatus: booking.status, payment: currentPayment, emailSent, professionalEmailSent });
     }
 
     if (booking.status !== "awaiting_payment" || new Date(booking.payment_expires_at) <= new Date()) {
@@ -168,11 +140,19 @@ Deno.serve(async (request) => {
     }, { onConflict: "booking_id" });
     if (saveError) throw saveError;
 
+    let customerConfirmationEmailSent = false;
+    let professionalConfirmationEmailSent = false;
     if (mercadoPago.status === "approved") {
       await supabase.from("bookings").update({
         status: "confirmed",
         updated_at: new Date().toISOString(),
       }).eq("id", booking.id).eq("status", "awaiting_payment");
+      if (details) {
+        [customerConfirmationEmailSent, professionalConfirmationEmailSent] = await Promise.all([
+          sendCustomerPaymentConfirmedEmail(details),
+          sendProfessionalPaymentConfirmedEmail(details),
+        ]);
+      }
     }
 
     await supabase.from("clinic_settings").update({
@@ -191,6 +171,9 @@ Deno.serve(async (request) => {
         expires_at: booking.payment_expires_at,
       },
       emailSent,
+      professionalEmailSent,
+      customerConfirmationEmailSent,
+      professionalConfirmationEmailSent,
     }, 201);
   } catch (error) {
     console.error(error);
