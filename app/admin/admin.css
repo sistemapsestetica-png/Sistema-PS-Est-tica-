@@ -132,19 +132,36 @@
 .recurring-form button { min-height: 44px; white-space: nowrap; }
 
 .table-wrap { overflow-x: auto; border: 1px solid var(--admin-line); border-radius: 2px 14px 2px 14px; }
-.crm-toolbar { margin: -2px 0 18px; padding: 15px; display: grid; grid-template-columns: auto minmax(220px, 1fr) 190px 210px auto; gap: 10px; align-items: end; border: 1px solid var(--admin-line); border-radius: 2px 14px 2px 14px; background: #f5f3ef; }
-.lead-view-tabs { min-height: 42px; padding: 3px; display: flex; gap: 3px; border: 1px solid var(--admin-line); border-radius: 2px 10px 2px 10px; background: #eeeae7; }
-.lead-view-tabs button { padding: 8px 11px; border: 0; border-radius: 2px 8px 2px 8px; color: var(--admin-muted); background: transparent; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap; }
-.lead-view-tabs button.active { color: #fff; background: var(--admin-black); }
+.crm-section { padding: 34px; }
+.crm-funnel-grid { margin: 0 0 22px; display: grid; grid-template-columns: repeat(5,minmax(135px,1fr)); gap: 11px; }
+.crm-funnel-card { min-height: 132px; padding: 17px; position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; overflow: hidden; color: var(--admin-ink); background: #fff; border: 1px solid var(--admin-line); border-radius: 3px 17px 3px 17px; text-align: left; cursor: pointer; transition: transform .22s ease,border-color .22s ease,box-shadow .22s ease; }
+.crm-funnel-card::before { content: ""; width: 100%; height: 4px; position: absolute; inset: 0 0 auto; background: #bca36b; }
+.crm-funnel-card:hover { transform: translateY(-3px); border-color: #c7b27e; box-shadow: 0 18px 35px -28px rgba(33,31,28,.55); }
+.crm-funnel-card.active { color: #fff; background: linear-gradient(145deg,#34312c,#171715); border-color: #554c3b; box-shadow: 0 20px 38px -28px rgba(20,20,20,.8); }
+.crm-funnel-card span { margin-top: 5px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.crm-funnel-card b { font: 400 34px Georgia,serif; line-height: 1; }
+.crm-funnel-card small { margin-top: auto; color: var(--admin-muted); font-size: 10px; line-height: 1.35; }
+.crm-funnel-card.active small { color: #cbc4b8; }
+.crm-funnel-card.prebooking::before { background: #d2aa3b; }
+.crm-funnel-card.confirmed::before { background: #5d9874; }
+.crm-funnel-card.expired::before { background: #b96c6c; }
+.crm-funnel-card.archived::before { background: #96918b; }
+.crm-filter-panel { margin-bottom: 27px; padding: 18px; display: grid; grid-template-columns: minmax(260px,1.4fr) minmax(165px,.7fr) minmax(190px,.9fr) auto; gap: 12px; align-items: end; border: 1px solid var(--admin-line); border-radius: 3px 15px 3px 15px; background: #f5f3ef; }
+.crm-filter-panel label { display: grid; gap: 7px; color: var(--admin-black-soft); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.crm-filter-panel input,.crm-filter-panel select { width: 100%; min-height: 44px; padding: 10px 12px; color: var(--admin-ink); background: #fff; border: 1px solid var(--admin-line); border-radius: 2px 10px 2px 10px; }
+.crm-clear-filters { min-height: 44px; padding: 10px 14px; color: var(--admin-black); background: #fff; border: 1px solid var(--admin-line); border-radius: 2px 10px 2px 10px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.crm-list-heading { margin: 0 2px 13px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.crm-list-heading h3 { margin: 2px 0 0; color: var(--admin-black); font: 400 25px Georgia,serif; }
 .funnel-stage { display: inline-flex; padding: 6px 9px; border-radius: 999px; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
 .funnel-stage.conversion { color: #5d4730; background: #f2e4cf; }
 .funnel-stage.prebooking { color: #795f18; background: #fff0b8; }
 .funnel-stage.confirmed { color: #1e6444; background: #d9f1e4; }
 .funnel-stage.expired { color: #8a3d3d; background: #f6dddd; }
 .funnel-stage.archived { color: #666; background: #e5e5e5; }
-.crm-toolbar label { display: grid; gap: 6px; color: var(--admin-black-soft); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.crm-toolbar input, .crm-toolbar select { width: 100%; min-height: 42px; padding: 10px 12px; color: var(--admin-ink); background: #fff; border: 1px solid var(--admin-line); border-radius: 2px 10px 2px 10px; }
-.crm-total { padding: 0 3px 12px; color: var(--admin-muted); font-size: 11px; white-space: nowrap; }
+.crm-total { padding: 8px 12px; color: var(--admin-black-soft); background: #eeeae4; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.crm-table-wrap { border-radius: 3px 16px 3px 16px; }
+.crm-table td { padding-top: 17px; padding-bottom: 17px; }
+.crm-whatsapp { display: inline-flex; padding: 8px 11px; color: #315f46; background: #edf6f0; border-radius: 2px 9px 2px 9px; text-decoration: none; }
 .lead-open { padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
 .lead-open b { color: var(--admin-black); text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 4px; transition: .2s ease; }
 .lead-open:hover b { color: var(--admin-black-light); text-decoration-color: var(--admin-gold); }
@@ -162,7 +179,7 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 .lead-row-actions button { min-height: 36px; padding: 8px 11px; border-radius: 2px 9px 2px 9px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap; }
 .archive-lead { color: #8b4653; border: 1px solid #8b4653; background: #fffdf9; }
 .restore-lead { color: #38624b; border: 1px solid #bad2c2; background: #f3faf5; }
-.view-lead { color: var(--admin-black); border: 1px solid var(--admin-line); background: #fff; }
+.view-lead { min-height: 36px; padding: 8px 11px; color: var(--admin-black); background: #fff; border: 1px solid var(--admin-line); border-radius: 2px 9px 2px 9px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap; }
 .empty-state { padding: 26px !important; color: #8c8885; text-align: center; }
 
 .drawer-backdrop { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: flex-end; background: rgba(20,20,20,.5); backdrop-filter: blur(6px); animation: drawerFade .2s ease; }
@@ -175,6 +192,7 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 .lead-drawer dl div { padding: 18px 8px 18px 0; border-bottom: 1px solid var(--admin-line); }
 .lead-drawer dt { color: #96928f; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
 .lead-drawer dd { margin: 7px 0 0; color: var(--admin-ink); font-size: 13px; }
+.drawer-status-select { width: 100%; min-height: 38px; padding: 7px 9px; color: var(--admin-ink); background: #fff; border: 1px solid var(--admin-line); border-radius: 2px 9px 2px 9px; }
 .source-card, .drawer-note { margin-top: 14px; padding: 20px; border: 1px solid var(--admin-line); border-radius: 2px 14px 2px 14px; background: #f5f3ef; }
 .lead-management { margin-top: 14px; padding: 20px; border: 1px solid var(--admin-line); border-radius: 2px 14px 2px 14px; background: #fff; }
 .lead-management > b { color: var(--admin-black); font: 400 18px Georgia, serif; }
@@ -196,8 +214,8 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 @keyframes panelReveal { from { opacity: 0; transform: translateY(15px); } }
 @keyframes drawerFade { from { opacity: 0; } }
 @keyframes drawerSlide { from { transform: translateX(45px); opacity: .72; } }
-@media (max-width: 1050px) { .admin-shell { grid-template-columns: 1fr; } .admin-sidebar { position: sticky; top: 0; z-index: 30; padding: 9px; border-radius: 0 0 15px 15px; } .admin-sidebar-heading, .sidebar-shortcuts,.admin-nav-group { display: none; } .admin-nav { padding: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; } .admin-nav button { width: auto; min-width: max-content; grid-template-columns: auto auto; align-items: center; } .admin-nav button:hover { transform: none; } .admin-nav small { display: none; } .overview-action-grid, .settings-summary dl { grid-template-columns: 1fr 1fr; } .stats-grid, .service-editor { grid-template-columns: 1fr 1fr; } .split-panel { grid-template-columns: 1fr; } .split-panel > div + div { padding: 32px 0 0; border-top: 1px solid var(--admin-line); border-left: 0; } .recurring-form { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 800px) { .admin-header-logo { display: none; } .crm-toolbar { grid-template-columns: 1fr; } .lead-view-tabs { width: 100%; flex-wrap: wrap; } .lead-view-tabs button { flex: 1 1 calc(50% - 4px); } .crm-total { padding: 4px 0; } .lead-drawer { padding: 45px 24px; } }
+@media (max-width: 1050px) { .admin-shell { grid-template-columns: 1fr; } .admin-sidebar { position: sticky; top: 0; z-index: 30; padding: 9px; border-radius: 0 0 15px 15px; } .admin-sidebar-heading, .sidebar-shortcuts,.admin-nav-group { display: none; } .admin-nav { padding: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; } .admin-nav button { width: auto; min-width: max-content; grid-template-columns: auto auto; align-items: center; } .admin-nav button:hover { transform: none; } .admin-nav small { display: none; } .overview-action-grid, .settings-summary dl { grid-template-columns: 1fr 1fr; } .stats-grid, .service-editor { grid-template-columns: 1fr 1fr; } .split-panel { grid-template-columns: 1fr; } .split-panel > div + div { padding: 32px 0 0; border-top: 1px solid var(--admin-line); border-left: 0; } .recurring-form { grid-template-columns: repeat(3, 1fr); } .crm-funnel-grid { grid-template-columns: repeat(3,1fr); } .crm-filter-panel { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 800px) { .admin-header-logo { display: none; } .crm-funnel-grid { margin-right: -21px; padding-right: 21px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(155px,72%); grid-template-columns: none; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: thin; } .crm-funnel-card { min-height: 125px; scroll-snap-align: start; } .crm-filter-panel { grid-template-columns: 1fr; } .crm-clear-filters { width: 100%; } .lead-drawer { padding: 45px 24px; } }
 @media (max-width: 650px) { .admin-login::before { inset: 0 0 55% 0; } .admin-login::after { left: 50%; top: 4%; font-size: 150px; transform: translateX(-50%); } .login-card { margin: 180px 0 0; padding: 31px 24px; } .admin-page { padding: 0 14px 55px; } .admin-header { margin: 0 -14px 12px; padding: 18px 16px; align-items: flex-start; } .admin-header h1 { font-size: 28px; } .admin-account { max-width: 155px; align-items: flex-end; flex-direction: column; gap: 7px; text-align: right; overflow-wrap: anywhere; } .section-intro { min-height: 90px; padding: 18px 3px; } .section-intro h2 { font-size: 32px; } .panel-heading, .payment-note { align-items: flex-start; flex-direction: column; } .overview-action-grid, .settings-summary dl, .stats-grid, .service-editor, .recurring-form { grid-template-columns: 1fr; } .overview-action-grid button { min-height: 120px; } .stats-grid article { min-height: 140px; } .panel-heading > p { text-align: left; } .admin-panel, .payment-note { padding: 21px; } .login-card h1 { font-size: 35px; } .lead-drawer dl { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .login-card, .stats-grid article, .admin-panel, .payment-note, .drawer-backdrop, .lead-drawer { animation: none !important; } }
 
