@@ -50,6 +50,15 @@ O domínio do endereço remetente precisa estar validado no Resend. Cada uma das
 
 Os e-mails de autenticação (confirmação de cadastro, convite, recuperação, magic link, alteração de e-mail e reautenticação) usam o SMTP e os templates declarados em `supabase/config.toml` e `supabase/templates`.
 
+## Faturamento integral
+
+O painel da recepção possui um módulo de faturamento que combina o sinal registrado em `payments` com os saldos registrados em `service_payments`. O saldo pode ser recebido de duas formas:
+
+- link autenticado do Mercado Pago, atualizado automaticamente pelo mesmo webhook;
+- lançamento manual pela recepção para dinheiro, maquininha, Pix externo, transferência ou outra forma.
+
+A função `create-service-payment` calcula o saldo no servidor, exige uma sessão ativa da recepção e nunca permite cobrar acima do valor restante do atendimento. O dashboard mostra receita por período, ticket médio, valores pendentes e totais por procedimento e profissional.
+
 No painel do Mercado Pago, configure o webhook de pagamentos para:
 
 ```text

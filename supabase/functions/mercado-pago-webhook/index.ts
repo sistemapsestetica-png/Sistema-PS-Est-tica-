@@ -145,11 +145,29 @@ Deno.serve(async (request) => {
   });
   if (!paymentResponse.ok) return new Response("Payment lookup failed", { status: 502 });
   const payment = await paymentResponse.json();
-  const match = String(payment.external_reference ?? "").match(/^booking:(\d+)$/);
-  if (!match) return new Response("ok", { status: 200 });
+  const externalReference = String(payment.external_reference ?? "");
+  const depositMatch = externalReference.match(/^booking:(\d+)$/);
+  const balanceMatch = externalReference.match(/^booking-balance:(\d+):(\d+)$/);
+  if (!depositMatch && !balanceMatch) return new Response("ok", { status: 200 });
 
-  const bookingId = Number(match[1]);
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  if (balanceMatch) {
+    const bookingId = Number(balanceMatch[1]);
+    const ledgerId = Number(balanceMatch[2]);
+    const balanceStatusMap: Record<string, string> = {
+      approved: "paid", pending: "pending", in_process: "pending",
+      rejected: "failed", cancelled: "cancelled", refunded: "refunded", charged_back: "refunded",
+    };
+    await supabase.from("service_payments").update({
+      status: balanceStatusMap[payment.status] ?? "pending",
+      provider_external_id: String(payment.id),
+      paid_at: payment.status === "approved" ? (payment.date_approved ?? new Date().toISOString()) : null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", ledgerId).eq("booking_id", bookingId).eq("method", "mercado_pago");
+    return new Response("ok", { status: 200 });
+  }
+
+  const bookingId = Number(depositMatch![1]);
   const statusMap: Record<string, string> = {
     approved: "paid", pending: "pending", in_process: "pending",
     rejected: "failed", cancelled: "failed", refunded: "refunded", charged_back: "refunded",

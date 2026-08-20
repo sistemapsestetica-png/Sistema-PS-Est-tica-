@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Fragment, FormEvent, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import { AGENDA_URL, PANEL_URL, PROFESSIONAL_URL, QUIZ_URL } from "../../lib/public-urls";
+import { RevenueDashboard } from "./revenue-dashboard";
 import "./admin.css";
 
 type Service = {
@@ -70,17 +71,18 @@ type StaffProfile = { user_id: string; full_name: string; email: string; role: "
 type StaffInvite = { email: string; full_name: string; role: "receptionist" | "professional"; service_id: number | null; active: boolean; created_at: string };
 type Assignment = { professional_id: string; service_id: number };
 type BookingLink = { id: number; token: string; label: string; service_id: number | null; professional_id: string | null; active: boolean; uses: number; created_at: string };
-type AdminSection = "overview" | "agenda" | "clients" | "team" | "services" | "links" | "settings";
+type AdminSection = "overview" | "clients" | "agenda" | "revenue" | "team" | "services" | "links" | "settings";
 type LeadQueue = "conversion" | "prebooking" | "confirmed" | "expired" | "archived";
 
-const adminSections: { id: AdminSection; label: string; description: string }[] = [
-  { id: "overview", label: "Visão geral", description: "Resumo da operação e atalhos principais" },
-  { id: "agenda", label: "Agenda", description: "Horários, recorrências e agendamentos" },
-  { id: "clients", label: "Clientes", description: "Leads ativos, arquivados e histórico" },
-  { id: "team", label: "Equipe", description: "Profissionais, acessos e modalidades" },
-  { id: "services", label: "Procedimentos", description: "Catálogo, preços e duração" },
-  { id: "links", label: "Links", description: "Agendas diretas e compartilhamento" },
-  { id: "settings", label: "Configurações", description: "Pagamento e regras da clínica" },
+const adminSections: { id: AdminSection; label: string; description: string; group: "Operação" | "Gestão" }[] = [
+  { id: "overview", label: "Início", description: "Resumo da operação e prioridades", group: "Operação" },
+  { id: "clients", label: "Atendimento", description: "Conversão, pré-agendamentos e clientes", group: "Operação" },
+  { id: "agenda", label: "Agenda", description: "Horários e atendimentos confirmados", group: "Operação" },
+  { id: "revenue", label: "Faturamento", description: "Recebimentos, saldos e indicadores", group: "Operação" },
+  { id: "team", label: "Equipe", description: "Profissionais, acessos e modalidades", group: "Gestão" },
+  { id: "services", label: "Catálogo", description: "Procedimentos, preços e duração", group: "Gestão" },
+  { id: "links", label: "Links", description: "Agendas diretas e compartilhamento", group: "Gestão" },
+  { id: "settings", label: "Configurações", description: "Pagamento e regras da clínica", group: "Gestão" },
 ];
 
 const leadStatus: Record<string, string> = {
@@ -697,12 +699,13 @@ export default function AdminPage() {
         <aside className="admin-sidebar">
           <div className="admin-sidebar-heading"><p className="admin-eyebrow">Navegação</p><strong>Organize seu dia</strong></div>
           <nav className="admin-nav" aria-label="Seções do painel">
-            {adminSections.map((section, index) => (
-              <button key={section.id} type="button" className={activeSection === section.id ? "active" : ""} onClick={() => setActiveSection(section.id)} aria-current={activeSection === section.id ? "page" : undefined}>
+            {adminSections.map((section, index) => <Fragment key={section.id}>
+              {(index === 0 || adminSections[index - 1].group !== section.group) && <span className="admin-nav-group">{section.group}</span>}
+              <button type="button" className={activeSection === section.id ? "active" : ""} onClick={() => setActiveSection(section.id)} aria-current={activeSection === section.id ? "page" : undefined}>
                 <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                 <span><b>{section.label}</b><small>{section.description}</small></span>
               </button>
-            ))}
+            </Fragment>)}
           </nav>
           <div className="sidebar-shortcuts"><Link href={AGENDA_URL} target="_blank">Abrir agenda pública ↗</Link><Link href={QUIZ_URL} target="_blank">Abrir quiz ↗</Link></div>
         </aside>
@@ -879,6 +882,8 @@ export default function AdminPage() {
           </table>
         </div>
       </section>}
+
+      {activeSection === "revenue" && <RevenueDashboard />}
 
       {activeSection === "settings" && <>
       <section className="payment-note">
