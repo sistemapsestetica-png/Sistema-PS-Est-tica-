@@ -46,6 +46,15 @@ function monthOf(value: string) {
   return `${parts.find((part) => part.type === "year")?.value}-${parts.find((part) => part.type === "month")?.value}`;
 }
 
+function fetchRevenueBookings() {
+  return supabase
+    .from("bookings")
+    .select("id,status,price_cents,deposit_cents,leads(name,phone),services(name),slots(starts_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status,amount_cents,paid_at,provider),service_payments(id,status,amount_cents,paid_at,method,checkout_url,notes)")
+    .in("status", ["confirmed", "rescheduled", "completed", "no_show"])
+    .order("created_at", { ascending: false })
+    .limit(500);
+}
+
 export function RevenueDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [month, setMonth] = useState(currentMonth);
@@ -59,18 +68,22 @@ export function RevenueDashboard() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("bookings")
-      .select("id,status,price_cents,deposit_cents,leads(name,phone),services(name),slots(starts_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status,amount_cents,paid_at,provider),service_payments(id,status,amount_cents,paid_at,method,checkout_url,notes)")
-      .in("status", ["confirmed", "rescheduled", "completed", "no_show"])
-      .order("created_at", { ascending: false })
-      .limit(500);
+    const { data, error } = await fetchRevenueBookings();
     if (error) setMessage(`Não foi possível carregar o faturamento: ${error.message}`);
     setBookings((data ?? []) as unknown as Booking[]);
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    void fetchRevenueBookings().then(({ data, error }) => {
+      if (!active) return;
+      if (error) setMessage(`Não foi possível carregar o faturamento: ${error.message}`);
+      setBookings((data ?? []) as unknown as Booking[]);
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
 
   const totals = (booking: Booking) => {
     const deposit = (booking.payments ?? []).filter((payment) => payment.status === "paid").reduce((sum, payment) => sum + Number(payment.amount_cents ?? 0), 0);

@@ -9,15 +9,24 @@ import {
   sendProfessionalPrebookingEmail,
 } from "../_shared/booking-emails.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": Deno.env.get("SITE_URL") ?? "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-};
+function corsHeaders(request: Request) {
+  const configured = [
+    Deno.env.get("SITE_URL"),
+    Deno.env.get("AGENDA_URL"),
+    ...(Deno.env.get("PUBLIC_ALLOWED_ORIGINS") ?? "").split(","),
+  ].map((value) => value?.trim().replace(/\/$/, "")).filter(Boolean) as string[];
+  const origin = request.headers.get("origin")?.replace(/\/$/, "") ?? "";
+  return {
+    "Access-Control-Allow-Origin": configured.includes(origin) ? origin : (configured[0] ?? "*"),
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+const json = (request: Request, body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
-  headers: { ...corsHeaders, "content-type": "application/json; charset=utf-8" },
+  headers: { ...corsHeaders(request), "content-type": "application/json; charset=utf-8" },
 });
 
 function emailDetails(booking: Record<string, unknown>): BookingEmailDetails | null {
@@ -40,7 +49,7 @@ function emailDetails(booking: Record<string, unknown>): BookingEmailDetails | n
 }
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -52,7 +61,7 @@ Deno.serve(async (request) => {
     const url = new URL(request.url);
     const payload = request.method === "POST" ? await request.json() : {};
     const bookingToken = String(payload.bookingToken ?? url.searchParams.get("token") ?? "");
-    if (!bookingToken) return json({ error: "Reserva inválida." }, 400);
+    if (!bookingToken) return json(request, { error: "Reserva inválida." }, 400);
 
     await supabase.rpc("release_expired_reservations");
     const { data: booking, error: bookingError } = await supabase
@@ -61,11 +70,11 @@ Deno.serve(async (request) => {
       .eq("public_token", bookingToken)
       .single();
 
-    if (bookingError || !booking) return json({ error: "Reserva não encontrada." }, 404);
+    if (bookingError || !booking) return json(request, { error: "Reserva não encontrada." }, 404);
 
     const lead = firstRelation(booking.leads);
     const service = firstRelation(booking.services);
-    if (!lead?.email) return json({ error: "Informe um e-mail válido para gerar o Pix." }, 422);
+    if (!lead?.email) return json(request, { error: "Informe um e-mail válido para gerar o Pix." }, 422);
 
     const details = emailDetails(booking as unknown as Record<string, unknown>);
     let emailSent = false;
@@ -85,20 +94,20 @@ Deno.serve(async (request) => {
       .maybeSingle();
 
     if (request.method === "GET" || currentPayment?.pix_copy_paste) {
-      return json({ bookingStatus: booking.status, payment: currentPayment, emailSent, professionalEmailSent });
+      return json(request, { bookingStatus: booking.status, payment: currentPayment, emailSent, professionalEmailSent });
     }
 
     if (booking.status !== "awaiting_payment" || new Date(booking.payment_expires_at) <= new Date()) {
-      return json({ error: "O prazo desta reserva expirou." }, 409);
+      return json(request, { error: "O prazo desta reserva expirou." }, 409);
     }
 
     const accessToken = Deno.env.get("MERCADO_PAGO_ACCESS_TOKEN");
-    if (!accessToken) return json({
+    const notificationUrl = Deno.env.get("MERCADO_PAGO_WEBHOOK_URL");
+    if (!accessToken || !notificationUrl) return json(request, {
       error: "Pix ainda não configurado.",
       code: "mercado_pago_not_configured",
     }, 503);
 
-    const notificationUrl = Deno.env.get("MERCADO_PAGO_WEBHOOK_URL");
     const paymentPayload: Record<string, unknown> = {
       transaction_amount: Number(booking.deposit_cents) / 100,
       description: `Sinal de reserva — ${service?.name ?? "PS Estética"}`,
@@ -107,7 +116,7 @@ Deno.serve(async (request) => {
       date_of_expiration: booking.payment_expires_at,
       payer: { email: lead.email, first_name: lead.name },
     };
-    if (notificationUrl) paymentPayload.notification_url = notificationUrl;
+    paymentPayload.notification_url = notificationUrl;
 
     const mercadoPagoResponse = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
@@ -121,7 +130,7 @@ Deno.serve(async (request) => {
     const mercadoPago = await mercadoPagoResponse.json();
     if (!mercadoPagoResponse.ok) {
       console.error("Mercado Pago create payment failed", mercadoPago);
-      return json({ error: "Não foi possível gerar o Pix agora." }, 502);
+      return json(request, { error: "Não foi possível gerar o Pix agora." }, 502);
     }
 
     const transaction = mercadoPago.point_of_interaction?.transaction_data ?? {};
@@ -163,7 +172,7 @@ Deno.serve(async (request) => {
       updated_at: new Date().toISOString(),
     }).eq("id", true);
 
-    return json({
+    return json(request, {
       bookingStatus: mercadoPago.status === "approved" ? "confirmed" : booking.status,
       payment: {
         status: mercadoPago.status === "approved" ? "paid" : "pending",
@@ -179,6 +188,6 @@ Deno.serve(async (request) => {
     }, 201);
   } catch (error) {
     console.error(error);
-    return json({ error: "Erro interno ao processar o Pix." }, 500);
+    return json(request, { error: "Erro interno ao processar o Pix." }, 500);
   }
 });

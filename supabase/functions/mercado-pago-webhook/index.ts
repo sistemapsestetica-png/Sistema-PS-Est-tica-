@@ -2,9 +2,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 import {
   type BookingEmailDetails,
+  type ServicePaymentEmailDetails,
   firstRelation,
   sendCustomerPaymentConfirmedEmail,
+  sendCustomerServicePaymentEmail,
   sendProfessionalPaymentConfirmedEmail,
+  sendProfessionalServicePaymentEmail,
 } from "../_shared/booking-emails.ts";
 
 function hex(buffer: ArrayBuffer) {
@@ -20,7 +23,16 @@ async function validSignature(request: Request, dataId: string, secret: string) 
   const template = `id:${normalizedId};request-id:${requestId};ts:${parts.ts};`;
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(template));
-  return hex(digest) === parts.v1;
+  const actual = hex(digest);
+  const expected = String(parts.v1).toLowerCase();
+  if (actual.length !== expected.length) return false;
+  let difference = 0;
+  for (let index = 0; index < actual.length; index += 1) difference |= actual.charCodeAt(index) ^ expected.charCodeAt(index);
+  return difference === 0;
+}
+
+function paymentAmountCents(payment: Record<string, unknown>) {
+  return Math.round(Number(payment.transaction_amount ?? 0) * 100);
 }
 
 async function sha256(value: string) {
@@ -130,6 +142,48 @@ async function sendPaymentConfirmationEmails(
   ]);
 }
 
+async function sendServicePaymentConfirmationEmails(
+  supabase: ReturnType<typeof createClient>,
+  bookingId: number,
+  paymentId: string,
+  paymentCents: number,
+) {
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("id,price_cents,deposit_cents,leads(name,email,phone),services(name),slots(starts_at),professional:staff_profiles!bookings_professional_id_fkey(full_name,email),payments(status,amount_cents),service_payments(status,amount_cents)")
+    .eq("id", bookingId)
+    .single();
+  if (error || !booking) throw error ?? new Error("Booking not found for service payment emails");
+
+  const lead = firstRelation(booking.leads);
+  const service = firstRelation(booking.services);
+  const slot = firstRelation(booking.slots);
+  const professional = firstRelation(booking.professional);
+  if (!lead?.email || !slot?.starts_at) throw new Error("Booking has no customer email or scheduled time");
+  const totalPaidCents = [
+    ...(booking.payments ?? []).filter((item) => item.status === "paid"),
+    ...(booking.service_payments ?? []).filter((item) => item.status === "paid"),
+  ].reduce((sum, item) => sum + Number(item.amount_cents ?? 0), 0);
+  const details: ServicePaymentEmailDetails = {
+    bookingId: booking.id,
+    customerName: lead.name?.trim() || "Cliente",
+    customerEmail: lead.email,
+    customerPhone: lead.phone,
+    serviceName: service?.name || "Avaliação na PS Estética",
+    startsAt: slot.starts_at,
+    professionalName: professional?.full_name,
+    professionalEmail: professional?.email,
+    depositCents: booking.deposit_cents,
+    paymentCents,
+    totalPaidCents,
+    servicePriceCents: Number(booking.price_cents),
+  };
+  await Promise.all([
+    sendCustomerServicePaymentEmail(details, paymentId),
+    sendProfessionalServicePaymentEmail(details, paymentId),
+  ]);
+}
+
 Deno.serve(async (request) => {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const url = new URL(request.url);
@@ -154,44 +208,66 @@ Deno.serve(async (request) => {
   if (balanceMatch) {
     const bookingId = Number(balanceMatch[1]);
     const ledgerId = Number(balanceMatch[2]);
+    const { data: ledger } = await supabase.from("service_payments").select("id,status,amount_cents").eq("id", ledgerId).eq("booking_id", bookingId).eq("method", "mercado_pago").maybeSingle();
+    if (!ledger) return new Response("Payment ledger not found", { status: 404 });
+    if (paymentAmountCents(payment) !== Number(ledger.amount_cents)) return new Response("Payment amount mismatch", { status: 409 });
     const balanceStatusMap: Record<string, string> = {
       approved: "paid", pending: "pending", in_process: "pending",
       rejected: "failed", cancelled: "cancelled", refunded: "refunded", charged_back: "refunded",
     };
-    await supabase.from("service_payments").update({
+    let transitioned = false;
+    let balanceUpdate = supabase.from("service_payments").update({
       status: balanceStatusMap[payment.status] ?? "pending",
       provider_external_id: String(payment.id),
       paid_at: payment.status === "approved" ? (payment.date_approved ?? new Date().toISOString()) : null,
       updated_at: new Date().toISOString(),
     }).eq("id", ledgerId).eq("booking_id", bookingId).eq("method", "mercado_pago");
+    if (payment.status === "approved") balanceUpdate = balanceUpdate.neq("status", "paid");
+    const { data: updatedLedger } = await balanceUpdate.select("id").maybeSingle();
+    transitioned = payment.status === "approved" && Boolean(updatedLedger);
+    if (transitioned) {
+      try {
+        await sendServicePaymentConfirmationEmails(supabase, bookingId, String(payment.id), paymentAmountCents(payment));
+      } catch (error) {
+        console.error("Service payment confirmation emails failed", error);
+      }
+    }
     return new Response("ok", { status: 200 });
   }
 
   const bookingId = Number(depositMatch![1]);
+  const { data: expectedPayment } = await supabase.from("payments").select("id,status,amount_cents").eq("booking_id", bookingId).eq("external_id", dataId).maybeSingle();
+  if (!expectedPayment) return new Response("Payment record not found", { status: 404 });
+  if (paymentAmountCents(payment) !== Number(expectedPayment.amount_cents)) return new Response("Payment amount mismatch", { status: 409 });
   const statusMap: Record<string, string> = {
     approved: "paid", pending: "pending", in_process: "pending",
     rejected: "failed", cancelled: "failed", refunded: "refunded", charged_back: "refunded",
   };
   const paymentStatus = statusMap[payment.status] ?? "pending";
-  await supabase.from("payments").update({
+  let paymentUpdate = supabase.from("payments").update({
     status: paymentStatus,
     provider_status: payment.status,
     paid_at: payment.status === "approved" ? (payment.date_approved ?? new Date().toISOString()) : null,
     updated_at: new Date().toISOString(),
   }).eq("booking_id", bookingId).eq("external_id", dataId);
+  if (payment.status === "approved") paymentUpdate = paymentUpdate.neq("status", "paid");
+  const { data: updatedPayment } = await paymentUpdate.select("id").maybeSingle();
+  const transitioned = payment.status === "approved" && Boolean(updatedPayment);
 
   if (payment.status === "approved") {
     const { data: confirmedBooking } = await supabase.from("bookings").update({ status: "confirmed", updated_at: new Date().toISOString() }).eq("id", bookingId).select("lead_id").maybeSingle();
     if (confirmedBooking?.lead_id) await supabase.from("leads").update({ status: "scheduled", updated_at: new Date().toISOString() }).eq("id", confirmedBooking.lead_id);
-    try {
-      await sendPaymentConfirmationEmails(supabase, bookingId);
-    } catch (error) {
-      console.error("Payment confirmation emails failed", error);
-    }
-    try {
-      await sendMetaPurchase(supabase, bookingId, payment.date_approved);
-    } catch (error) {
-      console.error("Meta Purchase event failed", error);
+    if (transitioned) {
+      try {
+        await sendPaymentConfirmationEmails(supabase, bookingId);
+      } catch (error) {
+        console.error("Payment confirmation emails failed", error);
+      }
+      try {
+        await sendMetaPurchase(supabase, bookingId, payment.date_approved);
+      } catch (error) {
+        console.error("Meta Purchase event failed", error);
+      }
     }
   } else if (["rejected", "cancelled"].includes(payment.status)) {
     const { data: booking } = await supabase.from("bookings").select("slot_id,lead_id").eq("id", bookingId).single();

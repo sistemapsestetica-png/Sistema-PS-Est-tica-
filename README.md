@@ -22,15 +22,26 @@ O Pixel dispara `PageView`, `Lead`, `Schedule`, `InitiateCheckout` e `Purchase` 
 
 ## Configuração do Mercado Pago
 
-Depois do deploy da migração e das Edge Functions, cadastre estes secrets no projeto Supabase:
+As URLs da operação já podem ficar cadastradas no Supabase antes das credenciais:
+
+```bash
+supabase secrets set \
+  MERCADO_PAGO_WEBHOOK_URL="https://tprouhszfoofljcebtsd.supabase.co/functions/v1/mercado-pago-webhook" \
+  SITE_URL="https://quiz.psestetica.com.br" \
+  AGENDA_URL="https://agenda.psestetica.com.br" \
+  PANEL_URL="https://painel.psestetica.com.br" \
+  PUBLIC_ALLOWED_ORIGINS="https://quiz.psestetica.com.br,https://agenda.psestetica.com.br"
+```
+
+Para ativar o Mercado Pago faltam somente duas credenciais, que devem ser mantidas exclusivamente nos secrets das Edge Functions:
 
 ```bash
 supabase secrets set \
   MERCADO_PAGO_ACCESS_TOKEN="APP_USR-..." \
-  MERCADO_PAGO_WEBHOOK_SECRET="..." \
-  MERCADO_PAGO_WEBHOOK_URL="https://tprouhszfoofljcebtsd.supabase.co/functions/v1/mercado-pago-webhook" \
-  SITE_URL="https://ps-estetica-sbc.vercel.app"
+  MERCADO_PAGO_WEBHOOK_SECRET="assinatura-secreta-do-webhook"
 ```
+
+Depois disso, publique novamente `create-pix`, `create-service-payment` e `mercado-pago-webhook`. O sistema rejeita notificações sem assinatura válida, confere o valor recebido contra o lançamento esperado e processa cada aprovação apenas uma vez.
 
 Para enviar os e-mails transacionais de pré-reserva e pagamento confirmado ao cliente e ao profissional responsável, configure também o Resend nos secrets das Edge Functions:
 
@@ -66,5 +77,7 @@ https://tprouhszfoofljcebtsd.supabase.co/functions/v1/mercado-pago-webhook
 ```
 
 O indicador “Mercado Pago ativo” é habilitado automaticamente assim que o primeiro Pix for gerado com sucesso.
+
+Antes de abrir para tráfego pago, faça uma reserva real de baixo valor e confirme no mesmo teste: geração do QR Code, mudança de pré-agendado para agendado, liberação para o profissional, e-mails do cliente/profissional, evento `Purchase` e lançamento no faturamento.
 
 As credenciais do Mercado Pago ficam somente nos secrets das Edge Functions. Elas nunca são expostas ao navegador ou ao repositório.

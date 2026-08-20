@@ -10,6 +10,12 @@ export type BookingEmailDetails = {
   depositCents?: number;
 };
 
+export type ServicePaymentEmailDetails = BookingEmailDetails & {
+  paymentCents: number;
+  totalPaidCents: number;
+  servicePriceCents: number;
+};
+
 export function firstRelation<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -115,4 +121,36 @@ export function sendProfessionalPaymentConfirmedEmail(details: BookingEmailDetai
     "O horário já consta como confirmado na agenda da PS Estética.",
     "Pagamento aprovado",
   ), `booking-${details.bookingId}-payment-confirmed-professional`);
+}
+
+export function sendCustomerServicePaymentEmail(details: ServicePaymentEmailDetails, paymentId: string) {
+  const fullyPaid = details.totalPaidCents >= details.servicePriceCents;
+  return sendEmail(details.customerEmail, `${fullyPaid ? "Pagamento integral" : "Pagamento"} recebido | PS Estética`, template(
+    fullyPaid ? "Seu procedimento está quitado" : "Recebemos seu pagamento",
+    `Olá, ${details.customerName}. O pagamento referente ao seu atendimento foi aprovado com sucesso.`,
+    detailsTable([
+      ["Procedimento", details.serviceName],
+      ["Data e horário", formatDate(details.startsAt)],
+      ["Pagamento recebido", formatMoney(details.paymentCents)],
+      ["Total recebido", formatMoney(details.totalPaidCents)],
+    ]),
+    fullyPaid ? "Não há saldo pendente para este atendimento." : "O valor foi registrado no seu atendimento pela equipe da PS Estética.",
+    "Pagamento do procedimento",
+  ), `service-payment-${paymentId}-customer`);
+}
+
+export function sendProfessionalServicePaymentEmail(details: ServicePaymentEmailDetails, paymentId: string) {
+  return sendEmail(details.professionalEmail, "Pagamento do atendimento recebido | PS Estética", template(
+    "Pagamento registrado",
+    `Olá, ${details.professionalName || "profissional"}. Um pagamento do atendimento abaixo foi aprovado.`,
+    detailsTable([
+      ["Cliente", details.customerName],
+      ["WhatsApp", formatPhone(details.customerPhone)],
+      ["Procedimento", details.serviceName],
+      ["Data e horário", formatDate(details.startsAt)],
+      ["Pagamento recebido", formatMoney(details.paymentCents)],
+    ]),
+    "O recebimento já consta no faturamento da PS Estética.",
+    "Recebimento confirmado",
+  ), `service-payment-${paymentId}-professional`);
 }
