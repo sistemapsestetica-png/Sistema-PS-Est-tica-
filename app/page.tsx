@@ -282,6 +282,13 @@ export default function Home() {
     setBooking(nextBooking);
     setSelectedSlot(null);
     setStep(6);
+    trackMetaEvent("Schedule", {
+      content_name: nextBooking.service_name,
+      content_ids: [day],
+      content_type: "product",
+      currency: "BRL",
+      value: nextBooking.deposit_cents / 100,
+    }, `booking-${nextBooking.booking_id}-schedule`);
     const { data: pixData, error: pixError } = await supabase.functions.invoke("create-pix", { body: { bookingToken: nextBooking.booking_token } });
     if (pixError || !pixData?.payment) {
       setSaveNotice(pixData?.code === "mercado_pago_not_configured" ? "Sua vaga foi separada. O Pix será exibido assim que a clínica ativar o Mercado Pago." : (pixData?.error ?? "Não foi possível gerar o Pix agora."));

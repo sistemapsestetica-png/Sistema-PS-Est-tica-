@@ -9,7 +9,7 @@ Site, quiz, agenda online, painel master da recepção e portal individual dos p
 - `/admin` — agenda master, preços, horários, equipe, links e pagamentos.
 - `/profissional` — acesso individual à agenda e aos atendimentos atribuídos.
 
-O sinal é calculado pelo percentual salvo no serviço (10% por padrão). A vaga fica temporariamente reservada, o Mercado Pago gera o Pix e o webhook confirma o agendamento automaticamente.
+O sinal segue a estratégia híbrida: 10% do procedimento, com mínimo de R$ 30 e máximo de R$ 100. A vaga fica temporariamente reservada, o Mercado Pago gera o Pix e o webhook confirma o agendamento automaticamente.
 
 ## Desenvolvimento
 
@@ -18,7 +18,7 @@ O sinal é calculado pelo percentual salvo no serviço (10% por padrão). A vaga
 3. Informe o ID do Meta Pixel em `NEXT_PUBLIC_META_PIXEL_ID`.
 4. Execute `npm install` e `npm run dev`.
 
-O Pixel dispara `PageView`, `Lead`, `InitiateCheckout` e `Purchase` no navegador. Para confirmar a compra também pelo servidor, configure `META_CONVERSIONS_API_TOKEN` nos secrets do Supabase. O token nunca deve ser salvo em `.env` público ou enviado ao GitHub.
+O Pixel dispara `PageView`, `Lead`, `Schedule`, `InitiateCheckout` e `Purchase` no navegador. A compra também é confirmada pelo servidor via API de Conversões, com deduplicação pelo identificador da reserva. O token nunca deve ser salvo em `.env` público ou enviado ao GitHub.
 
 ## Configuração do Mercado Pago
 

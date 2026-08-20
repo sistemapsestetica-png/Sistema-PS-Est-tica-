@@ -139,6 +139,7 @@ export default function LavieenPage() {
     if (error || !data?.[0]) { setNotice("Este horário acabou de ficar indisponível. Escolha outra opção."); await loadSlots(); setSelected(null); setLoading(false); return; }
     const next = data[0] as Booking;
     setBooking(next); setStep(7);
+    trackMetaEvent("Schedule", { content_name: next.service_name, content_ids: ["lavieen"], content_type: "product", currency: "BRL", value: next.deposit_cents / 100 }, `booking-${next.booking_id}-schedule`);
     const { data: pixData, error: pixError } = await supabase.functions.invoke("create-pix", { body: { bookingToken: next.booking_token } });
     if (pixError || !pixData?.payment) setNotice(pixData?.error ?? "Sua vaga foi separada, mas não foi possível gerar o Pix agora.");
     else {
