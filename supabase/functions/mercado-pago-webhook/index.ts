@@ -163,7 +163,8 @@ Deno.serve(async (request) => {
   }).eq("booking_id", bookingId).eq("external_id", dataId);
 
   if (payment.status === "approved") {
-    await supabase.from("bookings").update({ status: "confirmed", updated_at: new Date().toISOString() }).eq("id", bookingId);
+    const { data: confirmedBooking } = await supabase.from("bookings").update({ status: "confirmed", updated_at: new Date().toISOString() }).eq("id", bookingId).select("lead_id").maybeSingle();
+    if (confirmedBooking?.lead_id) await supabase.from("leads").update({ status: "scheduled", updated_at: new Date().toISOString() }).eq("id", confirmedBooking.lead_id);
     try {
       await sendPaymentConfirmationEmails(supabase, bookingId);
     } catch (error) {
@@ -175,8 +176,9 @@ Deno.serve(async (request) => {
       console.error("Meta Purchase event failed", error);
     }
   } else if (["rejected", "cancelled"].includes(payment.status)) {
-    const { data: booking } = await supabase.from("bookings").select("slot_id").eq("id", bookingId).single();
+    const { data: booking } = await supabase.from("bookings").select("slot_id,lead_id").eq("id", bookingId).single();
     await supabase.from("bookings").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", bookingId).eq("status", "awaiting_payment");
+    if (booking?.lead_id) await supabase.from("leads").update({ status: "contacted", updated_at: new Date().toISOString() }).eq("id", booking.lead_id).eq("status", "qualified");
     if (booking?.slot_id) await supabase.from("slots").update({ status: "open", updated_at: new Date().toISOString() }).eq("id", booking.slot_id);
   }
 

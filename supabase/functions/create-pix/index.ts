@@ -57,7 +57,7 @@ Deno.serve(async (request) => {
     await supabase.rpc("release_expired_reservations");
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
-      .select("id,status,deposit_cents,payment_expires_at,public_token,leads(name,email,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name,email)")
+      .select("id,lead_id,status,deposit_cents,payment_expires_at,public_token,leads(name,email,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name,email)")
       .eq("public_token", bookingToken)
       .single();
 
@@ -71,6 +71,7 @@ Deno.serve(async (request) => {
     let emailSent = false;
     let professionalEmailSent = false;
     if (request.method === "POST" && booking.status === "awaiting_payment" && new Date(booking.payment_expires_at) > new Date() && details) {
+      await supabase.from("leads").update({ status: "qualified", updated_at: new Date().toISOString() }).eq("id", booking.lead_id).neq("status", "lost");
       [emailSent, professionalEmailSent] = await Promise.all([
         sendCustomerPrebookingEmail(details),
         sendProfessionalPrebookingEmail(details),
@@ -147,6 +148,7 @@ Deno.serve(async (request) => {
         status: "confirmed",
         updated_at: new Date().toISOString(),
       }).eq("id", booking.id).eq("status", "awaiting_payment");
+      await supabase.from("leads").update({ status: "scheduled", updated_at: new Date().toISOString() }).eq("id", booking.lead_id);
       if (details) {
         [customerConfirmationEmailSent, professionalConfirmationEmailSent] = await Promise.all([
           sendCustomerPaymentConfirmedEmail(details),

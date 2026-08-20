@@ -71,6 +71,7 @@ type StaffInvite = { email: string; full_name: string; role: "receptionist" | "p
 type Assignment = { professional_id: string; service_id: number };
 type BookingLink = { id: number; token: string; label: string; service_id: number | null; professional_id: string | null; active: boolean; uses: number; created_at: string };
 type AdminSection = "overview" | "agenda" | "clients" | "team" | "services" | "links" | "settings";
+type LeadQueue = "conversion" | "prebooking" | "confirmed" | "expired" | "archived";
 
 const adminSections: { id: AdminSection; label: string; description: string }[] = [
   { id: "overview", label: "Visão geral", description: "Resumo da operação e atalhos principais" },
@@ -108,6 +109,14 @@ const bookingStatus: Record<string, string> = {
   cancelled: "Cancelado",
   completed: "Concluído",
   no_show: "Não compareceu",
+};
+
+const leadQueueLabel: Record<LeadQueue, string> = {
+  conversion: "Para converter",
+  prebooking: "Pré-agendado",
+  confirmed: "Agendado",
+  expired: "Expirado",
+  archived: "Arquivado",
 };
 
 const weekdayOptions = [
@@ -183,7 +192,7 @@ export default function AdminPage() {
   const [leadSearch, setLeadSearch] = useState("");
   const [leadStatusFilter, setLeadStatusFilter] = useState("all");
   const [leadServiceFilter, setLeadServiceFilter] = useState("all");
-  const [leadView, setLeadView] = useState<"active" | "archived">("active");
+  const [leadQueue, setLeadQueue] = useState<LeadQueue>("conversion");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [invites, setInvites] = useState<StaffInvite[]>([]);
@@ -209,7 +218,7 @@ export default function AdminPage() {
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(250),
       supabase.from("slots").select("id,service_id,professional_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
       supabase.from("clinic_settings").select("deposit_percent,min_deposit_cents,max_deposit_cents,reservation_expiry_minutes,reschedule_notice_hours,whatsapp,payment_provider,pix_enabled").eq("id", true).single(),
-      supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(100),
+      supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(250),
       supabase.from("staff_profiles").select("user_id,full_name,email,role,active").order("full_name"),
       supabase.from("staff_invites").select("email,full_name,role,service_id,active,created_at").order("created_at", { ascending: false }),
       supabase.from("professional_services").select("professional_id,service_id").eq("active", true),
@@ -620,13 +629,26 @@ export default function AdminPage() {
     : professionals;
   const professionalNames = Object.fromEntries(allProfessionals.map((professional) => [professional.user_id, professional.full_name]));
   const openSlots = slots.filter((slot) => slot.status === "open").length;
-  const activeBookings = bookings.filter((booking) => ["pending", "awaiting_payment", "confirmed"].includes(booking.status)).length;
-  const newLeads = leads.filter((lead) => lead.status === "new" && !lead.archived_at).length;
+  const latestBookingByLead = new Map<number, Booking>();
+  bookings.forEach((booking) => { if (!latestBookingByLead.has(booking.lead_id)) latestBookingByLead.set(booking.lead_id, booking); });
+  const queueForLead = (lead: Lead): LeadQueue => {
+    if (lead.archived_at) return "archived";
+    const booking = latestBookingByLead.get(lead.id);
+    if (!booking) return "conversion";
+    if (["pending", "awaiting_payment"].includes(booking.status)) return "prebooking";
+    if (["confirmed", "rescheduled", "completed", "no_show"].includes(booking.status)) return "confirmed";
+    if (["expired", "cancelled"].includes(booking.status)) return "expired";
+    return "conversion";
+  };
+  const queueCounts = leads.reduce<Record<LeadQueue, number>>((counts, lead) => {
+    counts[queueForLead(lead)] += 1;
+    return counts;
+  }, { conversion: 0, prebooking: 0, confirmed: 0, expired: 0, archived: 0 });
+  const newLeads = queueCounts.conversion;
   const filteredLeads = leads.filter((lead) => {
     const query = leadSearch.trim().toLowerCase();
     const matchesQuery = !query || lead.name.toLowerCase().includes(query) || lead.phone.includes(query.replace(/\D/g, ""));
-    const matchesView = leadView === "archived" ? Boolean(lead.archived_at) : !lead.archived_at;
-    return matchesView && matchesQuery && (leadStatusFilter === "all" || lead.status === leadStatusFilter) && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter);
+    return queueForLead(lead) === leadQueue && matchesQuery && (leadStatusFilter === "all" || lead.status === leadStatusFilter) && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter);
   });
   const currentSection = adminSections.find((section) => section.id === activeSection) ?? adminSections[0];
 
@@ -691,17 +713,17 @@ export default function AdminPage() {
       {activeSection === "overview" && <>
 
       <section className="stats-grid" aria-label="Resumo">
-        <article><span>Agendamentos ativos</span><b>{activeBookings}</b><small>pendentes e confirmados</small></article>
-        <article><span>Horários abertos</span><b>{openSlots}</b><small>datas futuras</small></article>
-        <article><span>Leads novos</span><b>{newLeads}</b><small>aguardando primeiro contato</small></article>
-        <article><span>Sinal híbrido</span><b>{settings?.deposit_percent ?? 10}%</b><small>{formatMoney(settings?.min_deposit_cents ?? 3000)} a {formatMoney(settings?.max_deposit_cents ?? 10000)}</small></article>
+        <article><span>Para converter</span><b>{queueCounts.conversion}</b><small>leads sem reserva ativa</small></article>
+        <article><span>Pré-agendados</span><b>{queueCounts.prebooking}</b><small>aguardando pagamento</small></article>
+        <article><span>Agendados</span><b>{queueCounts.confirmed}</b><small>pagamento confirmado</small></article>
+        <article><span>Expirados</span><b>{queueCounts.expired}</b><small>recepção deve recuperar</small></article>
       </section>
 
       <section className="admin-panel overview-actions">
         <div className="panel-heading"><div><p className="admin-eyebrow">Acesso rápido</p><h2>O que você quer fazer?</h2></div><p>As tarefas mais usadas ficam a um toque de distância.</p></div>
         <div className="overview-action-grid">
           <button type="button" onClick={() => setActiveSection("agenda")}><span>Agenda</span><b>Abrir ou bloquear horários</b><small>{openSlots} horário(s) aberto(s)</small></button>
-          <button type="button" onClick={() => setActiveSection("clients")}><span>Clientes</span><b>Acompanhar novos contatos</b><small>{newLeads} lead(s) novo(s)</small></button>
+          <button type="button" onClick={() => { setLeadQueue("conversion"); setActiveSection("clients"); }}><span>Clientes</span><b>Acompanhar novos contatos</b><small>{newLeads} lead(s) para converter</small></button>
           <button type="button" onClick={() => setActiveSection("team")}><span>Equipe</span><b>Gerenciar profissionais</b><small>{professionals.length} profissional(is) ativo(s)</small></button>
           <button type="button" onClick={() => setActiveSection("links")}><span>Compartilhar</span><b>Copiar links da agenda</b><small>{bookingLinks.filter((link) => link.active).length} link(s) ativo(s)</small></button>
         </div>
@@ -837,9 +859,11 @@ export default function AdminPage() {
       </>}
 
       {activeSection === "clients" && <section className="admin-panel">
-        <div className="panel-heading"><div><p className="admin-eyebrow">CRM</p><h2>Leads do quiz</h2></div><p>Os novos contatos aparecem automaticamente após o envio do diagnóstico.</p></div>
+        <div className="panel-heading"><div><p className="admin-eyebrow">CRM</p><h2>Funil de atendimento</h2></div><p>A recepção acompanha as clientes até o pagamento; depois da confirmação, o atendimento segue para o especialista.</p></div>
         <div className="crm-toolbar">
-          <div className="lead-view-tabs" role="group" aria-label="Visualização dos leads"><button className={leadView === "active" ? "active" : ""} onClick={() => setLeadView("active")}>Ativos</button><button className={leadView === "archived" ? "active" : ""} onClick={() => setLeadView("archived")}>Arquivados ({leads.filter((lead) => lead.archived_at).length})</button></div>
+          <div className="lead-view-tabs" role="group" aria-label="Etapa do funil">
+            {(["conversion", "prebooking", "confirmed", "expired", "archived"] as LeadQueue[]).map((queue) => <button key={queue} className={leadQueue === queue ? "active" : ""} onClick={() => setLeadQueue(queue)}>{leadQueueLabel[queue]} ({queueCounts[queue]})</button>)}
+          </div>
           <label className="crm-search">Buscar lead<input value={leadSearch} onChange={(event) => setLeadSearch(event.target.value)} placeholder="Nome ou WhatsApp" /></label>
           <label>Status<select value={leadStatusFilter} onChange={(event) => setLeadStatusFilter(event.target.value)}><option value="all">Todos os status</option>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label>Procedimento<select value={leadServiceFilter} onChange={(event) => setLeadServiceFilter(event.target.value)}><option value="all">Todos</option>{services.map((service) => <option key={service.slug} value={service.slug}>{service.name}</option>)}</select></label>
@@ -847,10 +871,10 @@ export default function AdminPage() {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Lead</th><th>Interesse</th><th>Prazo</th><th>Entrada</th><th>Status</th><th>Contato</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Lead</th><th>Etapa</th><th>Interesse</th><th>Prazo</th><th>Entrada</th><th>Status</th><th>Contato</th><th>Ações</th></tr></thead>
             <tbody>
-              {filteredLeads.length === 0 && <tr><td colSpan={7} className="empty-state">{leadView === "archived" ? "Nenhum lead arquivado." : "Nenhum lead corresponde aos filtros."}</td></tr>}
-              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td><select value={lead.status} onChange={(event) => updateLeadStatus(lead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td><a href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td><td><div className="lead-row-actions"><button className={lead.archived_at ? "restore-lead" : "archive-lead"} onClick={() => lead.archived_at ? restoreLead(lead) : archiveLead(lead)}>{lead.archived_at ? "Restaurar" : "Arquivar"}</button><button className="view-lead" onClick={() => setSelectedLead(lead)}>Ver perfil</button></div></td></tr>)}
+              {filteredLeads.length === 0 && <tr><td colSpan={8} className="empty-state">Nenhum lead nesta etapa.</td></tr>}
+              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small></button></td><td><span className={`funnel-stage ${queueForLead(lead)}`}>{leadQueueLabel[queueForLead(lead)]}</span></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td><select value={lead.status} onChange={(event) => updateLeadStatus(lead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td><a href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td><td><div className="lead-row-actions"><button className={lead.archived_at ? "restore-lead" : "archive-lead"} onClick={() => lead.archived_at ? restoreLead(lead) : archiveLead(lead)}>{lead.archived_at ? "Restaurar" : "Arquivar"}</button><button className="view-lead" onClick={() => setSelectedLead(lead)}>Ver perfil</button></div></td></tr>)}
             </tbody>
           </table>
         </div>
