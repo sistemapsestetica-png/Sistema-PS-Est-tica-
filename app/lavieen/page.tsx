@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { trackMetaEvent } from "../../lib/meta-pixel";
+import { trackMetaCustomEvent, trackMetaEvent } from "../../lib/meta-pixel";
 import { supabase } from "../../lib/supabase";
 import s from "./lavieen.module.css";
 
@@ -70,6 +70,8 @@ export default function LavieenPage() {
   const [paid, setPaid] = useState(false);
   const trackedLead = useRef<number | null>(null);
   const trackedPurchase = useRef<number | null>(null);
+  const trackedViewContent = useRef(false);
+  const trackedQuizStart = useRef(false);
   const current = step >= 1 && step <= 4 ? questions[step - 1] : null;
   const progress = step === 0 ? 0 : step <= 4 ? step * 20 : step === 5 ? 90 : 100;
 
@@ -79,9 +81,21 @@ export default function LavieenPage() {
   }, [booking, name]);
 
   function start() {
-    if (step === 0) setStep(1);
+    if (step === 0) {
+      if (!trackedQuizStart.current) {
+        trackedQuizStart.current = true;
+        trackMetaCustomEvent("QuizStart", { content_name: "Quiz Lavieen", content_category: "lavieen", content_ids: ["lavieen"], content_type: "product" });
+      }
+      setStep(1);
+    }
     window.setTimeout(() => document.getElementById("diagnostico")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
   }
+
+  useEffect(() => {
+    if (trackedViewContent.current) return;
+    trackedViewContent.current = true;
+    trackMetaEvent("ViewContent", { content_name: "Quiz Lavieen", content_category: "lavieen", content_ids: ["lavieen"], content_type: "product" });
+  }, []);
 
   function choose(value: string) {
     if (!current) return;
@@ -195,7 +209,7 @@ export default function LavieenPage() {
       <div className={s.quizIntro}><p className={s.eyebrow}>Seu quiz Lavieen</p><h2>Quatro respostas para começar uma conversa mais objetiva.</h2><p>Leva cerca de um minuto. Ao final, você poderá consultar a disponibilidade da PS Estética.</p></div>
       <div className={s.quizCard} aria-live="polite">
         <div className={s.quizTop}><span>{step === 0 ? "Pronto para começar" : step <= 4 ? `Pergunta ${step} de 4` : step === 5 ? "Seus dados" : step === 6 ? "Indicação e agenda" : "Pré-reserva"}</span><b>{progress}%</b></div><div className={s.progress}><span style={{ width: `${progress}%` }} /></div>
-        {step === 0 && <div className={s.quizBody}><p className={s.quizKicker}>Quiz Lavieen • PS Estética</p><h3>Descubra se o Lavieen faz sentido para a sua pele</h3><p className={s.quizText}>Responda algumas perguntas rápidas sobre manchas, textura, poros e viço. Em poucos minutos, você recebe uma indicação inicial de acordo com seus objetivos.</p><button className={s.primary} onClick={() => setStep(1)}>Começar o quiz <span>›</span></button><p className={s.cardTrust}>Atendimento na PS Estética • ABC Paulista<br /><span>Avaliação individualizada antes da definição do protocolo</span></p></div>}
+        {step === 0 && <div className={s.quizBody}><p className={s.quizKicker}>Quiz Lavieen • PS Estética</p><h3>Descubra se o Lavieen faz sentido para a sua pele</h3><p className={s.quizText}>Responda algumas perguntas rápidas sobre manchas, textura, poros e viço. Em poucos minutos, você recebe uma indicação inicial de acordo com seus objetivos.</p><button className={s.primary} onClick={start}>Começar o quiz <span>›</span></button><p className={s.cardTrust}>Atendimento na PS Estética • ABC Paulista<br /><span>Avaliação individualizada antes da definição do protocolo</span></p></div>}
         {current && <div className={s.quizBody}><p className={s.quizKicker}>{current.eyebrow}</p><h3>{current.title}</h3><div className={s.options}>{current.options.map((option) => <button key={option} className={`${answers[current.key] === option ? s.selected : ""} ${current.key === "concern" ? s.visualOption : ""}`} data-tone={current.key === "concern" ? concernImages[option].tone : undefined} onClick={() => choose(option)}>{current.key === "concern" && <Image className={s.optionImage} src={concernImages[option].src} width={76} height={76} sizes="(max-width: 620px) 64px, 76px" alt="" />}<span>{option}</span><i>›</i></button>)}</div>{current.key === "concern" && <small className={s.illustrativeNote}>Imagens ilustrativas geradas por IA.</small>}{step > 1 && <button className={s.back} onClick={() => setStep((step - 1) as Step)}>Voltar</button>}</div>}
         {step === 5 && <form className={`${s.quizBody} ${s.contactForm}`} onSubmit={submitContact}><p className={s.quizKicker}>Sua indicação inicial está quase pronta</p><h3>Deixe seus dados para ver a recomendação.</h3><p className={s.quizText}>Você também poderá verificar a disponibilidade para avaliação na PS Estética.</p><label>Nome<input required value={name} onChange={(e) => { setName(e.target.value); setLead(null); }} autoComplete="name" placeholder="Como podemos chamar você?" minLength={2} /></label><label>WhatsApp<input required value={phone} onChange={(e) => { setPhone(phoneMask(e.target.value)); setLead(null); }} autoComplete="tel" inputMode="numeric" placeholder="(11) 90000-0000" maxLength={15} minLength={15} pattern="\(\d{2}\) \d{5}-\d{4}" /></label><label>E-mail<input required type="email" value={email} onChange={(e) => { setEmail(e.target.value); setLead(null); }} autoComplete="email" placeholder="voce@exemplo.com" /></label><button className={s.primary} disabled={loading} type="submit">{loading ? "Preparando sua indicação…" : "Ver minha indicação"} <span>›</span></button>{notice && <p className={s.notice}>{notice}</p>}<button className={s.back} type="button" onClick={() => setStep(4)}>Voltar</button><small className={s.privacy}>Seus dados serão usados apenas para o atendimento da PS Estética.</small></form>}
         {step === 6 && <div className={s.quizBody}><p className={s.resultLabel}>Sua indicação inicial</p><h3>O Lavieen pode ser uma opção compatível com seus objetivos.</h3><p className={s.resultText}>Pelas suas respostas, seus objetivos de <b>{answers.priority.toLowerCase()}</b> e sua queixa sobre <b>{answers.concern.toLowerCase()}</b> podem ser conversados em uma avaliação de Lavieen. A indicação final depende de avaliação profissional.</p><div className={s.answerSummary}><span>Seu principal objetivo</span><strong>{answers.priority}</strong></div><div className={s.scheduleHead}><p className={s.quizKicker}>Próximo passo opcional</p><h4>Escolha um horário para sua avaliação</h4></div>{loading && <p className={s.notice}>Consultando a agenda…</p>}{!loading && slots.length > 0 && <div className={s.slots}>{slots.map((slot) => <button key={slot.slot_id} onClick={() => { setSelected(slot); setNotice(""); }} className={selected?.slot_id === slot.slot_id ? s.selectedSlot : ""}><span><small>{selected?.slot_id === slot.slot_id ? "Selecionado" : "Disponível"}</small>{formatSlot(slot.starts_at)}</span><i>{selected?.slot_id === slot.slot_id ? "✓" : "›"}</i></button>)}</div>}{!loading && slots.length === 0 && <div className={s.empty}><b>Não encontrou um horário?</b><p>A equipe pode consultar outras possibilidades para você.</p><a href={whatsapp} target="_blank" rel="noreferrer">Falar pelo WhatsApp</a></div>}{selected && <form className={s.reserveBox} onSubmit={reserve}><div><small>Horário escolhido</small><b>{formatSlot(selected.starts_at)}</b></div><p className={s.reserveEmail}>A confirmação será enviada para <b>{email}</b></p><button className={s.primary} disabled={loading} type="submit">{loading ? "Criando pré-reserva…" : "Pré-reservar este horário"} <span>›</span></button></form>}{notice && <p className={s.notice}>{notice}</p>}</div>}
