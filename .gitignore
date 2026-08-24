@@ -7,3 +7,5 @@ supabase/.temp/
 npm-debug.log*
 *.pem
 .DS_Store
+
+.env*.local
