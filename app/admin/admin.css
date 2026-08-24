@@ -273,6 +273,19 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 .status-badge.active { color: #4d715c; background: #e7f0e9; }
 .status-badge.pending { color: var(--admin-gold-dark); background: #f3e8ce; }
 .status-badge.inactive { color: #7a7a7a; background: #e8e5df; }
+.status-badge.master { color: #fff; background: linear-gradient(135deg,var(--admin-black),#51452f); border: 1px solid #857044; }
+.access-waiting { max-width: 560px; margin: 0 auto; padding: 80px 28px; text-align: center; }
+.access-waiting h1 { margin: 5px 0 14px; color: var(--admin-black); font: 400 38px Georgia,serif; }
+.access-waiting > p:not(.admin-eyebrow) { color: var(--admin-muted); line-height: 1.65; }
+.access-waiting > span { margin: 20px 0; display: block; color: var(--admin-black-soft); font-size: 12px; }
+.access-waiting > button { min-height: 42px; padding: 10px 22px; color: #fff; background: var(--admin-black); border: 0; border-radius: 2px 11px 2px 11px; cursor: pointer; }
+.access-request-list { display: grid; gap: 10px; }
+.access-request-list article { padding: 17px 18px; display: grid; grid-template-columns: auto minmax(220px,1fr) auto auto; align-items: center; gap: 15px; border: 1px solid var(--admin-line); border-radius: 2px 14px 2px 14px; background: #fff; }
+.access-request-list article.inactive { opacity: .72; background: #f5f3ef; }
+.access-request-list article > div:not(.access-request-actions) { min-width: 0; display: grid; gap: 4px; }
+.access-request-list small { color: var(--admin-muted); overflow-wrap: anywhere; }
+.access-request-actions { display: flex; gap: 8px; }
+.access-request-actions button:first-child { min-height: 38px; padding: 9px 13px; color: #fff; background: var(--admin-black); border: 1px solid var(--admin-gold); border-radius: 2px 9px 2px 9px; font-size: 10px; font-weight: 800; cursor: pointer; }
 .staff-actions,.service-actions,.link-actions,.slot-actions { display: flex !important; flex-wrap: wrap; align-items: center; gap: 8px !important; }
 .staff-actions button,.secondary-action,.danger-button,.delete-slot { min-height: 34px; padding: 7px 11px; border: 1px solid var(--admin-line); border-radius: 2px 9px 2px 9px; background: #fff; color: var(--admin-black); font-size: 10px; font-weight: 700; cursor: pointer; }
 .staff-actions .danger-link,.danger-button,.delete-slot { color: #8b4653; border-color: #8b4653; background: #fffdf9; }
@@ -295,3 +308,4 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 @media(max-width:1000px){.team-layout{grid-template-columns:1fr}.team-layout>form{padding:0 0 30px;border-right:0;border-bottom:1px solid var(--admin-line)}.link-form{grid-template-columns:1fr 1fr}.link-list{grid-template-columns:1fr}}
 @media(max-width:1150px){.new-service-form{grid-template-columns:1fr 1fr 1fr}.new-service-form>div{grid-column:1/-1}}
 @media(max-width:650px){.link-form,.new-service-form{grid-template-columns:1fr}.direct-links-panel .panel-heading{align-items:flex-start}.copy-master{width:100%}.staff-card-title,.link-list article{align-items:flex-start;flex-direction:column}.link-actions{width:100%}.link-actions button{flex:1}.slot-list article{align-items:flex-start;flex-direction:column}.slot-actions{width:100%;justify-content:space-between}}
+@media(max-width:700px){.access-request-list article{grid-template-columns:auto 1fr}.access-request-list article>.status-badge,.access-request-list article>button,.access-request-actions{grid-column:1/-1}.access-request-actions{width:100%}.access-request-actions button{flex:1}}

@@ -67,11 +67,12 @@ type Booking = {
   payments?: { status: string }[] | null;
 };
 
-type StaffProfile = { user_id: string; full_name: string; email: string; role: "receptionist" | "professional"; active: boolean };
+type StaffProfile = { user_id: string; full_name: string; email: string; role: "receptionist" | "professional"; active: boolean; is_master: boolean };
 type StaffInvite = { email: string; full_name: string; role: "receptionist" | "professional"; service_id: number | null; active: boolean; created_at: string };
+type StaffAccessRequest = { id: number; user_id: string; email: string; full_name: string; status: "pending" | "approved" | "rejected"; created_at: string };
 type Assignment = { professional_id: string; service_id: number };
 type BookingLink = { id: number; token: string; label: string; service_id: number | null; professional_id: string | null; active: boolean; uses: number; created_at: string };
-type AdminSection = "overview" | "clients" | "agenda" | "revenue" | "team" | "services" | "links" | "settings";
+type AdminSection = "overview" | "clients" | "agenda" | "revenue" | "team" | "access" | "services" | "links" | "settings";
 type LeadQueue = "conversion" | "prebooking" | "confirmed" | "expired" | "archived";
 
 const adminSections: { id: AdminSection; label: string; description: string; group: "Operação" | "Gestão" }[] = [
@@ -80,6 +81,7 @@ const adminSections: { id: AdminSection; label: string; description: string; gro
   { id: "agenda", label: "Agenda", description: "Horários e atendimentos confirmados", group: "Operação" },
   { id: "revenue", label: "Faturamento", description: "Recebimentos, saldos e indicadores", group: "Operação" },
   { id: "team", label: "Equipe", description: "Profissionais, acessos e modalidades", group: "Gestão" },
+  { id: "access", label: "Acessos", description: "Aprovação e bloqueio de recepcionistas", group: "Gestão" },
   { id: "services", label: "Catálogo", description: "Procedimentos, preços e duração", group: "Gestão" },
   { id: "links", label: "Links", description: "Agendas diretas e compartilhamento", group: "Gestão" },
   { id: "settings", label: "Configurações", description: "Pagamento e regras da clínica", group: "Gestão" },
@@ -178,7 +180,10 @@ export default function AdminPage() {
   const [activeSection, setActiveSection] = useState<AdminSection>("overview");
   const [session, setSession] = useState<Session | null>(null);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [isMaster, setIsMaster] = useState(false);
+  const [accessRequestStatus, setAccessRequestStatus] = useState<"pending" | "approved" | "rejected" | null>(null);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [signupName, setSignupName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -206,6 +211,7 @@ export default function AdminPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [invites, setInvites] = useState<StaffInvite[]>([]);
+  const [accessRequests, setAccessRequests] = useState<StaffAccessRequest[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [bookingLinks, setBookingLinks] = useState<BookingLink[]>([]);
   const [slotProfessionalId, setSlotProfessionalId] = useState("");
@@ -223,19 +229,20 @@ export default function AdminPage() {
 
   async function loadDashboard() {
     setLoading(true);
-    const [serviceResult, leadResult, slotResult, settingsResult, bookingResult, staffResult, inviteResult, assignmentResult, linkResult] = await Promise.all([
+    const [serviceResult, leadResult, slotResult, settingsResult, bookingResult, staffResult, inviteResult, assignmentResult, linkResult, accessResult] = await Promise.all([
       supabase.from("services").select("*").order("id"),
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(250),
       supabase.from("slots").select("id,service_id,professional_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
       supabase.from("clinic_settings").select("deposit_percent,min_deposit_cents,max_deposit_cents,reservation_expiry_minutes,reschedule_notice_hours,whatsapp,payment_provider,pix_enabled").eq("id", true).single(),
       supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(250),
-      supabase.from("staff_profiles").select("user_id,full_name,email,role,active").order("full_name"),
+      supabase.from("staff_profiles").select("user_id,full_name,email,role,active,is_master").order("full_name"),
       supabase.from("staff_invites").select("email,full_name,role,service_id,active,created_at").order("created_at", { ascending: false }),
       supabase.from("professional_services").select("professional_id,service_id").eq("active", true),
       supabase.from("booking_links").select("id,token,label,service_id,professional_id,active,uses,created_at").order("created_at", { ascending: false }).limit(50),
+      supabase.from("staff_access_requests").select("id,user_id,email,full_name,status,created_at").order("created_at", { ascending: false }),
     ]);
 
-    const firstError = serviceResult.error || leadResult.error || slotResult.error || settingsResult.error || bookingResult.error || staffResult.error || inviteResult.error || assignmentResult.error || linkResult.error;
+    const firstError = serviceResult.error || leadResult.error || slotResult.error || settingsResult.error || bookingResult.error || staffResult.error || inviteResult.error || assignmentResult.error || linkResult.error || accessResult.error;
     if (firstError) setMessage(`Não foi possível carregar o painel: ${firstError.message}`);
     const loadedServices = (serviceResult.data ?? []) as Service[];
     setServices(loadedServices);
@@ -248,6 +255,7 @@ export default function AdminPage() {
     setSettings(settingsResult.data as Settings | null);
     setStaff((staffResult.data ?? []) as StaffProfile[]);
     setInvites((inviteResult.data ?? []) as StaffInvite[]);
+    setAccessRequests((accessResult.data ?? []) as StaffAccessRequest[]);
     setAssignments((assignmentResult.data ?? []) as Assignment[]);
     setBookingLinks((linkResult.data ?? []) as BookingLink[]);
     const firstActiveService = loadedServices.find((service) => service.active);
@@ -260,30 +268,29 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  async function verifyAndLoad(userEmail: string) {
+  async function verifyAndLoad() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("admin_allowlist")
-      .select("email, active")
-      .eq("email", userEmail.toLowerCase())
-      .eq("active", true)
+    const userId = (await supabase.auth.getUser()).data.user?.id ?? "";
+    const { data: profile } = await supabase
+      .from("staff_profiles")
+      .select("user_id,role,active,is_master")
+      .eq("user_id", userId)
       .maybeSingle();
 
-    if (error || !data) {
-      const userId = (await supabase.auth.getUser()).data.user?.id ?? "";
-      const { data: receptionist } = await supabase
-        .from("staff_profiles")
-        .select("user_id")
+    if (!profile?.active || profile.role !== "receptionist") {
+      const { data: request } = await supabase
+        .from("staff_access_requests")
+        .select("status")
         .eq("user_id", userId)
-        .eq("role", "receptionist")
-        .eq("active", true)
         .maybeSingle();
-      if (!receptionist) {
-        setAuthorized(false);
-        setLoading(false);
-        return;
-      }
+      setAccessRequestStatus((request?.status as "pending" | "approved" | "rejected" | undefined) ?? null);
+      setIsMaster(false);
+      setAuthorized(false);
+      setLoading(false);
+      return;
     }
+    setAccessRequestStatus(null);
+    setIsMaster(Boolean(profile.is_master));
     setAuthorized(true);
     await loadDashboard();
   }
@@ -296,8 +303,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!session?.user.email) return;
-    const userEmail = session.user.email;
-    queueMicrotask(() => void verifyAndLoad(userEmail));
+    queueMicrotask(() => void verifyAndLoad());
     // Supabase is a module singleton; this effect intentionally follows only the session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
@@ -312,11 +318,11 @@ export default function AdminPage() {
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
-        options: { emailRedirectTo: PANEL_URL },
+        options: { emailRedirectTo: PANEL_URL, data: { full_name: signupName.trim() } },
       });
       if (error) setMessage(error.message);
-      else if (!data.session) setMessage("Cadastro iniciado. Confirme o e-mail recebido e depois entre no painel.");
-      else setMessage("Acesso criado com sucesso.");
+      else if (!data.session) setMessage("Cadastro recebido. Confirme o e-mail; depois a conta ficará aguardando aprovação do master.");
+      else setMessage("Cadastro recebido e aguardando aprovação do master.");
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
       if (error) setMessage("E-mail ou senha inválidos, ou o e-mail ainda não foi confirmado.");
@@ -591,6 +597,27 @@ export default function AdminPage() {
     else { setMessage(nextActive ? "Profissional reativado." : "Profissional desativado."); await loadDashboard(); }
   }
 
+  async function reviewAccessRequest(request: StaffAccessRequest, approve: boolean) {
+    if (busy) return;
+    if (!approve && !window.confirm(`Recusar o acesso de ${request.full_name}?`)) return;
+    setBusy(true); setMessage("");
+    const { error } = await supabase.rpc("review_staff_access_request", { p_request_id: request.id, p_approve: approve });
+    setBusy(false);
+    if (error) setMessage(`Não foi possível ${approve ? "aprovar" : "recusar"}: ${error.message}`);
+    else { setMessage(approve ? `${request.full_name} foi autorizada como recepcionista.` : `Solicitação de ${request.full_name} recusada.`); await loadDashboard(); }
+  }
+
+  async function toggleReceptionistActive(receptionist: StaffProfile) {
+    if (!isMaster || receptionist.is_master || busy) return;
+    const nextActive = !receptionist.active;
+    if (!nextActive && !window.confirm(`Bloquear o acesso de ${receptionist.full_name}?`)) return;
+    setBusy(true); setMessage("");
+    const { error } = await supabase.from("staff_profiles").update({ active: nextActive }).eq("user_id", receptionist.user_id).eq("is_master", false);
+    setBusy(false);
+    if (error) setMessage(`Não foi possível alterar o acesso: ${error.message}`);
+    else { setMessage(nextActive ? `${receptionist.full_name} foi reativada.` : `${receptionist.full_name} foi bloqueada.`); await loadDashboard(); }
+  }
+
   async function toggleProfessionalService(professional: StaffProfile, service: Service) {
     const assigned = assignments.some((item) => item.professional_id === professional.user_id && item.service_id === service.id);
     if (assigned) {
@@ -635,6 +662,8 @@ export default function AdminPage() {
   const activeServices = services.filter((service) => service.active);
   const allProfessionals = staff.filter((member) => member.role === "professional");
   const professionals = allProfessionals.filter((member) => member.active);
+  const receptionists = staff.filter((member) => member.role === "receptionist");
+  const pendingAccessRequests = accessRequests.filter((request) => request.status === "pending");
   const professionalEmails = new Set(allProfessionals.map((member) => member.email.toLowerCase()));
   const pendingInvites = invites.filter((invite) => invite.role === "professional" && invite.active && !professionalEmails.has(invite.email.toLowerCase()));
   const professionalsFor = (serviceId: string) => serviceId
@@ -663,7 +692,8 @@ export default function AdminPage() {
     const matchesQuery = !query || lead.name.toLowerCase().includes(query) || lead.phone.includes(query.replace(/\D/g, ""));
     return queueForLead(lead) === leadQueue && matchesQuery && (leadStatusFilter === "all" || lead.status === leadStatusFilter) && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter);
   });
-  const currentSection = adminSections.find((section) => section.id === activeSection) ?? adminSections[0];
+  const visibleAdminSections = adminSections.filter((section) => section.id !== "access" || isMaster);
+  const currentSection = visibleAdminSections.find((section) => section.id === activeSection) ?? visibleAdminSections[0];
 
   if (!session) {
     return (
@@ -674,6 +704,7 @@ export default function AdminPage() {
           <h1>{authMode === "login" ? "Entrar no painel" : "Criar primeiro acesso"}</h1>
           <p>Use o e-mail autorizado da clínica e uma senha segura.</p>
           <form onSubmit={handleAuth}>
+            {authMode === "signup" && <label>Nome completo<input type="text" required value={signupName} onChange={(event) => setSignupName(event.target.value)} autoComplete="name" /></label>}
             <label>E-mail<input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
             <label>Senha<input type="password" minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={authMode === "login" ? "current-password" : "new-password"} /></label>
             <button type="submit" disabled={busy}>{busy ? "Aguarde…" : authMode === "login" ? "Entrar" : "Criar acesso"}</button>
@@ -691,7 +722,7 @@ export default function AdminPage() {
   if (loading || authorized === null) return <main className="admin-loading">Carregando painel…</main>;
 
   if (!authorized) {
-    return <main className="admin-loading"><p>Este usuário não está autorizado.</p><button onClick={() => supabase.auth.signOut()}>Sair</button></main>;
+    return <main className="admin-loading access-waiting"><p className="admin-eyebrow">Acesso ao painel</p><h1>{accessRequestStatus === "rejected" ? "Solicitação não aprovada" : "Aguardando aprovação"}</h1><p>{accessRequestStatus === "rejected" ? "O master não autorizou esta conta. Fale com a administração da clínica se precisar revisar o acesso." : "Seu cadastro e seu e-mail foram confirmados. O master da PS Estética precisa autorizar seu perfil antes do primeiro acesso."}</p><span>{session?.user.email}</span><button onClick={() => supabase.auth.signOut()}>Sair</button></main>;
   }
 
   return (
@@ -710,8 +741,8 @@ export default function AdminPage() {
         <aside className="admin-sidebar">
           <div className="admin-sidebar-heading"><p className="admin-eyebrow">Navegação</p><strong>Organize seu dia</strong></div>
           <nav className="admin-nav" aria-label="Seções do painel">
-            {adminSections.map((section, index) => <Fragment key={section.id}>
-              {(index === 0 || adminSections[index - 1].group !== section.group) && <span className="admin-nav-group">{section.group}</span>}
+            {visibleAdminSections.map((section, index) => <Fragment key={section.id}>
+              {(index === 0 || visibleAdminSections[index - 1].group !== section.group) && <span className="admin-nav-group">{section.group}</span>}
               <button type="button" className={activeSection === section.id ? "active" : ""} onClick={() => setActiveSection(section.id)} aria-current={activeSection === section.id ? "page" : undefined}>
                 <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                 <span><b>{section.label}</b><small>{section.description}</small></span>
@@ -773,6 +804,32 @@ export default function AdminPage() {
           </div>
         </div>
       </section>}
+
+      {activeSection === "access" && isMaster && <>
+      <section className="admin-panel access-approval-panel">
+        <div className="panel-heading"><div><p className="admin-eyebrow">Controle master</p><h2>Solicitações de acesso</h2></div><p>Somente o master pode autorizar novas recepcionistas. O cadastro não libera acesso automaticamente.</p></div>
+        <div className="access-request-list">
+          {pendingAccessRequests.length === 0 && <p className="empty-state">Nenhuma solicitação aguardando aprovação.</p>}
+          {pendingAccessRequests.map((request) => <article key={request.id}>
+            <span className="staff-avatar">{request.full_name.slice(0,1).toUpperCase()}</span>
+            <div><b>{request.full_name}</b><small>{request.email} · solicitado em {formatDate(request.created_at)}</small></div>
+            <div className="access-request-actions"><button type="button" disabled={busy} onClick={() => reviewAccessRequest(request, true)}>Autorizar recepcionista</button><button type="button" className="danger-button" disabled={busy} onClick={() => reviewAccessRequest(request, false)}>Recusar</button></div>
+          </article>)}
+        </div>
+      </section>
+
+      <section className="admin-panel access-approval-panel">
+        <div className="panel-heading"><div><p className="admin-eyebrow">Pessoas autorizadas</p><h2>Acesso da recepção</h2></div><p>O master é protegido contra bloqueio. Recepcionistas podem ser desativadas sem apagar o histórico.</p></div>
+        <div className="access-request-list">
+          {receptionists.map((receptionist) => <article className={receptionist.active ? "" : "inactive"} key={receptionist.user_id}>
+            <span className="staff-avatar">{receptionist.full_name.slice(0,1).toUpperCase()}</span>
+            <div><b>{receptionist.full_name}</b><small>{receptionist.email}</small></div>
+            <span className={`status-badge ${receptionist.is_master ? "master" : receptionist.active ? "active" : "inactive"}`}>{receptionist.is_master ? "Master" : receptionist.active ? "Autorizada" : "Bloqueada"}</span>
+            {!receptionist.is_master && <button type="button" className={receptionist.active ? "danger-button" : "secondary-action"} disabled={busy} onClick={() => toggleReceptionistActive(receptionist)}>{receptionist.active ? "Bloquear acesso" : "Reativar acesso"}</button>}
+          </article>)}
+        </div>
+      </section>
+      </>}
 
       {activeSection === "links" && <section className="admin-panel direct-links-panel">
         <div className="panel-heading"><div><p className="admin-eyebrow">Agendamento sem quiz</p><h2>Links diretos da agenda</h2></div><button className="copy-master" onClick={() => copyScheduleLink()}>Copiar agenda geral</button></div>
