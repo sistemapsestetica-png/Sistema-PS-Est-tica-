@@ -554,11 +554,13 @@ export default function AdminPage() {
   }
 
   async function permanentlyDeleteLead(lead: Lead) {
-    const confirmation = window.prompt(`Esta ação não pode ser desfeita. Digite EXCLUIR para apagar permanentemente ${lead.name}.`);
+    const confirmation = window.prompt(`Esta ação não pode ser desfeita e também apagará agenda e pagamentos vinculados. Digite EXCLUIR para apagar permanentemente ${lead.name}.`);
     if (confirmation !== "EXCLUIR") { if (confirmation !== null) setMessage("Exclusão cancelada: digite exatamente EXCLUIR."); return; }
     const { error } = await supabase.rpc("permanently_delete_lead", { p_lead_id: lead.id });
-    if (error) { setMessage(error.message.includes("agendamentos") ? "Este lead possui agendamentos e deve permanecer arquivado para preservar o histórico." : `Não foi possível excluir: ${error.message}`); return; }
-    setLeads((current) => current.filter((item) => item.id !== lead.id)); setSelectedLead(null); setMessage(`${lead.name} foi excluído permanentemente.`);
+    if (error) { setMessage(`Não foi possível excluir: ${error.message}`); return; }
+    setSelectedLead(null);
+    await loadDashboard();
+    setMessage(`${lead.name} foi excluído permanentemente de leads, agenda e registros vinculados.`);
   }
 
   async function inviteProfessional(event: FormEvent<HTMLFormElement>) {
@@ -985,7 +987,7 @@ export default function AdminPage() {
           <dl><div><dt>Telefone</dt><dd>{selectedLead.phone}</dd></div><div><dt>Procedimento</dt><dd>{services.find((service) => service.slug === selectedLead.service_slug)?.name ?? selectedLead.service_slug}</dd></div><div><dt>Experiência</dt><dd>{selectedLead.experience ? (experienceLabel[selectedLead.experience] ?? selectedLead.experience) : "Não informada"}</dd></div><div><dt>Prazo</dt><dd>{timingLabel[selectedLead.timing] ?? selectedLead.timing}</dd></div><div><dt>Entrada</dt><dd>{formatDate(selectedLead.created_at)}</dd></div><div><dt>Status do atendimento</dt><dd><select className="drawer-status-select" value={selectedLead.status} onChange={(event) => updateLeadStatus(selectedLead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></dd></div></dl>
           <div className="source-card"><b>Origem da campanha</b><p>{selectedLead.source?.utm_source || "Acesso direto"}{selectedLead.source?.utm_campaign ? ` · ${selectedLead.source.utm_campaign}` : ""}</p><small>{selectedLead.source?.referrer || "Sem referência externa registrada"}</small></div>
           <div className="drawer-note"><b>Observações</b><p>{selectedLead.notes || "Nenhuma observação registrada para esta cliente."}</p></div>
-          <div className="lead-management"><b>Gerenciar cadastro</b><p>{selectedLead.archived_at ? `Arquivado em ${formatDate(selectedLead.archived_at)}. Você pode restaurar este contato ou acessar as opções avançadas.` : "Arquive contatos que não precisam aparecer na lista principal. O histórico e os agendamentos serão preservados."}</p><div className="lead-management-actions">{selectedLead.archived_at ? <button className="secondary-action" onClick={() => restoreLead(selectedLead)}>Restaurar lead</button> : <button className="secondary-action" onClick={() => archiveLead(selectedLead)}>Arquivar lead</button>}</div>{selectedLead.archived_at && <details className="advanced-options"><summary>Opções avançadas</summary><p>A exclusão permanente só é permitida para leads sem agendamentos vinculados.</p><button className="danger-button" onClick={() => permanentlyDeleteLead(selectedLead)}>Excluir permanentemente</button></details>}</div>
+          <div className="lead-management"><b>Gerenciar cadastro</b><p>{selectedLead.archived_at ? `Arquivado em ${formatDate(selectedLead.archived_at)}. Você pode restaurar este contato ou acessar as opções avançadas.` : "Arquive contatos que não precisam aparecer na lista principal. O histórico e os agendamentos serão preservados."}</p><div className="lead-management-actions">{selectedLead.archived_at ? <button className="secondary-action" onClick={() => restoreLead(selectedLead)}>Restaurar lead</button> : <button className="secondary-action" onClick={() => archiveLead(selectedLead)}>Arquivar lead</button>}</div>{selectedLead.archived_at && <details className="advanced-options"><summary>Opções avançadas</summary><p>A exclusão permanente apaga também agenda, pagamentos e registros vinculados. Esta ação não pode ser desfeita.</p><button className="danger-button" onClick={() => permanentlyDeleteLead(selectedLead)}>Excluir permanentemente</button></details>}</div>
         </aside>
       </div>}
     </main>
