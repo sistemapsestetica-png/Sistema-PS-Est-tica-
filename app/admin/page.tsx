@@ -141,11 +141,6 @@ const leadQueueDescription: Record<LeadQueue, string> = {
   archived: "Fora da operação",
 };
 
-const weekdayOptions = [
-  [1, "Segunda-feira"], [2, "Terça-feira"], [3, "Quarta-feira"],
-  [4, "Quinta-feira"], [5, "Sexta-feira"], [6, "Sábado"], [0, "Domingo"],
-] as const;
-
 function formatMoney(cents: number | null) {
   if (cents === null) return "Não configurado";
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
@@ -211,12 +206,6 @@ export default function AdminPage() {
   const [selectedSlotIds, setSelectedSlotIds] = useState<number[]>([]);
   const [slotListServiceFilter, setSlotListServiceFilter] = useState("all");
   const [slotListStatusFilter, setSlotListStatusFilter] = useState("all");
-  const [recurringServiceId, setRecurringServiceId] = useState("");
-  const [recurringWeekday, setRecurringWeekday] = useState("1");
-  const [recurringTime, setRecurringTime] = useState("09:00");
-  const [recurringWeeks, setRecurringWeeks] = useState("8");
-  const [recurringSlotsPerDay, setRecurringSlotsPerDay] = useState("1");
-  const [recurringInterval, setRecurringInterval] = useState("60");
   const [leadSearch, setLeadSearch] = useState("");
   const [leadStatusFilter, setLeadStatusFilter] = useState("all");
   const [leadServiceFilter, setLeadServiceFilter] = useState("all");
@@ -228,7 +217,6 @@ export default function AdminPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [bookingLinks, setBookingLinks] = useState<BookingLink[]>([]);
   const [slotProfessionalId, setSlotProfessionalId] = useState("");
-  const [recurringProfessionalId, setRecurringProfessionalId] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteServiceId, setInviteServiceId] = useState("");
@@ -274,7 +262,6 @@ export default function AdminPage() {
     const firstActiveService = loadedServices.find((service) => service.active);
     if (firstActiveService) {
       setSlotServiceId((current) => current || String(firstActiveService.id));
-      setRecurringServiceId((current) => current || String(firstActiveService.id));
       setInviteServiceId((current) => current || String(firstActiveService.id));
       setLinkServiceId((current) => current || String(firstActiveService.id));
     }
@@ -530,26 +517,6 @@ export default function AdminPage() {
   async function deleteSlot(slot: Slot) {
     if (!['open', 'blocked'].includes(slot.status)) return;
     await deleteSlots([slot.id], `o horário de ${formatDate(slot.starts_at)}`);
-  }
-
-  async function createRecurringSlots(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setMessage("");
-    const { data, error } = await supabase.rpc("create_recurring_slots", {
-      p_service_id: Number(recurringServiceId),
-      p_weekday: Number(recurringWeekday),
-      p_start_time: recurringTime,
-      p_weeks: Number(recurringWeeks),
-      p_slots_per_day: Number(recurringSlotsPerDay),
-      p_interval_minutes: Number(recurringInterval),
-      p_professional_id: recurringProfessionalId || null,
-    });
-    if (error) {
-      setMessage(`Erro ao gerar agenda: ${error.message}`);
-      return;
-    }
-    setMessage(`${data ?? 0} horário(s) criado(s). Datas repetidas foram ignoradas.`);
-    await loadDashboard();
   }
 
   async function updateBookingStatus(id: number, status: string) {
@@ -972,20 +939,6 @@ export default function AdminPage() {
             })}
           </div>
         </div>
-      </section>
-
-      <section className="admin-panel">
-        <div className="panel-heading"><div><p className="admin-eyebrow">Automação</p><h2>Gerar horários recorrentes</h2></div><p>Cria a agenda semanal em lote e ignora automaticamente datas que já existem.</p></div>
-        <form className="recurring-form" onSubmit={createRecurringSlots}>
-          <label>Procedimento<select required value={recurringServiceId} onChange={(event) => { setRecurringServiceId(event.target.value); setRecurringProfessionalId(""); }}>{activeServices.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
-          <label>Profissional<select value={recurringProfessionalId} onChange={(event) => setRecurringProfessionalId(event.target.value)}><option value="">Equipe</option>{professionalsFor(recurringServiceId).map((professional) => <option key={professional.user_id} value={professional.user_id}>{professional.full_name}</option>)}</select></label>
-          <label>Dia da semana<select value={recurringWeekday} onChange={(event) => setRecurringWeekday(event.target.value)}>{weekdayOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label>Primeiro horário<input type="time" required value={recurringTime} onChange={(event) => setRecurringTime(event.target.value)} /></label>
-          <label>Semanas à frente<input type="number" min="1" max="52" value={recurringWeeks} onChange={(event) => setRecurringWeeks(event.target.value)} /></label>
-          <label>Horários por dia<input type="number" min="1" max="12" value={recurringSlotsPerDay} onChange={(event) => setRecurringSlotsPerDay(event.target.value)} /></label>
-          <label>Intervalo (min)<input type="number" min="5" max="720" step="5" value={recurringInterval} onChange={(event) => setRecurringInterval(event.target.value)} /></label>
-          <button type="submit">Gerar agenda</button>
-        </form>
       </section>
 
       <section className="admin-panel">

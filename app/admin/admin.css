@@ -24,11 +24,11 @@
 .login-card h1 { max-width: 350px; font-size: 40px; line-height: 1.04; }
 .login-card > p:not(.admin-eyebrow):not(.admin-message) { color: var(--admin-muted); line-height: 1.65; }
 .login-card form, .slot-form { display: grid; gap: 15px; margin-top: 28px; }
-.login-card label, .slot-form label, .service-editor label, .recurring-form label { display: grid; gap: 7px; color: var(--admin-black-soft); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.login-card input, .slot-form input, .slot-form select, .service-editor input, .recurring-form input, .recurring-form select, table select { width: 100%; min-height: 44px; padding: 11px 13px; outline: none; border: 1px solid var(--admin-line); border-radius: 2px 12px 2px 12px; background: #fff; color: var(--admin-ink); font: 13px "Segoe UI", Arial, sans-serif; transition: border-color .22s ease, box-shadow .22s ease, background .22s ease; }
-.login-card input:focus, .slot-form input:focus, .slot-form select:focus, .service-editor input:focus, .recurring-form input:focus, .recurring-form select:focus, table select:focus { border-color: var(--admin-black-light); background: #fffdf9; box-shadow: 0 0 0 3px rgba(45,45,45,.1); }
-.login-card form button, .slot-form button, .service-editor button, .recurring-form button { min-height: 44px; padding: 12px 18px; border: 0; border-radius: 2px 12px 2px 12px; background: var(--admin-black); color: #fff; font-weight: 700; cursor: pointer; transition: transform .25s ease, box-shadow .25s ease, background .25s ease; }
-.login-card form button:hover, .slot-form button:hover, .service-editor button:hover, .recurring-form button:hover { background: var(--admin-black-soft); transform: translateY(-2px); box-shadow: 0 14px 30px -20px rgba(24,24,24,.75); }
+.login-card label, .slot-form label, .service-editor label { display: grid; gap: 7px; color: var(--admin-black-soft); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.login-card input, .slot-form input, .slot-form select, .service-editor input, table select { width: 100%; min-height: 44px; padding: 11px 13px; outline: none; border: 1px solid var(--admin-line); border-radius: 2px 12px 2px 12px; background: #fff; color: var(--admin-ink); font: 13px "Segoe UI", Arial, sans-serif; transition: border-color .22s ease, box-shadow .22s ease, background .22s ease; }
+.login-card input:focus, .slot-form input:focus, .slot-form select:focus, .service-editor input:focus, table select:focus { border-color: var(--admin-black-light); background: #fffdf9; box-shadow: 0 0 0 3px rgba(45,45,45,.1); }
+.login-card form button, .slot-form button, .service-editor button { min-height: 44px; padding: 12px 18px; border: 0; border-radius: 2px 12px 2px 12px; background: var(--admin-black); color: #fff; font-weight: 700; cursor: pointer; transition: transform .25s ease, box-shadow .25s ease, background .25s ease; }
+.login-card form button:hover, .slot-form button:hover, .service-editor button:hover { background: var(--admin-black-soft); transform: translateY(-2px); box-shadow: 0 14px 30px -20px rgba(24,24,24,.75); }
 .login-card form button:disabled { opacity: .6; }
 .mode-switch { margin-top: 19px; padding: 0; border: 0; background: none; color: var(--admin-black-soft); cursor: pointer; text-decoration: underline; text-decoration-color: var(--admin-gold); text-underline-offset: 4px; }
 .back-site { display: block; margin-top: 28px; color: var(--admin-muted); font-size: 12px; text-decoration: none; }
@@ -143,9 +143,6 @@
 .slot-details { min-width: 0; }
 .slot-details small { color: #918a81; font-size: 10px; overflow-wrap: anywhere; }
 .slot-protected { color: #8a837b; font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-.recurring-form { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)) auto; gap: 12px; align-items: end; }
-.recurring-form button { min-height: 44px; white-space: nowrap; }
-
 .table-wrap { overflow-x: auto; border: 1px solid var(--admin-line); border-radius: 2px 14px 2px 14px; }
 .crm-section { padding: 34px; }
 .crm-funnel-grid { margin: 0 0 22px; display: grid; grid-template-columns: repeat(5,minmax(135px,1fr)); gap: 11px; }
