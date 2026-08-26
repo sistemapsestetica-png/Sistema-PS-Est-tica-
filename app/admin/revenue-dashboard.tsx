@@ -8,7 +8,8 @@ type ServicePayment = { id: number; status: string; amount_cents: number; paid_a
 type Booking = {
   id: number;
   status: string;
-  price_cents: number;
+  price_cents: number | null;
+  price_finalized: boolean;
   deposit_cents: number;
   leads: { name: string; phone: string } | null;
   services: { name: string } | null;
@@ -49,7 +50,7 @@ function monthOf(value: string) {
 function fetchRevenueBookings() {
   return supabase
     .from("bookings")
-    .select("id,status,price_cents,deposit_cents,leads(name,phone),services(name),slots(starts_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status,amount_cents,paid_at,provider),service_payments(id,status,amount_cents,paid_at,method,checkout_url,notes)")
+    .select("id,status,price_cents,price_finalized,deposit_cents,leads(name,phone),services(name),slots(starts_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status,amount_cents,paid_at,provider),service_payments(id,status,amount_cents,paid_at,method,checkout_url,notes)")
     .in("status", ["confirmed", "rescheduled", "completed", "no_show"])
     .order("created_at", { ascending: false })
     .limit(500);
@@ -65,6 +66,7 @@ export function RevenueDashboard() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [finalPriceDrafts, setFinalPriceDrafts] = useState<Record<number, string>>({});
 
   async function load() {
     setLoading(true);
@@ -88,7 +90,11 @@ export function RevenueDashboard() {
   const totals = (booking: Booking) => {
     const deposit = (booking.payments ?? []).filter((payment) => payment.status === "paid").reduce((sum, payment) => sum + Number(payment.amount_cents ?? 0), 0);
     const service = (booking.service_payments ?? []).filter((payment) => payment.status === "paid").reduce((sum, payment) => sum + Number(payment.amount_cents ?? 0), 0);
-    return { deposit, service, paid: deposit + service, outstanding: Math.max(0, Number(booking.price_cents) - deposit - service) };
+    const paid = deposit + service;
+    const outstanding = booking.price_finalized && booking.price_cents !== null
+      ? Math.max(0, Number(booking.price_cents) - paid)
+      : null;
+    return { deposit, service, paid, outstanding };
   };
 
   const transactions = useMemo(() => bookings.flatMap((booking) => [
@@ -99,7 +105,8 @@ export function RevenueDashboard() {
   const revenue = periodTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
   const paidBookings = new Set(periodTransactions.map((transaction) => transaction.booking.id)).size;
   const averageTicket = paidBookings ? Math.round(revenue / paidBookings) : 0;
-  const outstanding = bookings.reduce((sum, booking) => sum + totals(booking).outstanding, 0);
+  const outstanding = bookings.reduce((sum, booking) => sum + (totals(booking).outstanding ?? 0), 0);
+  const awaitingPrice = bookings.filter((booking) => !booking.price_finalized).length;
 
   const groupRevenue = (key: "service" | "professional") => Object.entries(periodTransactions.reduce<Record<string, number>>((groups, transaction) => {
     const label = key === "service" ? transaction.booking.services?.name : transaction.booking.professional?.full_name;
@@ -107,20 +114,20 @@ export function RevenueDashboard() {
     return groups;
   }, {})).sort((a, b) => b[1] - a[1]);
 
-  const eligibleBookings = bookings.filter((booking) => totals(booking).outstanding > 0 && ["confirmed", "rescheduled", "completed"].includes(booking.status));
+  const eligibleBookings = bookings.filter((booking) => (totals(booking).outstanding ?? 0) > 0 && ["confirmed", "rescheduled", "completed"].includes(booking.status));
   const selected = eligibleBookings.find((booking) => booking.id === Number(bookingId));
 
   function selectBooking(value: string) {
     setBookingId(value);
     const booking = eligibleBookings.find((item) => item.id === Number(value));
-    setAmount(booking ? (totals(booking).outstanding / 100).toFixed(2) : "");
+    setAmount(booking ? ((totals(booking).outstanding ?? 0) / 100).toFixed(2) : "");
   }
 
   async function recordManualPayment(event: FormEvent) {
     event.preventDefault();
     if (!selected || busy) return;
     const amountCents = Math.round(Number(amount.replace(",", ".")) * 100);
-    const balance = totals(selected).outstanding;
+    const balance = totals(selected).outstanding ?? 0;
     if (!amountCents || amountCents <= 0 || amountCents > balance) return setMessage(`Informe um valor entre R$ 0,01 e ${money(balance)}.`);
     setBusy(true); setMessage("");
     const { error } = await supabase.from("service_payments").insert({
@@ -158,9 +165,27 @@ export function RevenueDashboard() {
     await load();
   }
 
+  async function saveFinalPrice(booking: Booking) {
+    if (busy) return;
+    const normalized = (finalPriceDrafts[booking.id] ?? "").replace(/\./g, "").replace(",", ".");
+    const priceCents = Math.round(Number(normalized) * 100);
+    const alreadyPaid = totals(booking).paid;
+    if (!priceCents || priceCents < alreadyPaid) {
+      setMessage(`Informe um valor final igual ou maior que ${money(alreadyPaid)}.`);
+      return;
+    }
+    setBusy(true); setMessage("");
+    const { error } = await supabase.rpc("set_booking_final_price", { p_booking_id: booking.id, p_price_cents: priceCents });
+    setBusy(false);
+    if (error) { setMessage(`Não foi possível definir o valor: ${error.message}`); return; }
+    setFinalPriceDrafts((current) => ({ ...current, [booking.id]: "" }));
+    setMessage(`Valor final de ${money(priceCents)} definido. O sinal já foi abatido.`);
+    await load();
+  }
+
   return <>
     <section className="revenue-header">
-      <div><p className="admin-eyebrow">Financeiro</p><h2>Faturamento real</h2><p>Sinal, saldo do atendimento, recebimentos manuais e Mercado Pago em um único lugar.</p></div>
+      <div><p className="admin-eyebrow">Financeiro</p><h2>Faturamento real</h2><p>O sinal de R$ 50 vira crédito. Depois da avaliação, informe o valor final e cobre apenas o saldo.</p></div>
       <label>Período<input type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></label>
     </section>
     {message && <div className="admin-message banner" role="status">{message}<button onClick={() => setMessage("")}>×</button></div>}
@@ -169,6 +194,7 @@ export function RevenueDashboard() {
       <article><span>Atendimentos pagos</span><b>{paidBookings}</b><small>reservas com recebimento</small></article>
       <article><span>Ticket médio</span><b>{money(averageTicket)}</b><small>por atendimento recebido</small></article>
       <article><span>Saldo pendente</span><b>{money(outstanding)}</b><small>total ainda a receber</small></article>
+      <article><span>Valor a definir</span><b>{awaitingPrice}</b><small>atendimentos aguardando avaliação</small></article>
     </section>
     <section className="admin-panel revenue-breakdowns">
       <div><p className="admin-eyebrow">Por procedimento</p>{groupRevenue("service").length ? groupRevenue("service").map(([label, value]) => <p key={label}><span>{label}</span><b>{money(value)}</b></p>) : <small>Sem recebimentos no período.</small>}</div>
@@ -177,7 +203,7 @@ export function RevenueDashboard() {
     <section className="admin-panel revenue-manual">
       <div className="panel-heading"><div><p className="admin-eyebrow">Recebimento presencial</p><h2>Registrar pagamento manual</h2></div><p>Use para dinheiro, maquininha, Pix externo ou transferência.</p></div>
       <form onSubmit={recordManualPayment}>
-        <label>Atendimento<select required value={bookingId} onChange={(event) => selectBooking(event.target.value)}><option value="">Selecione</option>{eligibleBookings.map((booking) => <option key={booking.id} value={booking.id}>{booking.leads?.name} · {booking.services?.name} · saldo {money(totals(booking).outstanding)}</option>)}</select></label>
+        <label>Atendimento<select required value={bookingId} onChange={(event) => selectBooking(event.target.value)}><option value="">Selecione</option>{eligibleBookings.map((booking) => <option key={booking.id} value={booking.id}>{booking.leads?.name} · {booking.services?.name} · saldo {money(totals(booking).outstanding ?? 0)}</option>)}</select></label>
         <label>Valor recebido (R$)<input required inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d,.]/g, ""))} /></label>
         <label>Forma<select value={method} onChange={(event) => setMethod(event.target.value)}><option value="card_machine">Maquininha</option><option value="cash">Dinheiro</option><option value="pix_manual">Pix externo</option><option value="transfer">Transferência</option><option value="other">Outro</option></select></label>
         <label>Observação<input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Opcional" /></label>
@@ -189,7 +215,7 @@ export function RevenueDashboard() {
       <div className="table-wrap"><table><thead><tr><th>Cliente</th><th>Procedimento</th><th>Profissional</th><th>Valor total</th><th>Recebido</th><th>Saldo</th><th>Cobrar</th></tr></thead><tbody>
         {loading && <tr><td colSpan={7} className="empty-state">Carregando faturamento…</td></tr>}
         {!loading && bookings.length === 0 && <tr><td colSpan={7} className="empty-state">Nenhum atendimento confirmado.</td></tr>}
-        {!loading && bookings.map((booking) => { const summary = totals(booking); return <tr key={booking.id}><td><b>{booking.leads?.name ?? "Cliente"}</b><small>{booking.slots ? date(booking.slots.starts_at) : ""}</small></td><td>{booking.services?.name ?? "—"}</td><td>{booking.professional?.full_name ?? "Equipe"}</td><td>{money(booking.price_cents)}</td><td className="revenue-paid">{money(summary.paid)}</td><td className={summary.outstanding ? "revenue-due" : "revenue-settled"}>{summary.outstanding ? money(summary.outstanding) : "Quitado"}</td><td>{summary.outstanding > 0 && ["confirmed", "rescheduled", "completed"].includes(booking.status) ? <button className="revenue-charge" disabled={busy} onClick={() => createMercadoPagoLink(booking)}>Gerar link</button> : "—"}</td></tr>; })}
+        {!loading && bookings.map((booking) => { const summary = totals(booking); return <tr key={booking.id}><td><b>{booking.leads?.name ?? "Cliente"}</b><small>{booking.slots ? date(booking.slots.starts_at) : ""}</small></td><td>{booking.services?.name ?? "—"}</td><td>{booking.professional?.full_name ?? "Equipe"}</td><td>{booking.price_finalized && booking.price_cents !== null ? money(booking.price_cents) : <div className="final-price-editor"><input inputMode="decimal" value={finalPriceDrafts[booking.id] ?? ""} onChange={(event) => setFinalPriceDrafts((current) => ({ ...current, [booking.id]: event.target.value.replace(/[^\d,.]/g, "") }))} placeholder="Ex.: 900,00" aria-label={`Valor final de ${booking.leads?.name ?? "cliente"}`} /><button disabled={busy} onClick={() => saveFinalPrice(booking)}>Definir</button></div>}</td><td className="revenue-paid">{money(summary.paid)}</td><td className={summary.outstanding === null ? "revenue-pending-price" : summary.outstanding ? "revenue-due" : "revenue-settled"}>{summary.outstanding === null ? "A definir" : summary.outstanding ? money(summary.outstanding) : "Quitado"}</td><td>{summary.outstanding !== null && summary.outstanding > 0 && ["confirmed", "rescheduled", "completed"].includes(booking.status) ? <button className="revenue-charge" disabled={busy} onClick={() => createMercadoPagoLink(booking)}>Gerar link</button> : "—"}</td></tr>; })}
       </tbody></table></div>
     </section>
   </>;

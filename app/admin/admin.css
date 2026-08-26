@@ -278,6 +278,10 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 .revenue-manual button,.revenue-charge { min-height: 44px; padding: 10px 14px; color: #fff; background: var(--admin-black); border: 1px solid var(--admin-gold); border-radius: 2px 11px 2px 11px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap; }
 .revenue-paid,.revenue-settled { color: #38624b; font-weight: 800; }
 .revenue-due { color: #9a5b2f; font-weight: 800; }
+.revenue-pending-price { color: #8b4653; font-weight: 800; }
+.final-price-editor { min-width: 190px; display: flex; gap: 6px; }
+.final-price-editor input { width: 105px; min-height: 36px; padding: 7px 9px; border: 1px solid var(--admin-line); border-radius: 2px 8px 2px 8px; }
+.final-price-editor button { min-height: 36px; padding: 7px 10px; color: #fff; background: var(--admin-black); border: 0; border-radius: 2px 8px 2px 8px; font-size: 9px; font-weight: 800; cursor: pointer; }
 
 @media (max-width: 1050px) { .revenue-manual form { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 650px) { .revenue-header { align-items: flex-start; flex-direction: column; padding: 21px; } .revenue-breakdowns,.revenue-manual form { grid-template-columns: 1fr; } .revenue-breakdowns > div + div { padding: 24px 0 0; border-top: 1px solid var(--admin-line); border-left: 0; } }

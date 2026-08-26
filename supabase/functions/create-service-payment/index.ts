@@ -44,11 +44,15 @@ Deno.serve(async (request) => {
 
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
-      .select("id,status,price_cents,deposit_cents,leads(name,email),services(name),payments(status,amount_cents),service_payments(status,amount_cents,checkout_url,created_at)")
+      .select("id,status,price_cents,price_finalized,deposit_cents,leads(name,email),services(name),payments(status,amount_cents),service_payments(status,amount_cents,checkout_url,created_at)")
       .eq("id", bookingId)
       .single();
     if (bookingError || !booking) return json(request, { error: "Agendamento não encontrado." }, 404);
     if (!["confirmed", "rescheduled", "completed"].includes(booking.status)) return json(request, { error: "O pagamento do sinal precisa estar confirmado." }, 409);
+    if (!booking.price_finalized || booking.price_cents === null) return json(request, {
+      error: "Defina o valor final após a avaliação antes de gerar a cobrança do saldo.",
+      code: "final_price_required",
+    }, 409);
 
     const lead = firstRelation(booking.leads);
     const service = firstRelation(booking.services);

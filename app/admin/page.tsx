@@ -45,9 +45,7 @@ type Slot = {
 };
 
 type Settings = {
-  deposit_percent: number;
-  min_deposit_cents: number;
-  max_deposit_cents: number;
+  fixed_deposit_cents: number;
   reservation_expiry_minutes: number;
   reschedule_notice_hours: number;
   whatsapp: string;
@@ -248,7 +246,7 @@ export default function AdminPage() {
       supabase.from("services").select("*").order("id"),
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(250),
       supabase.from("slots").select("id,service_id,professional_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
-      supabase.from("clinic_settings").select("deposit_percent,min_deposit_cents,max_deposit_cents,reservation_expiry_minutes,reschedule_notice_hours,whatsapp,payment_provider,pix_enabled").eq("id", true).single(),
+      supabase.from("clinic_settings").select("fixed_deposit_cents,reservation_expiry_minutes,reschedule_notice_hours,whatsapp,payment_provider,pix_enabled").eq("id", true).single(),
       supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone,email),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(250),
       supabase.from("staff_profiles").select("user_id,full_name,email,role,active,is_master").order("full_name"),
       supabase.from("staff_invites").select("email,full_name,role,service_id,active,created_at").order("created_at", { ascending: false }),
@@ -373,8 +371,8 @@ export default function AdminPage() {
   async function saveService(service: Service) {
     setMessage("");
     const priceCents = parsePriceInput(servicePriceDrafts[service.id] ?? "");
-    if (priceCents === null || priceCents <= 0 || !service.duration_minutes) {
-      setMessage("Informe preço e duração antes de salvar.");
+    if ((priceCents !== null && priceCents <= 0) || !service.duration_minutes) {
+      setMessage("Informe uma duração válida. O preço pode ficar em branco quando for definido após a avaliação.");
       return;
     }
     const { error } = await supabase.from("services").update({
@@ -398,8 +396,8 @@ export default function AdminPage() {
     const priceCents = parsePriceInput(newServicePrice);
     const duration = Number(newServiceDuration);
     const name = newServiceName.trim();
-    if (name.length < 2 || !priceCents || priceCents <= 0 || !duration || duration < 5) {
-      setMessage("Informe nome, preço e duração válidos para criar o procedimento.");
+    if (name.length < 2 || (priceCents !== null && priceCents <= 0) || !duration || duration < 5) {
+      setMessage("Informe nome e duração válidos. O preço é opcional.");
       return;
     }
     setBusy(true);
@@ -409,7 +407,7 @@ export default function AdminPage() {
       description: newServiceDescription.trim(),
       price_cents: priceCents,
       duration_minutes: duration,
-      deposit_percent: settings?.deposit_percent ?? 10,
+      deposit_percent: 10,
       active: true,
     });
     setBusy(false);
@@ -426,17 +424,13 @@ export default function AdminPage() {
     event.preventDefault();
     if (!settings || busy) return;
     const whatsapp = settings.whatsapp.replace(/\D/g, "");
-    if (settings.deposit_percent < 1 || settings.deposit_percent > 100) return setMessage("O sinal padrão deve ficar entre 1% e 100%.");
-    if (settings.min_deposit_cents < 0) return setMessage("O valor mínimo do sinal não pode ser negativo.");
-    if (settings.max_deposit_cents < settings.min_deposit_cents) return setMessage("O valor máximo do sinal deve ser maior ou igual ao mínimo.");
+    if (settings.fixed_deposit_cents <= 0) return setMessage("O sinal fixo precisa ser maior que zero.");
     if (settings.reservation_expiry_minutes < 5 || settings.reservation_expiry_minutes > 1440) return setMessage("A reserva deve expirar entre 5 minutos e 24 horas.");
     if (settings.reschedule_notice_hours < 0 || settings.reschedule_notice_hours > 720) return setMessage("O prazo de remarcação deve ficar entre 0 e 720 horas.");
     if (!/^\d{10,13}$/.test(whatsapp)) return setMessage("Informe o WhatsApp da clínica com DDD e somente números.");
     setBusy(true);
     const { error } = await supabase.from("clinic_settings").update({
-      deposit_percent: settings.deposit_percent,
-      min_deposit_cents: settings.min_deposit_cents,
-      max_deposit_cents: settings.max_deposit_cents,
+      fixed_deposit_cents: settings.fixed_deposit_cents,
       reservation_expiry_minutes: settings.reservation_expiry_minutes,
       reschedule_notice_hours: settings.reschedule_notice_hours,
       whatsapp,
@@ -910,7 +904,7 @@ export default function AdminPage() {
           <div><p className="admin-eyebrow">Novo procedimento</p><h3>Adicionar à agenda</h3></div>
           <label>Nome<input required minLength={2} value={newServiceName} onChange={(event) => setNewServiceName(event.target.value)} placeholder="Ex.: Bioestimulador" /></label>
           <label>Descrição<input value={newServiceDescription} onChange={(event) => setNewServiceDescription(event.target.value)} placeholder="Resumo para a cliente" /></label>
-          <label>Preço (R$)<input required inputMode="decimal" value={newServicePrice} onChange={(event) => setNewServicePrice(event.target.value.replace(/[^\d,.-]/g, ""))} placeholder="0,00" /></label>
+          <label>Preço de referência (opcional)<input inputMode="decimal" value={newServicePrice} onChange={(event) => setNewServicePrice(event.target.value.replace(/[^\d,.-]/g, ""))} placeholder="Definido após avaliação" /></label>
           <label>Duração (min)<input required type="number" min="5" max="720" step="5" value={newServiceDuration} onChange={(event) => setNewServiceDuration(event.target.value)} /></label>
           <button disabled={busy}>{busy ? "Criando…" : "Criar procedimento"}</button>
         </form>
@@ -921,7 +915,7 @@ export default function AdminPage() {
               <label>Nome<input value={service.name} onChange={(event) => updateServiceText(service.id, "name", event.target.value)} /></label>
               <label>Descrição<input value={service.description ?? ""} onChange={(event) => updateServiceText(service.id, "description", event.target.value)} placeholder="Descrição curta" /></label>
               <label>
-                Preço
+                Preço de referência (opcional)
                 <span className="currency-input">
                   <span aria-hidden="true">R$</span>
                   <input
@@ -947,7 +941,7 @@ export default function AdminPage() {
         <div>
           <div className="panel-heading"><div><p className="admin-eyebrow">Agenda</p><h2>Abrir horário</h2></div></div>
           <form className="slot-form" onSubmit={createSlot}>
-            <label>Procedimento<select required value={slotServiceId} onChange={(event) => { setSlotServiceId(event.target.value); setSlotProfessionalId(""); }}>{activeServices.map((service) => <option key={service.id} value={service.id}>{service.name} · {formatMoney(service.price_cents)}</option>)}</select></label>
+            <label>Procedimento<select required value={slotServiceId} onChange={(event) => { setSlotServiceId(event.target.value); setSlotProfessionalId(""); }}>{activeServices.map((service) => <option key={service.id} value={service.id}>{service.name} · valor após avaliação</option>)}</select></label>
             <label>Profissional<select value={slotProfessionalId} onChange={(event) => setSlotProfessionalId(event.target.value)}><option value="">Equipe / ainda não atribuído</option>{professionalsFor(slotServiceId).map((professional) => <option key={professional.user_id} value={professional.user_id}>{professional.full_name}</option>)}</select></label>
             <label>Início<input type="datetime-local" required value={slotStart} onChange={(event) => setSlotStart(event.target.value)} /></label>
             <label>Observação<input value={slotNotes} onChange={(event) => setSlotNotes(event.target.value)} placeholder="Opcional" /></label>
@@ -1035,16 +1029,14 @@ export default function AdminPage() {
 
       {activeSection === "settings" && <>
       <section className="payment-note">
-        <div><p className="admin-eyebrow">Pagamento integrado</p><h2>Pix automático</h2><p>Após escolher o horário, o sistema calcula {settings?.deposit_percent ?? 10}% com mínimo de {formatMoney(settings?.min_deposit_cents ?? 3000)} e máximo de {formatMoney(settings?.max_deposit_cents ?? 10000)}, confirma pelo webhook e libera vagas expiradas automaticamente.</p></div>
+        <div><p className="admin-eyebrow">Pagamento integrado</p><h2>Sinal fixo de reserva</h2><p>A cliente paga {formatMoney(settings?.fixed_deposit_cents ?? 5000)} para confirmar o horário. O valor final é definido após a avaliação e o sinal é abatido automaticamente.</p></div>
         <span>{settings?.pix_enabled ? "Mercado Pago ativo" : "Pronto para credenciais"}</span>
       </section>
 
       <section className="admin-panel settings-summary">
         <div className="panel-heading"><div><p className="admin-eyebrow">Regras da clínica</p><h2>Configuração da operação</h2></div><p>As alterações passam a valer para novos procedimentos e agendamentos. Reservas existentes são preservadas.</p></div>
         {settings && <form className="settings-form" onSubmit={saveSettings}>
-          <label>Sinal padrão (%)<input type="number" min="1" max="100" value={settings.deposit_percent} onChange={(event) => setSettings({ ...settings, deposit_percent: Number(event.target.value) })} /><small>Usado ao criar novos procedimentos.</small></label>
-          <label>Sinal mínimo (R$)<input type="number" min="0" step="0.01" value={(settings.min_deposit_cents / 100).toFixed(2)} onChange={(event) => setSettings({ ...settings, min_deposit_cents: Math.round(Number(event.target.value) * 100) })} /><small>Evita sinais muito baixos.</small></label>
-          <label>Sinal máximo (R$)<input type="number" min="0" step="0.01" value={(settings.max_deposit_cents / 100).toFixed(2)} onChange={(event) => setSettings({ ...settings, max_deposit_cents: Math.round(Number(event.target.value) * 100) })} /><small>Evita que o sinal se torne uma barreira.</small></label>
+          <label>Sinal fixo (R$)<input type="number" min="1" step="0.01" value={(settings.fixed_deposit_cents / 100).toFixed(2)} onChange={(event) => setSettings({ ...settings, fixed_deposit_cents: Math.round(Number(event.target.value) * 100) })} /><small>Crédito abatido do valor final do procedimento.</small></label>
           <label>Expiração da reserva (min)<input type="number" min="5" max="1440" value={settings.reservation_expiry_minutes} onChange={(event) => setSettings({ ...settings, reservation_expiry_minutes: Number(event.target.value) })} /><small>Libera a vaga se o Pix não for pago.</small></label>
           <label>Remarcação mínima (h)<input type="number" min="0" max="720" value={settings.reschedule_notice_hours} onChange={(event) => setSettings({ ...settings, reschedule_notice_hours: Number(event.target.value) })} /><small>Antecedência exigida da cliente.</small></label>
           <label>WhatsApp da clínica<input inputMode="numeric" value={settings.whatsapp} onChange={(event) => setSettings({ ...settings, whatsapp: event.target.value.replace(/\D/g, "").slice(0, 13) })} /><small>País + DDD + número, sem símbolos.</small></label>
