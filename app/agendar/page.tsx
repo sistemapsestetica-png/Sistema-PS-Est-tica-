@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import { trackMetaEvent } from "../../lib/meta-pixel";
+import { formatBrazilianWhatsapp, INVALID_WHATSAPP_MESSAGE, isValidBrazilianWhatsapp, whatsappDigits } from "../../lib/whatsapp";
 import "./agendar.css";
 
 type Service = { id: number; slug: string; name: string; description: string; price_cents: number; deposit_percent: number };
@@ -16,13 +17,6 @@ function money(cents: number) {
 
 function dateTime(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
-}
-
-function phoneMask(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return digits ? `(${digits}` : "";
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
 export default function DirectSchedulePage() {
@@ -102,12 +96,13 @@ export default function DirectSchedulePage() {
   async function reserve(event: FormEvent) {
     event.preventDefault();
     if (!selected || busy) return;
+    if (!isValidBrazilianWhatsapp(phone)) { setNotice(INVALID_WHATSAPP_MESSAGE); return; }
     setBusy(true); setNotice("");
     const { data, error } = await supabase.rpc("create_direct_booking", {
       p_service_slug: serviceSlug,
       p_slot_id: selected.slot_id,
       p_name: name.trim(),
-      p_phone: phone.replace(/\D/g, ""),
+      p_phone: whatsappDigits(phone),
       p_email: email.trim().toLowerCase(),
       p_link_token: linkToken,
     });
@@ -159,7 +154,7 @@ export default function DirectSchedulePage() {
           <div className="schedule-step"><span>01</span><div><p>Escolha o serviço</p><h2>Qual cuidado você deseja agendar?</h2></div></div>
           <div className="service-options">{services.map((service) => <button key={service.id} className={serviceSlug === service.slug ? "active" : ""} onClick={() => { setSlots([]); setServiceSlug(service.slug); }}><b>{service.name}</b><small>{money(service.price_cents)} · sinal entre R$ 30 e R$ 100</small></button>)}</div>
           {serviceSlug && <><div className="schedule-step second"><span>02</span><div><p>Escolha o horário</p><h2>Datas disponíveis para {chosenService?.name}</h2></div></div><div className="slot-options direct">{busy && <p>Consultando agenda…</p>}{!busy && slots.length === 0 && <div className="schedule-empty"><b>Nenhuma data aberta neste momento.</b><span>A equipe pode avisar você quando novos horários forem liberados.</span><a href="https://wa.me/5511934580476" target="_blank" rel="noreferrer">Pedir próxima data ↗</a></div>}{slots.map((slot) => <button key={slot.slot_id} className={selected?.slot_id === slot.slot_id ? "active" : ""} onClick={() => setSelected(slot)}><span><small>{slot.professional_name}</small>{dateTime(slot.starts_at)}</span><b>{selected?.slot_id === slot.slot_id ? "✓" : "→"}</b></button>)}</div></>}
-          {selected && <form className="client-form" onSubmit={reserve}><div className="schedule-step third"><span>03</span><div><p>Seus dados</p><h2>Reserve este horário</h2></div></div><label>Nome completo<input required minLength={2} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></label><label>WhatsApp<input required minLength={15} pattern="\(\d{2}\) \d{5}-\d{4}" title="Digite um celular com DDD" value={phone} onChange={(event) => setPhone(phoneMask(event.target.value))} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel" /></label><label>E-mail para o pagamento<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@email.com" autoComplete="email" /></label><div className="deposit-box"><span>Sinal para confirmação</span><b>{money(selected.deposit_cents)}</b><small>10% do serviço · mínimo R$ 30 · máximo R$ 100 · abatido do atendimento</small></div><button className="schedule-primary" disabled={busy}>{busy ? "Gerando seu Pix…" : "Reservar e gerar Pix"} <span>→</span></button></form>}
+          {selected && <form className="client-form" onSubmit={reserve}><div className="schedule-step third"><span>03</span><div><p>Seus dados</p><h2>Reserve este horário</h2></div></div><label>Nome completo<input required minLength={2} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></label><label>WhatsApp<input required minLength={15} maxLength={15} pattern="\([1-9]\d\) 9\d{4}-\d{4}" title={INVALID_WHATSAPP_MESSAGE} value={phone} onChange={(event) => { setPhone(formatBrazilianWhatsapp(event.target.value)); setNotice(""); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel-national" aria-describedby="whatsapp-help-schedule" /><small id="whatsapp-help-schedule">Informe um celular com DDD e todos os 9 dígitos.</small></label><label>E-mail para o pagamento<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@email.com" autoComplete="email" /></label><div className="deposit-box"><span>Sinal para confirmação</span><b>{money(selected.deposit_cents)}</b><small>10% do serviço · mínimo R$ 30 · máximo R$ 100 · abatido do atendimento</small></div><button className="schedule-primary" disabled={busy}>{busy ? "Gerando seu Pix…" : "Reservar e gerar Pix"} <span>→</span></button></form>}
         </>}
         {notice && <p className="schedule-notice" role="status">{notice}</p>}
       </section>

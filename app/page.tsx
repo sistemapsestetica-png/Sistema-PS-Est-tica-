@@ -5,6 +5,7 @@ import Image from "next/image";
 import { supabase } from "../lib/supabase";
 import { PANEL_URL } from "../lib/public-urls";
 import { trackMetaEvent } from "../lib/meta-pixel";
+import { formatBrazilianWhatsapp, INVALID_WHATSAPP_MESSAGE, isValidBrazilianWhatsapp, whatsappDigits } from "../lib/whatsapp";
 
 type DayKey = "lavieen" | "laser" | "ultraformer" | "botox";
 type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -86,14 +87,6 @@ const timingLabels: Record<string, string> = {
   quinzena: "Nas próximas duas semanas",
   pesquisando: "Estou pesquisando por enquanto",
 };
-
-function formatBrazilianMobile(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (!digits) return "";
-  if (digits.length <= 2) return `(${digits}`;
-  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-}
 
 function formatSlot(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -204,7 +197,7 @@ export default function Home() {
 
     const { data, error } = await supabase.rpc("capture_lead_session", {
       p_name: name.trim(),
-      p_phone: phone.replace(/\D/g, ""),
+      p_phone: whatsappDigits(phone),
       p_service_slug: day,
       p_experience: experience,
       p_timing: timing,
@@ -242,6 +235,7 @@ export default function Home() {
   async function continueToSlots(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!day || saving) return;
+    if (!isValidBrazilianWhatsapp(phone)) { setSaveNotice(INVALID_WHATSAPP_MESSAGE); return; }
     setSaveNotice("");
     setSaving(true);
     const leadSession = await captureLead();
@@ -434,7 +428,7 @@ export default function Home() {
               <p className="quiz-kicker">Sua indicação inicial está quase pronta</p>
               <h2>Preencha seus dados para liberar a agenda.</h2>
               <label>Seu nome<input required value={name} onChange={(e) => { setName(e.target.value); setLeadId(null); setLeadToken(null); }} placeholder="Como podemos chamar você?" autoComplete="name" /></label>
-              <label>WhatsApp<input required value={phone} onChange={(e) => { setPhone(formatBrazilianMobile(e.target.value)); setLeadId(null); setLeadToken(null); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel" maxLength={15} minLength={15} pattern="\(\d{2}\) \d{5}-\d{4}" title="Digite um celular com DDD, por exemplo: (11) 90000-0000" /></label>
+              <label>WhatsApp<input required value={phone} onChange={(e) => { setPhone(formatBrazilianWhatsapp(e.target.value)); setLeadId(null); setLeadToken(null); setSaveNotice(""); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel-national" maxLength={15} minLength={15} pattern="\([1-9]\d\) 9\d{4}-\d{4}" title={INVALID_WHATSAPP_MESSAGE} aria-describedby="whatsapp-help-main" /><small id="whatsapp-help-main">Informe um celular com DDD e todos os 9 dígitos.</small></label>
               <label>E-mail para o Pix<input required type="email" value={email} onChange={(e) => { setEmail(e.target.value); setLeadId(null); setLeadToken(null); }} placeholder="voce@exemplo.com" autoComplete="email" /></label>
               <button className="primary-button" type="submit" disabled={saving}>{saving ? "Preparando sua agenda…" : "Liberar horários disponíveis"} <span>→</span></button>
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
