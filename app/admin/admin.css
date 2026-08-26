@@ -202,6 +202,10 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 .advanced-options summary { color: #8b4653; font-size: 11px; font-weight: 800; cursor: pointer; }
 .source-card b, .drawer-note b { color: var(--admin-black); font: 400 18px Georgia, serif; }
 .source-card p, .drawer-note p { margin: 9px 0 4px; color: #615e5c; font-size: 13px; line-height: 1.5; }
+.drawer-note textarea { width: 100%; min-height: 125px; margin-top: 13px; padding: 12px 13px; resize: vertical; color: var(--admin-ink); background: #fff; border: 1px solid var(--admin-line); border-radius: 2px 11px 2px 11px; font: inherit; line-height: 1.5; }
+.drawer-note > div { margin-top: 9px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.drawer-note > div small { color: var(--admin-muted); }
+.drawer-note > div button { min-height: 38px; padding: 9px 13px; color: #fff; background: var(--admin-black); border: 1px solid var(--admin-gold); border-radius: 2px 9px 2px 9px; font-size: 10px; font-weight: 800; cursor: pointer; }
 .source-card small { color: #8c8885; overflow-wrap: anywhere; }
 .payment-note { display: flex; align-items: center; justify-content: space-between; gap: 30px; background: linear-gradient(135deg, #e8e7e8, #f4f2ed); border-color: #ddd8cf; }
 .payment-note p:last-child { margin: 8px 0 0; color: var(--admin-muted); }

@@ -23,6 +23,7 @@ type Lead = {
   id: number;
   name: string;
   phone: string;
+  email?: string | null;
   service_slug: string;
   timing: string;
   status: string;
@@ -60,7 +61,7 @@ type Booking = {
   created_at: string;
   lead_id: number;
   slot_id: number;
-  leads: { name: string; phone: string } | null;
+  leads: { name: string; phone: string; email: string | null } | null;
   services: { name: string } | null;
   slots: { starts_at: string; ends_at: string } | null;
   professional?: { full_name: string } | null;
@@ -89,9 +90,11 @@ const adminSections: { id: AdminSection; label: string; description: string; gro
 
 const leadStatus: Record<string, string> = {
   new: "Novo",
-  contacted: "Contatado",
+  contacted: "Atendido / contatado",
   qualified: "Qualificado",
-  scheduled: "Agendado",
+  scheduled: "Agendou",
+  attended: "Compareceu",
+  no_answer: "Não respondeu",
   lost: "Perdido",
 };
 
@@ -111,8 +114,10 @@ const bookingStatus: Record<string, string> = {
   awaiting_payment: "Aguardando pagamento",
   confirmed: "Confirmado",
   cancelled: "Cancelado",
+  rescheduled: "Remarcado",
   completed: "Concluído",
   no_show: "Não compareceu",
+  expired: "Expirado",
 };
 
 const leadQueueLabel: Record<LeadQueue, string> = {
@@ -234,7 +239,7 @@ export default function AdminPage() {
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(250),
       supabase.from("slots").select("id,service_id,professional_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
       supabase.from("clinic_settings").select("deposit_percent,min_deposit_cents,max_deposit_cents,reservation_expiry_minutes,reschedule_notice_hours,whatsapp,payment_provider,pix_enabled").eq("id", true).single(),
-      supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(250),
+      supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone,email),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(250),
       supabase.from("staff_profiles").select("user_id,full_name,email,role,active,is_master").order("full_name"),
       supabase.from("staff_invites").select("email,full_name,role,service_id,active,created_at").order("created_at", { ascending: false }),
       supabase.from("professional_services").select("professional_id,service_id").eq("active", true),
@@ -539,6 +544,18 @@ export default function AdminPage() {
     }
   }
 
+  async function saveLeadNotes() {
+    if (!selectedLead || busy) return;
+    const notes = selectedLead.notes?.trim() || null;
+    setBusy(true); setMessage("");
+    const { error } = await supabase.from("leads").update({ notes }).eq("id", selectedLead.id);
+    setBusy(false);
+    if (error) { setMessage(`Não foi possível salvar as observações: ${error.message}`); return; }
+    setLeads((current) => current.map((lead) => lead.id === selectedLead.id ? { ...lead, notes } : lead));
+    setSelectedLead({ ...selectedLead, notes });
+    setMessage("Observações salvas no perfil da cliente.");
+  }
+
   async function archiveLead(lead: Lead) {
     if (!window.confirm(`Arquivar ${lead.name}? O histórico será preservado e poderá ser restaurado.`)) return;
     const archivedAt = new Date().toISOString();
@@ -689,9 +706,10 @@ export default function AdminPage() {
     return counts;
   }, { conversion: 0, prebooking: 0, confirmed: 0, expired: 0, archived: 0 });
   const newLeads = queueCounts.conversion;
+  const confirmedBookings = bookings.filter((booking) => ["confirmed", "rescheduled", "completed", "no_show"].includes(booking.status));
   const filteredLeads = leads.filter((lead) => {
     const query = leadSearch.trim().toLowerCase();
-    const matchesQuery = !query || lead.name.toLowerCase().includes(query) || lead.phone.includes(query.replace(/\D/g, ""));
+    const matchesQuery = !query || lead.name.toLowerCase().includes(query) || lead.phone.includes(query.replace(/\D/g, "")) || Boolean(lead.email?.toLowerCase().includes(query));
     return queueForLead(lead) === leadQueue && matchesQuery && (leadStatusFilter === "all" || lead.status === leadStatusFilter) && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter);
   });
   const visibleAdminSections = adminSections.filter((section) => section.id !== "access" || isMaster);
@@ -923,8 +941,8 @@ export default function AdminPage() {
           <table>
             <thead><tr><th>Cliente</th><th>Procedimento</th><th>Profissional</th><th>Data reservada</th><th>Pagamento</th><th>Status</th><th>Contato</th></tr></thead>
             <tbody>
-              {bookings.length === 0 && <tr><td colSpan={7} className="empty-state">Ainda não há agendamentos.</td></tr>}
-              {bookings.map((booking) => <tr key={booking.id}><td><b>{booking.leads?.name ?? "Cliente"}</b><small>{booking.leads?.phone ?? ""}</small></td><td>{booking.services?.name ?? "Procedimento"}</td><td>{booking.professional?.full_name ?? "Equipe"}</td><td>{booking.slots ? formatDate(booking.slots.starts_at) : "—"}</td><td><span className={`payment-status ${booking.payments?.[0]?.status ?? "pending"}`}>{booking.payments?.[0]?.status === "paid" ? "Pago" : booking.status === "awaiting_payment" ? "Aguardando Pix" : "—"}</span></td><td><select value={booking.status} onChange={(event) => updateBookingStatus(booking.id, event.target.value)}>{Object.entries(bookingStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td>{booking.leads?.phone ? <a href={`https://wa.me/55${booking.leads.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a> : "—"}</td></tr>)}
+              {confirmedBookings.length === 0 && <tr><td colSpan={7} className="empty-state">Nenhum agendamento confirmado por pagamento.</td></tr>}
+              {confirmedBookings.map((booking) => <tr key={booking.id}><td><b>{booking.leads?.name ?? "Cliente"}</b><small>{booking.leads?.phone ?? ""}</small><small>{booking.leads?.email ?? "Sem e-mail"}</small></td><td>{booking.services?.name ?? "Procedimento"}</td><td>{booking.professional?.full_name ?? "Equipe"}</td><td>{booking.slots ? formatDate(booking.slots.starts_at) : "—"}</td><td><span className={`payment-status ${booking.payments?.[0]?.status ?? "pending"}`}>{booking.payments?.[0]?.status === "paid" ? "Pago" : "—"}</span></td><td><select value={booking.status} onChange={(event) => updateBookingStatus(booking.id, event.target.value)}>{Object.entries(bookingStatus).filter(([value]) => !["pending", "awaiting_payment", "confirmed"].includes(value) || value === booking.status).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td>{booking.leads?.phone ? <a href={`https://wa.me/55${booking.leads.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a> : "—"}</td></tr>)}
             </tbody>
           </table>
         </div>
@@ -937,7 +955,7 @@ export default function AdminPage() {
           {(["conversion", "prebooking", "confirmed", "expired", "archived"] as LeadQueue[]).map((queue) => <button key={queue} role="tab" aria-selected={leadQueue === queue} className={`crm-funnel-card ${queue} ${leadQueue === queue ? "active" : ""}`} onClick={() => setLeadQueue(queue)}><span>{leadQueueLabel[queue]}</span><b>{queueCounts[queue]}</b><small>{leadQueueDescription[queue]}</small></button>)}
         </div>
         <div className="crm-filter-panel">
-          <label className="crm-search">Buscar lead<input value={leadSearch} onChange={(event) => setLeadSearch(event.target.value)} placeholder="Nome ou WhatsApp" /></label>
+          <label className="crm-search">Buscar lead<input value={leadSearch} onChange={(event) => setLeadSearch(event.target.value)} placeholder="Nome, WhatsApp ou e-mail" /></label>
           <label>Status<select value={leadStatusFilter} onChange={(event) => setLeadStatusFilter(event.target.value)}><option value="all">Todos os status</option>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label>Procedimento<select value={leadServiceFilter} onChange={(event) => setLeadServiceFilter(event.target.value)}><option value="all">Todos</option>{services.map((service) => <option key={service.slug} value={service.slug}>{service.name}</option>)}</select></label>
           {(leadSearch || leadStatusFilter !== "all" || leadServiceFilter !== "all") && <button className="crm-clear-filters" onClick={() => { setLeadSearch(""); setLeadStatusFilter("all"); setLeadServiceFilter("all"); }}>Limpar filtros</button>}
@@ -945,10 +963,10 @@ export default function AdminPage() {
         <div className="crm-list-heading"><div><p className="admin-eyebrow">Lista atual</p><h3>{leadQueueLabel[leadQueue]}</h3></div><span className="crm-total">{filteredLeads.length} {filteredLeads.length === 1 ? "contato" : "contatos"}</span></div>
         <div className="table-wrap crm-table-wrap">
           <table className="crm-table">
-            <thead><tr><th>Cliente</th><th>Interesse</th><th>Prioridade</th><th>Entrada</th><th>Etapa</th><th>Contato</th><th>Detalhes</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>Interesse</th><th>Prioridade</th><th>Entrada</th><th>Atendimento</th><th>Etapa</th><th>Contato</th><th>Detalhes</th></tr></thead>
             <tbody>
-              {filteredLeads.length === 0 && <tr><td colSpan={7} className="empty-state">Nenhum lead nesta etapa.</td></tr>}
-              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td><span className={`funnel-stage ${queueForLead(lead)}`}>{leadQueueLabel[queueForLead(lead)]}</span></td><td><a className="crm-whatsapp" href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td><td><button className="view-lead" onClick={() => setSelectedLead(lead)}>Abrir perfil</button></td></tr>)}
+              {filteredLeads.length === 0 && <tr><td colSpan={8} className="empty-state">Nenhum lead nesta etapa.</td></tr>}
+              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small><small>{lead.email || "Sem e-mail"}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td>{leadStatus[lead.status] ?? lead.status}</td><td><span className={`funnel-stage ${queueForLead(lead)}`}>{leadQueueLabel[queueForLead(lead)]}</span></td><td><a className="crm-whatsapp" href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td><td><button className="view-lead" onClick={() => setSelectedLead(lead)}>Abrir perfil</button></td></tr>)}
             </tbody>
           </table>
         </div>
@@ -984,9 +1002,9 @@ export default function AdminPage() {
           <button className="drawer-close" onClick={() => setSelectedLead(null)} aria-label="Fechar">×</button>
           <p className="admin-eyebrow">Perfil da cliente</p><h2>{selectedLead.name}</h2>
           <a className="drawer-whatsapp" href={`https://wa.me/55${selectedLead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">Conversar no WhatsApp ↗</a>
-          <dl><div><dt>Telefone</dt><dd>{selectedLead.phone}</dd></div><div><dt>Procedimento</dt><dd>{services.find((service) => service.slug === selectedLead.service_slug)?.name ?? selectedLead.service_slug}</dd></div><div><dt>Experiência</dt><dd>{selectedLead.experience ? (experienceLabel[selectedLead.experience] ?? selectedLead.experience) : "Não informada"}</dd></div><div><dt>Prazo</dt><dd>{timingLabel[selectedLead.timing] ?? selectedLead.timing}</dd></div><div><dt>Entrada</dt><dd>{formatDate(selectedLead.created_at)}</dd></div><div><dt>Status do atendimento</dt><dd><select className="drawer-status-select" value={selectedLead.status} onChange={(event) => updateLeadStatus(selectedLead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></dd></div></dl>
+          <dl><div><dt>Telefone</dt><dd>{selectedLead.phone}</dd></div><div><dt>E-mail</dt><dd>{selectedLead.email ? <a href={`mailto:${selectedLead.email}`}>{selectedLead.email}</a> : "Não informado"}</dd></div><div><dt>Procedimento</dt><dd>{services.find((service) => service.slug === selectedLead.service_slug)?.name ?? selectedLead.service_slug}</dd></div><div><dt>Experiência</dt><dd>{selectedLead.experience ? (experienceLabel[selectedLead.experience] ?? selectedLead.experience) : "Não informada"}</dd></div><div><dt>Prazo</dt><dd>{timingLabel[selectedLead.timing] ?? selectedLead.timing}</dd></div><div><dt>Entrada</dt><dd>{formatDate(selectedLead.created_at)}</dd></div><div><dt>Status do atendimento</dt><dd><select className="drawer-status-select" value={selectedLead.status} onChange={(event) => updateLeadStatus(selectedLead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></dd></div></dl>
           <div className="source-card"><b>Origem da campanha</b><p>{selectedLead.source?.utm_source || "Acesso direto"}{selectedLead.source?.utm_campaign ? ` · ${selectedLead.source.utm_campaign}` : ""}</p><small>{selectedLead.source?.referrer || "Sem referência externa registrada"}</small></div>
-          <div className="drawer-note"><b>Observações</b><p>{selectedLead.notes || "Nenhuma observação registrada para esta cliente."}</p></div>
+          <div className="drawer-note"><b>Observações do atendimento</b><textarea value={selectedLead.notes ?? ""} onChange={(event) => setSelectedLead({ ...selectedLead, notes: event.target.value })} maxLength={2000} placeholder="Ex.: respondeu pelo WhatsApp, prefere horário à tarde, pediu retorno na sexta…" /><div><small>{(selectedLead.notes ?? "").length}/2000</small><button type="button" disabled={busy} onClick={saveLeadNotes}>{busy ? "Salvando…" : "Salvar observações"}</button></div></div>
           <div className="lead-management"><b>Gerenciar cadastro</b><p>{selectedLead.archived_at ? `Arquivado em ${formatDate(selectedLead.archived_at)}. Você pode restaurar este contato ou acessar as opções avançadas.` : "Arquive contatos que não precisam aparecer na lista principal. O histórico e os agendamentos serão preservados."}</p><div className="lead-management-actions">{selectedLead.archived_at ? <button className="secondary-action" onClick={() => restoreLead(selectedLead)}>Restaurar lead</button> : <button className="secondary-action" onClick={() => archiveLead(selectedLead)}>Arquivar lead</button>}</div>{selectedLead.archived_at && <details className="advanced-options"><summary>Opções avançadas</summary><p>A exclusão permanente apaga também agenda, pagamentos e registros vinculados. Esta ação não pode ser desfeita.</p><button className="danger-button" onClick={() => permanentlyDeleteLead(selectedLead)}>Excluir permanentemente</button></details>}</div>
         </aside>
       </div>}
