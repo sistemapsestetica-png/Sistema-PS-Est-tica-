@@ -120,6 +120,13 @@ const bookingStatus: Record<string, string> = {
   expired: "Expirado",
 };
 
+const slotStatusLabel: Record<string, string> = {
+  open: "Aberto",
+  blocked: "Bloqueado",
+  reserved: "Reservado",
+  completed: "Concluído",
+};
+
 const leadQueueLabel: Record<LeadQueue, string> = {
   conversion: "Para converter",
   prebooking: "Pré-agendado",
@@ -203,6 +210,9 @@ export default function AdminPage() {
   const [slotServiceId, setSlotServiceId] = useState("");
   const [slotStart, setSlotStart] = useState("");
   const [slotNotes, setSlotNotes] = useState("");
+  const [selectedSlotIds, setSelectedSlotIds] = useState<number[]>([]);
+  const [slotListServiceFilter, setSlotListServiceFilter] = useState("all");
+  const [slotListStatusFilter, setSlotListStatusFilter] = useState("all");
   const [recurringServiceId, setRecurringServiceId] = useState("");
   const [recurringWeekday, setRecurringWeekday] = useState("1");
   const [recurringTime, setRecurringTime] = useState("09:00");
@@ -497,11 +507,35 @@ export default function AdminPage() {
     else await loadDashboard();
   }
 
+  async function deleteSlots(slotIds: number[], description: string) {
+    if (busy || slotIds.length === 0) return;
+    const warning = slotIds.length === 1
+      ? `Excluir ${description} da agenda? Esta ação não pode ser desfeita.`
+      : `Excluir ${slotIds.length} horários selecionados? Horários com reserva ou histórico de agendamento serão protegidos.`;
+    if (!window.confirm(warning)) return;
+
+    setBusy(true);
+    setMessage("");
+    const { data, error } = await supabase.rpc("delete_available_slots", { p_slot_ids: slotIds });
+    setBusy(false);
+    if (error) {
+      setMessage(`Não foi possível excluir os horários: ${error.message}`);
+      return;
+    }
+
+    const result = Array.isArray(data) ? data[0] : data;
+    const deletedCount = Number(result?.deleted_count ?? 0);
+    const protectedCount = Number(result?.protected_count ?? 0);
+    setSelectedSlotIds([]);
+    setMessage(protectedCount > 0
+      ? `${deletedCount} horário(s) excluído(s). ${protectedCount} protegido(s) por reserva, histórico ou alteração recente.`
+      : `${deletedCount} horário(s) excluído(s) da agenda.`);
+    await loadDashboard();
+  }
+
   async function deleteSlot(slot: Slot) {
-    if (!['open', 'blocked'].includes(slot.status) || !window.confirm("Excluir este horário da agenda?")) return;
-    const { error } = await supabase.from("slots").delete().eq("id", slot.id);
-    if (error) setMessage(`Erro ao excluir horário: ${error.message}`);
-    else { setMessage("Horário excluído."); await loadDashboard(); }
+    if (!['open', 'blocked'].includes(slot.status)) return;
+    await deleteSlots([slot.id], `o horário de ${formatDate(slot.starts_at)}`);
   }
 
   async function createRecurringSlots(event: FormEvent<HTMLFormElement>) {
@@ -707,6 +741,14 @@ export default function AdminPage() {
   }, { conversion: 0, prebooking: 0, confirmed: 0, expired: 0, archived: 0 });
   const newLeads = queueCounts.conversion;
   const confirmedBookings = bookings.filter((booking) => ["confirmed", "rescheduled", "completed", "no_show"].includes(booking.status));
+  const filteredSlots = slots.filter((slot) =>
+    (slotListServiceFilter === "all" || String(slot.service_id) === slotListServiceFilter)
+    && (slotListStatusFilter === "all" || slot.status === slotListStatusFilter));
+  const deletableFilteredSlotIds = filteredSlots
+    .filter((slot) => ["open", "blocked"].includes(slot.status))
+    .map((slot) => slot.id);
+  const allFilteredSlotsSelected = deletableFilteredSlotIds.length > 0
+    && deletableFilteredSlotIds.every((id) => selectedSlotIds.includes(id));
   const filteredLeads = leads.filter((lead) => {
     const query = leadSearch.trim().toLowerCase();
     const matchesQuery = !query || lead.name.toLowerCase().includes(query) || lead.phone.includes(query.replace(/\D/g, "")) || Boolean(lead.email?.toLowerCase().includes(query));
@@ -913,10 +955,27 @@ export default function AdminPage() {
           </form>
         </div>
         <div>
-          <div className="panel-heading"><div><p className="admin-eyebrow">Próximos</p><h2>Horários cadastrados</h2></div></div>
+          <div className="panel-heading"><div><p className="admin-eyebrow">Próximos</p><h2>Gerenciar horários</h2></div><p>Selecione horários livres para excluir individualmente ou em massa.</p></div>
+          <div className="slot-manager-toolbar">
+            <label>Procedimento<select value={slotListServiceFilter} onChange={(event) => { setSlotListServiceFilter(event.target.value); setSelectedSlotIds([]); }}><option value="all">Todos</option>{activeServices.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
+            <label>Status<select value={slotListStatusFilter} onChange={(event) => { setSlotListStatusFilter(event.target.value); setSelectedSlotIds([]); }}><option value="all">Todos</option><option value="open">Abertos</option><option value="blocked">Bloqueados</option><option value="reserved">Reservados</option><option value="completed">Concluídos</option></select></label>
+            <button type="button" className="secondary-action slot-select-all" disabled={deletableFilteredSlotIds.length === 0 || busy} onClick={() => setSelectedSlotIds(allFilteredSlotsSelected ? [] : deletableFilteredSlotIds)}>{allFilteredSlotsSelected ? "Limpar seleção" : "Selecionar livres"}</button>
+            <button type="button" className="slot-bulk-delete" disabled={selectedSlotIds.length === 0 || busy} onClick={() => deleteSlots(selectedSlotIds, "os horários selecionados")}>{busy ? "Excluindo…" : `Excluir selecionados (${selectedSlotIds.length})`}</button>
+          </div>
           <div className="slot-list">
-            {slots.length === 0 && <p className="empty-state">Nenhum horário futuro cadastrado.</p>}
-            {slots.map((slot) => <article key={slot.id}><div><b>{serviceNames[slot.service_id] ?? "Procedimento"}</b><span>{professionalNames[slot.professional_id ?? ""] ?? "Equipe PS"} · {formatDate(slot.starts_at)}</span></div><div className="slot-actions"><button className={slot.status} disabled={!['open', 'blocked'].includes(slot.status)} onClick={() => toggleSlot(slot)}>{slot.status === "open" ? "Aberto" : slot.status === "reserved" ? "Reservado" : slot.status === "completed" ? "Concluído" : "Bloqueado"}</button>{['open', 'blocked'].includes(slot.status) && <button className="delete-slot" onClick={() => deleteSlot(slot)} aria-label="Excluir horário">Excluir</button>}</div></article>)}
+            {filteredSlots.length === 0 && <p className="empty-state">Nenhum horário encontrado com estes filtros.</p>}
+            {filteredSlots.map((slot) => {
+              const canDelete = ['open', 'blocked'].includes(slot.status);
+              const selected = selectedSlotIds.includes(slot.id);
+              return <article key={slot.id} className={selected ? "selected" : ""}>
+                <label className={`slot-selector ${canDelete ? "" : "protected"}`} title={canDelete ? "Selecionar horário" : "Horários reservados ou concluídos são protegidos"}>
+                  <input type="checkbox" checked={selected} disabled={!canDelete || busy} onChange={() => setSelectedSlotIds((current) => current.includes(slot.id) ? current.filter((id) => id !== slot.id) : [...current, slot.id])} />
+                  <span aria-hidden="true" />
+                </label>
+                <div className="slot-details"><b>{serviceNames[slot.service_id] ?? "Procedimento"}</b><span>{professionalNames[slot.professional_id ?? ""] ?? "Equipe PS"} · {formatDate(slot.starts_at)}</span>{slot.notes && <small>{slot.notes}</small>}</div>
+                <div className="slot-actions"><button className={slot.status} disabled={!canDelete || busy} onClick={() => toggleSlot(slot)}>{slotStatusLabel[slot.status] ?? slot.status}</button>{canDelete ? <button className="delete-slot" disabled={busy} onClick={() => deleteSlot(slot)} aria-label={`Excluir horário de ${formatDate(slot.starts_at)}`}>Excluir</button> : <small className="slot-protected">Protegido</small>}</div>
+              </article>;
+            })}
           </div>
         </div>
       </section>
