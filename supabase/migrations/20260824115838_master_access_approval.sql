@@ -2,7 +2,6 @@
 
 alter table public.staff_profiles
   add column if not exists is_master boolean not null default false;
-
 create table if not exists public.staff_access_requests (
   id bigint generated always as identity primary key,
   user_id uuid not null unique references auth.users(id) on delete cascade,
@@ -14,13 +13,10 @@ create table if not exists public.staff_access_requests (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
 create index if not exists staff_access_requests_status_created_idx
   on public.staff_access_requests(status, created_at desc);
-
 alter table public.staff_access_requests enable row level security;
 grant select on public.staff_access_requests to authenticated;
-
 create or replace function private.is_master()
 returns boolean
 language sql stable security definer set search_path = ''
@@ -32,21 +28,18 @@ as $$
       and sp.is_master
   );
 $$;
-
 revoke all on function private.is_master() from public, anon, authenticated;
 grant execute on function private.is_master() to authenticated;
-
 update public.staff_profiles sp
 set is_master = true, active = true, role = 'receptionist', updated_at = now()
 from public.admin_allowlist a
 where a.email = sp.email and a.active;
-
 create or replace function public.queue_staff_access_request()
 returns trigger
 language plpgsql security definer set search_path = ''
 as $$
 begin
-  if new.email is null or new.email_confirmed_at is null or exists (select 1 from public.staff_profiles sp where sp.user_id = new.id) then
+  if new.email is null or exists (select 1 from public.staff_profiles sp where sp.user_id = new.id) then
     return new;
   end if;
 
@@ -66,14 +59,11 @@ begin
   return new;
 end;
 $$;
-
 revoke all on function public.queue_staff_access_request() from public, anon, authenticated;
-
 drop trigger if exists on_auth_user_access_request on auth.users;
 create trigger on_auth_user_access_request
-after insert or update of email, email_confirmed_at on auth.users
+after insert or update of email on auth.users
 for each row execute function public.queue_staff_access_request();
-
 insert into public.staff_access_requests(user_id,email,full_name,status)
 select
   u.id,
@@ -82,13 +72,8 @@ select
   'pending'
 from auth.users u
 left join public.staff_profiles sp on sp.user_id = u.id
-where u.email is not null and u.email_confirmed_at is not null and sp.user_id is null
+where u.email is not null and sp.user_id is null
 on conflict (user_id) do nothing;
-
-delete from public.staff_access_requests r
-using auth.users u
-where u.id = r.user_id and u.email_confirmed_at is null and r.status = 'pending';
-
 create or replace function public.review_staff_access_request(p_request_id bigint, p_approve boolean)
 returns void
 language plpgsql security definer set search_path = ''
@@ -127,35 +112,29 @@ begin
   where id = p_request_id;
 end;
 $$;
-
 revoke all on function public.review_staff_access_request(bigint,boolean) from public, anon;
 grant execute on function public.review_staff_access_request(bigint,boolean) to authenticated;
-
 drop policy if exists staff_access_requests_self_read on public.staff_access_requests;
 create policy staff_access_requests_self_read on public.staff_access_requests
 for select to authenticated
 using (user_id = (select auth.uid()) or (select private.is_master()));
-
 drop policy if exists staff_profiles_reception_all on public.staff_profiles;
 drop policy if exists staff_profiles_master_update on public.staff_profiles;
 create policy staff_profiles_master_update on public.staff_profiles
 for update to authenticated
 using ((select private.is_master()))
 with check ((select private.is_master()));
-
 drop policy if exists staff_profiles_reception_professional_update on public.staff_profiles;
 create policy staff_profiles_reception_professional_update on public.staff_profiles
 for update to authenticated
 using ((select private.is_receptionist()) and role = 'professional' and not is_master)
 with check (role = 'professional' and not is_master);
-
 drop policy if exists staff_invites_reception_all on public.staff_invites;
 drop policy if exists staff_invites_master_all on public.staff_invites;
 create policy staff_invites_master_all on public.staff_invites
 for all to authenticated
 using ((select private.is_master()))
 with check ((select private.is_master()));
-
 drop policy if exists staff_invites_reception_professional_all on public.staff_invites;
 create policy staff_invites_reception_professional_all on public.staff_invites
 for all to authenticated

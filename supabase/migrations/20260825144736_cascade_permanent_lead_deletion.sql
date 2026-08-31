@@ -50,6 +50,5 @@ begin
   where l.id = v_lead_id;
 end;
 $$;
-
 revoke all on function public.permanently_delete_lead(bigint) from public, anon;
 grant execute on function public.permanently_delete_lead(bigint) to authenticated;

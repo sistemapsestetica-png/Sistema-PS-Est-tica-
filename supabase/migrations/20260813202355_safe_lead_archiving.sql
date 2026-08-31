@@ -15,4 +15,4 @@ end;
 $$;
 
 revoke all on function public.permanently_delete_lead(bigint) from public, anon;
-grant execute on function public.permanently_delete_lead(bigint) to authenticated;
+grant execute on function public.permanently_delete_lead(bigint) to authenticated;;

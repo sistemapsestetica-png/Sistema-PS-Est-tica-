@@ -3,7 +3,6 @@
 alter table public.leads drop constraint if exists leads_status_check;
 alter table public.leads add constraint leads_status_check
   check (status in ('new','contacted','qualified','scheduled','attended','no_answer','lost'));
-
 create or replace function public.release_expired_reservations()
 returns integer
 language plpgsql
@@ -43,9 +42,7 @@ begin
   return v_count;
 end;
 $$;
-
 revoke all on function public.release_expired_reservations() from public, anon, authenticated;
-
 create or replace function private.require_paid_booking_confirmation()
 returns trigger
 language plpgsql
@@ -64,16 +61,12 @@ begin
   return new;
 end;
 $$;
-
 revoke all on function private.require_paid_booking_confirmation() from public, anon, authenticated;
-
 drop trigger if exists require_paid_booking_confirmation on public.bookings;
 create trigger require_paid_booking_confirmation
 before update of status on public.bookings
 for each row execute function private.require_paid_booking_confirmation();
-
 create extension if not exists pg_cron;
-
 select cron.schedule(
   'release-expired-prebookings',
   '* * * * *',

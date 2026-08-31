@@ -436,3 +436,4 @@ grant execute on function public.get_booking_public_status(uuid) to anon,authent
 grant execute on function public.get_booking_link_options(uuid) to anon,authenticated;
 grant execute on function public.professional_update_booking_status(bigint,text) to authenticated;
 grant execute on function public.create_recurring_slots(bigint,integer,time,integer,integer,integer,uuid) to authenticated;
+;

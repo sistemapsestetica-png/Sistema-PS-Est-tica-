@@ -1,20 +1,16 @@
 -- Reserva simples: R$ 50 fixos como crédito e preço final definido após avaliação.
 alter table public.clinic_settings
   add column if not exists fixed_deposit_cents bigint not null default 5000;
-
 alter table public.clinic_settings drop constraint if exists clinic_settings_fixed_deposit_check;
 alter table public.clinic_settings add constraint clinic_settings_fixed_deposit_check
   check (fixed_deposit_cents > 0);
-
 update public.clinic_settings set fixed_deposit_cents = 5000, updated_at = now() where id = true;
-
 alter table public.bookings add column if not exists price_finalized boolean not null default true;
 alter table public.bookings alter column price_cents drop not null;
 alter table public.bookings drop constraint if exists bookings_deposit_check;
 alter table public.bookings drop constraint if exists bookings_price_check;
 alter table public.bookings add constraint bookings_deposit_check check (deposit_cents > 0);
 alter table public.bookings add constraint bookings_price_check check (price_cents is null or price_cents > 0);
-
 create or replace function private.calculate_booking_deposit(
   p_price_cents bigint,
   p_deposit_percent numeric,
@@ -26,7 +22,6 @@ as $$
   select coalesce(cs.fixed_deposit_cents, 5000)
   from public.clinic_settings cs where cs.id = true;
 $$;
-
 create or replace function public.list_open_slots(p_service_slug text)
 returns table(slot_id bigint, service_slug text, service_name text, professional_id uuid, professional_name text, starts_at timestamptz, ends_at timestamptz, price_cents bigint, deposit_cents bigint)
 language plpgsql security definer set search_path = ''
@@ -45,7 +40,6 @@ begin
   order by sl.starts_at limit 60;
 end;
 $$;
-
 create or replace function public.reserve_slot_secure(p_lead_id bigint,p_reservation_token uuid,p_slot_id bigint)
 returns table(booking_id bigint,booking_token uuid,booking_status text,service_name text,professional_name text,starts_at timestamptz,ends_at timestamptz,price_cents bigint,deposit_cents bigint,payment_expires_at timestamptz)
 language plpgsql security definer set search_path = ''
@@ -72,7 +66,6 @@ begin
   return query select v_id,v_token,'awaiting_payment'::text,v_service.name,coalesce(v_prof_name,'Equipe PS Estética'),v_slot.starts_at,v_slot.ends_at,null::bigint,v_deposit,now()+make_interval(mins=>v_exp);
 end;
 $$;
-
 create or replace function public.create_direct_booking(p_service_slug text,p_slot_id bigint,p_name text,p_phone text,p_email text default null,p_link_token uuid default null)
 returns table(booking_id bigint,booking_token uuid,service_name text,professional_name text,starts_at timestamptz,deposit_cents bigint,payment_expires_at timestamptz)
 language plpgsql security definer set search_path = ''
@@ -106,7 +99,6 @@ begin
   return query select v_booking_id,v_booking_token,v_service.name,coalesce(v_prof_name,'Equipe PS Estética'),v_slot.starts_at,v_deposit,now()+make_interval(mins=>v_exp);
 end;
 $$;
-
 create or replace function public.set_booking_final_price(p_booking_id bigint,p_price_cents bigint)
 returns void language plpgsql security invoker set search_path = ''
 as $$
@@ -124,6 +116,5 @@ begin
   update public.bookings set price_cents=p_price_cents,price_finalized=true,updated_at=now() where id=p_booking_id;
 end;
 $$;
-
 revoke all on function public.set_booking_final_price(bigint,bigint) from public,anon;
 grant execute on function public.set_booking_final_price(bigint,bigint) to authenticated;

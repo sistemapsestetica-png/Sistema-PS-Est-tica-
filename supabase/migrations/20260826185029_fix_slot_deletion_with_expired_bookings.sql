@@ -2,14 +2,11 @@
 -- expiradas/canceladas e sem pagamento, preservando o historico da tentativa.
 alter table public.bookings
   alter column slot_id drop not null;
-
 alter table public.bookings
   drop constraint if exists bookings_slot_id_fkey;
-
 alter table public.bookings
   add constraint bookings_slot_id_fkey
   foreign key (slot_id) references public.slots(id) on delete set null;
-
 create or replace function public.delete_available_slots(p_slot_ids bigint[])
 returns table(requested_count integer, deleted_count integer, protected_count integer)
 language plpgsql
@@ -83,10 +80,8 @@ begin
   return query select v_requested, v_deleted, v_requested - v_deleted;
 end;
 $$;
-
 revoke all on function public.delete_available_slots(bigint[]) from public, anon;
 grant execute on function public.delete_available_slots(bigint[]) to authenticated;
-
 -- A agenda passa a ser criada somente de forma manual.
 revoke all on function public.create_recurring_slots(bigint, integer, time, integer, integer, integer, uuid)
   from public, anon, authenticated;

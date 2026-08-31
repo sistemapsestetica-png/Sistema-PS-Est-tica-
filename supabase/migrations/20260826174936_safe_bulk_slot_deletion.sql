@@ -2,7 +2,7 @@
 create or replace function public.delete_available_slots(p_slot_ids bigint[])
 returns table(requested_count integer, deleted_count integer, protected_count integer)
 language plpgsql
-security invoker
+security definer
 set search_path = ''
 as $$
 declare
@@ -47,6 +47,5 @@ begin
   return query select v_requested, v_deleted, v_requested - v_deleted;
 end;
 $$;
-
 revoke all on function public.delete_available_slots(bigint[]) from public, anon;
 grant execute on function public.delete_available_slots(bigint[]) to authenticated;

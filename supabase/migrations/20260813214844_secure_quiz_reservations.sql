@@ -101,3 +101,4 @@ revoke all on function public.reserve_slot_secure(bigint,uuid,bigint) from publi
 grant execute on function public.capture_lead_session(text,text,text,text,text,jsonb,text) to anon,authenticated;
 grant execute on function public.reserve_slot_secure(bigint,uuid,bigint) to anon,authenticated;
 
+;

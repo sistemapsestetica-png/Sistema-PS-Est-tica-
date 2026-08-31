@@ -37,3 +37,4 @@ create policy clinic_settings_admin_all on public.clinic_settings
 for all to authenticated
 using ((select private.is_receptionist()))
 with check ((select private.is_receptionist()));
+;
