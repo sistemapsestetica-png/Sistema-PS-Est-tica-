@@ -8,7 +8,7 @@ import { trackMetaEvent } from "../lib/meta-pixel";
 import { formatBrazilianWhatsapp, INVALID_WHATSAPP_MESSAGE, isValidBrazilianWhatsapp, whatsappDigits } from "../lib/whatsapp";
 
 type DayKey = "lavieen" | "laser" | "ultraformer" | "botox";
-type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 type OpenSlot = {
   slot_id: number;
@@ -88,6 +88,8 @@ const timingLabels: Record<string, string> = {
   pesquisando: "Estou pesquisando por enquanto",
 };
 
+const cityOptions = ["São Bernardo do Campo", "Santo André", "São Caetano do Sul", "Diadema", "Outra cidade"] as const;
+
 function formatSlot(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -109,6 +111,8 @@ export default function Home() {
   const [day, setDay] = useState<DayKey | null>(null);
   const [experience, setExperience] = useState("");
   const [timing, setTiming] = useState("");
+  const [cityChoice, setCityChoice] = useState("");
+  const [otherCity, setOtherCity] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -124,9 +128,21 @@ export default function Home() {
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const trackedLeadId = useRef<number | null>(null);
   const trackedPurchaseId = useRef<number | null>(null);
+  const leadSessionToken = useRef<string | null>(null);
 
-  const progress = step === 6 ? 100 : step * 20;
+  const progress = step === 7 ? 100 : Math.round((step / 6) * 100);
   const result = day ? days[day] : null;
+  const city = cityChoice === "Outra cidade" ? otherCity.trim() : cityChoice;
+
+  function getLeadSessionToken() {
+    leadSessionToken.current ??= window.crypto.randomUUID();
+    return leadSessionToken.current;
+  }
+
+  function invalidateCapturedLead() {
+    setLeadId(null);
+    setLeadToken(null);
+  }
 
   useEffect(() => {
     document.body.classList.add("motion-ready");
@@ -155,25 +171,24 @@ export default function Home() {
       `Principal queixa: ${result.short}`,
       `Experiência: ${experienceLabels[experience] ?? "Não informado"}`,
       `Prazo: ${timingLabels[timing] ?? "Não informado"}`,
+      city ? `Cidade: ${city}` : null,
       `Meu WhatsApp: ${phone}`,
       "",
       booking
         ? `Horário reservado: ${formatSlot(booking.starts_at)}. Quero confirmar minha avaliação.`
         : "Não encontrei um horário ideal e quero falar com a equipe.",
-    ].join("\n");
+    ].filter(Boolean).join("\n");
     return `https://wa.me/5511934580476?text=${encodeURIComponent(message)}`;
-  }, [booking, experience, name, phone, result, timing]);
+  }, [booking, city, experience, name, phone, result, timing]);
 
   function pickDay(value: DayKey) {
-    setLeadId(null);
-    setLeadToken(null);
+    invalidateCapturedLead();
     setDay(value);
     window.setTimeout(() => setStep(2), 160);
   }
 
   function startWithDay(value: DayKey) {
-    setLeadId(null);
-    setLeadToken(null);
+    invalidateCapturedLead();
     setDay(value);
     setStep(2);
     document.getElementById("quiz")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -193,14 +208,17 @@ export default function Home() {
       referrer: document.referrer || null,
       fbp: readCookie("_fbp"),
       fbc: readCookie("_fbc"),
+      quiz_answers: { procedure: day, experience, timing, city },
     };
 
-    const { data, error } = await supabase.rpc("capture_lead_session", {
+    const { data, error } = await supabase.rpc("capture_lead_session_v2", {
+      p_session_token: getLeadSessionToken(),
       p_name: name.trim(),
       p_phone: whatsappDigits(phone),
       p_service_slug: day,
       p_experience: experience,
       p_timing: timing,
+      p_city: city,
       p_source: source,
       p_email: email.trim().toLowerCase(),
     });
@@ -218,7 +236,17 @@ export default function Home() {
     return session;
   }
 
-  async function loadOpenSlots() {
+  async function recordLeadEvent(eventType: "whatsapp_opened" | "slots_viewed" | "booking_started", metadata: Record<string, unknown> = {}) {
+    if (!leadId || !leadToken) return;
+    await supabase.rpc("record_lead_event", {
+      p_lead_id: leadId,
+      p_reservation_token: leadToken,
+      p_event_type: eventType,
+      p_metadata: metadata,
+    });
+  }
+
+  async function loadOpenSlots(session?: LeadSession) {
     if (!day) return;
     setLoadingSlots(true);
     setSaveNotice("");
@@ -228,6 +256,16 @@ export default function Home() {
       setSaveNotice("Não foi possível carregar a agenda agora. Fale com a equipe pelo WhatsApp.");
     } else {
       setSlots(((data ?? []) as OpenSlot[]).slice(0, 8));
+      const activeLeadId = session?.lead_id ?? leadId;
+      const activeToken = session?.reservation_token ?? leadToken;
+      if (activeLeadId && activeToken) {
+        await supabase.rpc("record_lead_event", {
+          p_lead_id: activeLeadId,
+          p_reservation_token: activeToken,
+          p_event_type: "slots_viewed",
+          p_metadata: { available_count: (data ?? []).length },
+        });
+      }
     }
     setLoadingSlots(false);
   }
@@ -235,6 +273,7 @@ export default function Home() {
   async function continueToSlots(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!day || saving) return;
+    if (city.length < 2) { setSaveNotice("Informe sua cidade para continuar."); return; }
     if (!isValidBrazilianWhatsapp(phone)) { setSaveNotice(INVALID_WHATSAPP_MESSAGE); return; }
     setSaveNotice("");
     setSaving(true);
@@ -244,8 +283,8 @@ export default function Home() {
       setSaving(false);
       return;
     }
-    setStep(5);
-    await loadOpenSlots();
+    setStep(6);
+    await loadOpenSlots(leadSession);
     setSaving(false);
   }
 
@@ -259,6 +298,13 @@ export default function Home() {
       setSaving(false);
       return;
     }
+
+    await supabase.rpc("record_lead_event", {
+      p_lead_id: leadSession.lead_id,
+      p_reservation_token: leadSession.reservation_token,
+      p_event_type: "booking_started",
+      p_metadata: { slot_id: slot.slot_id },
+    });
 
     const { data, error } = await supabase.rpc("reserve_slot_secure", {
       p_lead_id: leadSession.lead_id,
@@ -275,7 +321,7 @@ export default function Home() {
     const nextBooking = data[0] as BookingConfirmation;
     setBooking(nextBooking);
     setSelectedSlot(null);
-    setStep(6);
+    setStep(7);
     trackMetaEvent("Schedule", {
       content_name: nextBooking.service_name,
       content_ids: [day],
@@ -361,7 +407,7 @@ export default function Home() {
         <div className="quiz-shell" id="quiz" aria-live="polite">
           <div className="quiz-aura" aria-hidden="true" />
           <div className="quiz-top">
-            <span>{step === 0 ? "Pronto para começar" : step === 6 ? "Pré-reserva criada" : step === 5 ? "Escolha da data" : `Etapa ${step} de 5`}</span>
+            <span>{step === 0 ? "Pronto para começar" : step === 7 ? "Pré-reserva criada" : step === 6 ? "Escolha da data" : `Etapa ${step} de 5`}</span>
             <span>{progress}%</span>
           </div>
           <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
@@ -399,7 +445,7 @@ export default function Home() {
               <h2>Você já realizou esse tipo de tratamento?</h2>
               <div className="option-grid compact">
                 {Object.entries(experienceLabels).map(([key, label]) => (
-                  <button key={key} className="option" onClick={() => { setExperience(key); setLeadId(null); setLeadToken(null); setStep(3); }}>
+                  <button key={key} className="option" onClick={() => { setExperience(key); invalidateCapturedLead(); setStep(3); }}>
                     <span className="radio" /> <span>{label}</span><span className="option-arrow">→</span>
                   </button>
                 ))}
@@ -414,7 +460,7 @@ export default function Home() {
               <h2>Quando você gostaria de começar a cuidar disso?</h2>
               <div className="option-grid compact">
                 {Object.entries(timingLabels).map(([key, label]) => (
-                  <button key={key} className="option" onClick={() => { setTiming(key); setLeadId(null); setLeadToken(null); setStep(4); }}>
+                  <button key={key} className="option" onClick={() => { setTiming(key); invalidateCapturedLead(); setStep(4); }}>
                     <span className="radio" /> <span>{label}</span><span className="option-arrow">→</span>
                   </button>
                 ))}
@@ -424,20 +470,36 @@ export default function Home() {
           )}
 
           {step === 4 && (
+            <div className="quiz-step">
+              <p className="quiz-kicker">Atendimento no ABC Paulista</p>
+              <h2>Você está em São Bernardo do Campo ou região?</h2>
+              <div className="option-grid compact city-options">
+                {cityOptions.map((option) => (
+                  <button key={option} type="button" className={`option ${cityChoice === option ? "selected" : ""}`} onClick={() => { setCityChoice(option); invalidateCapturedLead(); if (option !== "Outra cidade") window.setTimeout(() => setStep(5), 120); }}>
+                    <span className="radio" /> <span>{option}</span><span className="option-arrow">→</span>
+                  </button>
+                ))}
+              </div>
+              {cityChoice === "Outra cidade" && <div className="other-city-field"><label>Qual cidade?<input required minLength={2} maxLength={120} value={otherCity} onChange={(event) => { setOtherCity(event.target.value); invalidateCapturedLead(); }} placeholder="Digite sua cidade" autoComplete="address-level2" /></label><button type="button" className="primary-button" disabled={otherCity.trim().length < 2} onClick={() => setStep(5)}>Continuar <span>→</span></button></div>}
+              <button className="back" onClick={() => setStep(3)}>← Voltar</button>
+            </div>
+          )}
+
+          {step === 5 && (
             <form className="quiz-step" onSubmit={continueToSlots}>
               <p className="quiz-kicker">Sua indicação inicial está quase pronta</p>
               <h2>Preencha seus dados para liberar a agenda.</h2>
-              <label>Seu nome<input required value={name} onChange={(e) => { setName(e.target.value); setLeadId(null); setLeadToken(null); }} placeholder="Como podemos chamar você?" autoComplete="name" /></label>
-              <label>WhatsApp<input required value={phone} onChange={(e) => { setPhone(formatBrazilianWhatsapp(e.target.value)); setLeadId(null); setLeadToken(null); setSaveNotice(""); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel-national" maxLength={15} minLength={15} pattern="\([1-9]\d\) 9\d{4}-\d{4}" title={INVALID_WHATSAPP_MESSAGE} aria-describedby="whatsapp-help-main" /><small id="whatsapp-help-main">Informe um celular com DDD e todos os 9 dígitos.</small></label>
-              <label>E-mail para o Pix<input required type="email" value={email} onChange={(e) => { setEmail(e.target.value); setLeadId(null); setLeadToken(null); }} placeholder="voce@exemplo.com" autoComplete="email" /></label>
+              <label>Seu nome<input required value={name} onChange={(e) => { setName(e.target.value); invalidateCapturedLead(); }} placeholder="Como podemos chamar você?" autoComplete="name" /></label>
+              <label>WhatsApp<input required value={phone} onChange={(e) => { setPhone(formatBrazilianWhatsapp(e.target.value)); invalidateCapturedLead(); setSaveNotice(""); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel-national" maxLength={15} minLength={15} pattern="\([1-9]\d\) 9\d{4}-\d{4}" title={INVALID_WHATSAPP_MESSAGE} aria-describedby="whatsapp-help-main" /><small id="whatsapp-help-main">Informe um celular com DDD e todos os 9 dígitos.</small></label>
+              <label>E-mail para o Pix<input required type="email" value={email} onChange={(e) => { setEmail(e.target.value); invalidateCapturedLead(); }} placeholder="voce@exemplo.com" autoComplete="email" /></label>
               <button className="primary-button" type="submit" disabled={saving}>{saving ? "Preparando sua agenda…" : "Liberar horários disponíveis"} <span>→</span></button>
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
-              <button className="back" type="button" onClick={() => setStep(3)}>← Voltar</button>
+              <button className="back" type="button" onClick={() => setStep(4)}>← Voltar</button>
               <p className="privacy">Seus dados ficam protegidos e serão usados apenas para seu atendimento na PS Estética.</p>
             </form>
           )}
 
-          {step === 5 && result && (
+          {step === 6 && result && (
             <div className="quiz-step">
               <p className="quiz-kicker">Última etapa</p>
               <h2>Escolha o horário que melhor cabe na sua rotina.</h2>
@@ -457,16 +519,16 @@ export default function Home() {
                 <div className="no-slots">
                   <b>Novos horários serão abertos em breve.</b>
                   <span>Fale com a equipe para entrar na lista da próxima data.</span>
-                  <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer">Pedir próxima data <span>↗</span></a>
-                  <button className="restart" onClick={() => setStep(6)}>Ver minha indicação</button>
+                  <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer" onClick={() => void recordLeadEvent("whatsapp_opened", { context: "no_slots" })}>Pedir próxima data <span>↗</span></a>
+                  <button className="restart" onClick={() => setStep(7)}>Ver minha indicação</button>
                 </div>
               )}
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
-              <button className="back" onClick={() => setStep(4)} disabled={saving}>← Voltar</button>
+              <button className="back" onClick={() => setStep(5)} disabled={saving}>← Voltar</button>
             </div>
           )}
 
-          {step === 6 && result && (
+          {step === 7 && result && (
             <div className="quiz-step result-step">
               <div className="result-icon">{result.icon}</div>
               <p className="quiz-kicker">Com base nas suas respostas</p>
@@ -489,8 +551,8 @@ export default function Home() {
               ) : null}
               {booking && paymentConfirmed ? <p className="payment-success" role="status">Pagamento aprovado. Seu horário está confirmado na agenda.</p> : null}
               {saveNotice && <p className="save-notice" role="status">{saveNotice}</p>}
-              <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer">{booking ? "Preciso de ajuda com a reserva" : "Pedir uma data no WhatsApp"} <span>↗</span></a>
-              <button className="restart" onClick={() => { setStep(1); setDay(null); setBooking(null); setSlots([]); setLeadId(null); setLeadToken(null); setPixPayment(null); setPaymentConfirmed(false); setSaveNotice(""); }}>Refazer o diagnóstico</button>
+              <a className="whatsapp-button" href={whatsappUrl} target="_blank" rel="noreferrer" onClick={() => void recordLeadEvent("whatsapp_opened", { context: booking ? "booking_help" : "result" })}>{booking ? "Preciso de ajuda com a reserva" : "Pedir uma data no WhatsApp"} <span>↗</span></a>
+              <button className="restart" onClick={() => { setStep(1); setDay(null); setBooking(null); setSlots([]); setLeadId(null); setLeadToken(null); leadSessionToken.current = null; setCityChoice(""); setOtherCity(""); setPixPayment(null); setPaymentConfirmed(false); setSaveNotice(""); }}>Refazer o diagnóstico</button>
               <p className="disclaimer">Esta é uma indicação inicial. O protocolo, número de sessões e possíveis contraindicações serão definidos após avaliação profissional.</p>
             </div>
           )}

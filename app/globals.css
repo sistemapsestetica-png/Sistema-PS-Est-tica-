@@ -58,6 +58,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .quiz-step label { display: grid; gap: 7px; color: var(--bronze-deep); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 13px; }
 .quiz-step input { width: 100%; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: var(--espresso); padding: 14px 15px; outline: none; font-size: 15px; text-transform: none; letter-spacing: 0; }
 .quiz-step input:focus { border-color: var(--bronze); box-shadow: 0 0 0 3px rgba(158,117,59,.10); }
+.other-city-field { display: grid; gap: 12px; margin-top: 14px; }
+.other-city-field label { margin: 0; }
 .primary-button, .whatsapp-button { width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px; border: 0; border-radius: 11px; padding: 15px 18px; color: #fff; background: var(--espresso); font-weight: 700; cursor: pointer; text-decoration: none; transition: .2s ease; }
 .primary-button:hover { background: var(--bronze-deep); }
 .primary-button:disabled { opacity: .62; cursor: wait; }

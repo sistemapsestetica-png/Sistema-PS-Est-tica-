@@ -29,9 +29,22 @@ type Lead = {
   status: string;
   created_at: string;
   experience?: string;
-  source?: Record<string, string | null> | null;
+  source?: Record<string, unknown> | null;
   notes?: string | null;
   archived_at?: string | null;
+  city?: string | null;
+  intent_level?: "high" | "medium" | "low" | null;
+  next_action?: string | null;
+  next_action_at?: string | null;
+};
+
+type LeadEvent = {
+  id: number;
+  lead_id: number;
+  event_type: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
+  booking_id: number | null;
 };
 
 type Slot = {
@@ -73,6 +86,7 @@ type Assignment = { professional_id: string; service_id: number };
 type BookingLink = { id: number; token: string; label: string; service_id: number | null; professional_id: string | null; active: boolean; uses: number; created_at: string };
 type AdminSection = "overview" | "clients" | "agenda" | "revenue" | "team" | "access" | "services" | "links" | "settings";
 type LeadQueue = "conversion" | "prebooking" | "confirmed" | "expired" | "archived";
+type FunnelPeriod = "today" | "7d" | "30d" | "custom";
 
 const adminSections: { id: AdminSection; label: string; description: string; group: "Operação" | "Gestão" }[] = [
   { id: "overview", label: "Início", description: "Resumo da operação e prioridades", group: "Operação" },
@@ -90,6 +104,12 @@ const leadStatus: Record<string, string> = {
   new: "Novo",
   contacted: "Atendido / contatado",
   qualified: "Qualificado",
+  replied: "Respondeu",
+  interested: "Interessado",
+  slots_viewed: "Viu horários",
+  booking_started: "Iniciou agendamento",
+  awaiting_payment: "Aguardando pagamento",
+  converted: "Convertido",
   scheduled: "Agendou",
   attended: "Compareceu",
   no_answer: "Não respondeu",
@@ -196,6 +216,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<Service[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadEvents, setLeadEvents] = useState<LeadEvent[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -209,6 +230,12 @@ export default function AdminPage() {
   const [leadSearch, setLeadSearch] = useState("");
   const [leadStatusFilter, setLeadStatusFilter] = useState("all");
   const [leadServiceFilter, setLeadServiceFilter] = useState("all");
+  const [leadCityFilter, setLeadCityFilter] = useState("all");
+  const [leadIntentFilter, setLeadIntentFilter] = useState("all");
+  const [leadSourceFilter, setLeadSourceFilter] = useState("all");
+  const [funnelPeriod, setFunnelPeriod] = useState<FunnelPeriod>("30d");
+  const [customPeriodStart, setCustomPeriodStart] = useState("");
+  const [customPeriodEnd, setCustomPeriodEnd] = useState("");
   const [leadQueue, setLeadQueue] = useState<LeadQueue>("conversion");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [staff, setStaff] = useState<StaffProfile[]>([]);
@@ -230,9 +257,10 @@ export default function AdminPage() {
 
   async function loadDashboard() {
     setLoading(true);
-    const [serviceResult, leadResult, slotResult, settingsResult, bookingResult, staffResult, inviteResult, assignmentResult, linkResult, accessResult] = await Promise.all([
+    const [serviceResult, leadResult, eventResult, slotResult, settingsResult, bookingResult, staffResult, inviteResult, assignmentResult, linkResult, accessResult] = await Promise.all([
       supabase.from("services").select("*").order("id"),
       supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(250),
+      supabase.from("lead_events").select("id,lead_id,event_type,created_at,metadata,booking_id").order("created_at", { ascending: false }).limit(2000),
       supabase.from("slots").select("id,service_id,professional_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
       supabase.from("clinic_settings").select("fixed_deposit_cents,reservation_expiry_minutes,reschedule_notice_hours,whatsapp,payment_provider,pix_enabled").eq("id", true).single(),
       supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone,email),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(250),
@@ -243,7 +271,7 @@ export default function AdminPage() {
       supabase.from("staff_access_requests").select("id,user_id,email,full_name,status,created_at").order("created_at", { ascending: false }),
     ]);
 
-    const firstError = serviceResult.error || leadResult.error || slotResult.error || settingsResult.error || bookingResult.error || staffResult.error || inviteResult.error || assignmentResult.error || linkResult.error || accessResult.error;
+    const firstError = serviceResult.error || leadResult.error || eventResult.error || slotResult.error || settingsResult.error || bookingResult.error || staffResult.error || inviteResult.error || assignmentResult.error || linkResult.error || accessResult.error;
     if (firstError) setMessage(`Não foi possível carregar o painel: ${firstError.message}`);
     const loadedServices = (serviceResult.data ?? []) as Service[];
     setServices(loadedServices);
@@ -251,6 +279,7 @@ export default function AdminPage() {
       loadedServices.map((service) => [service.id, formatPriceInput(service.price_cents)]),
     ));
     setLeads((leadResult.data ?? []) as Lead[]);
+    setLeadEvents((eventResult.data ?? []) as LeadEvent[]);
     setSlots((slotResult.data ?? []) as Slot[]);
     setBookings((bookingResult.data ?? []) as unknown as Booking[]);
     setSettings(settingsResult.data as Settings | null);
@@ -539,6 +568,32 @@ export default function AdminPage() {
     }
   }
 
+  async function setCommercialStatus(lead: Lead, status: "contacted" | "replied" | "interested" | "lost") {
+    if (busy) return;
+    setBusy(true); setMessage("");
+    const { error } = await supabase.rpc("set_lead_commercial_status", { p_lead_id: lead.id, p_status: status });
+    setBusy(false);
+    if (error) { setMessage(`Não foi possível atualizar o atendimento: ${error.message}`); return; }
+    setLeads((current) => current.map((item) => item.id === lead.id ? { ...item, status } : item));
+    setSelectedLead((current) => current?.id === lead.id ? { ...current, status } : current);
+    setMessage(`${lead.name}: ${leadStatus[status]}.`);
+    await loadDashboard();
+  }
+
+  async function saveLeadFollowUp() {
+    if (!selectedLead || busy) return;
+    setBusy(true); setMessage("");
+    const { error } = await supabase.rpc("set_lead_follow_up", {
+      p_lead_id: selectedLead.id,
+      p_next_action: selectedLead.next_action?.trim() || null,
+      p_next_action_at: selectedLead.next_action_at || null,
+    });
+    setBusy(false);
+    if (error) { setMessage(`Não foi possível salvar a próxima ação: ${error.message}`); return; }
+    setLeads((current) => current.map((lead) => lead.id === selectedLead.id ? { ...lead, next_action: selectedLead.next_action, next_action_at: selectedLead.next_action_at } : lead));
+    setMessage("Próxima ação salva.");
+  }
+
   async function saveLeadNotes() {
     if (!selectedLead || busy) return;
     const notes = selectedLead.notes?.trim() || null;
@@ -702,6 +757,42 @@ export default function AdminPage() {
   }, { conversion: 0, prebooking: 0, confirmed: 0, expired: 0, archived: 0 });
   const newLeads = queueCounts.conversion;
   const confirmedBookings = bookings.filter((booking) => ["confirmed", "rescheduled", "completed", "no_show"].includes(booking.status));
+  const cities = [...new Set(leads.map((lead) => lead.city).filter((value): value is string => Boolean(value)))].sort();
+  const leadSource = (lead: Lead) => typeof lead.source?.utm_source === "string" && lead.source.utm_source ? lead.source.utm_source : "Acesso direto";
+  const leadCampaign = (lead: Lead) => typeof lead.source?.utm_campaign === "string" ? lead.source.utm_campaign : "";
+  const leadReferrer = (lead: Lead) => typeof lead.source?.referrer === "string" ? lead.source.referrer : "";
+  const sources = [...new Set(leads.map(leadSource))].sort();
+  const periodStart = (() => {
+    const now = new Date();
+    if (funnelPeriod === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (funnelPeriod === "7d") return new Date(now.getTime() - 7 * 86_400_000);
+    if (funnelPeriod === "30d") return new Date(now.getTime() - 30 * 86_400_000);
+    return customPeriodStart ? new Date(`${customPeriodStart}T00:00:00`) : new Date(0);
+  })();
+  const periodEnd = funnelPeriod === "custom" && customPeriodEnd ? new Date(`${customPeriodEnd}T23:59:59.999`) : new Date();
+  const inSelectedPeriod = (value: string) => { const date = new Date(value); return date >= periodStart && date <= periodEnd; };
+  const periodLeads = leads.filter((lead) => !lead.archived_at && inSelectedPeriod(lead.created_at));
+  const periodLeadIds = new Set(periodLeads.map((lead) => lead.id));
+  const periodEvents = leadEvents.filter((event) => periodLeadIds.has(event.lead_id) && inSelectedPeriod(event.created_at));
+  const leadsWithEvent = (eventTypes: string[]) => new Set(periodEvents.filter((event) => eventTypes.includes(event.event_type)).map((event) => event.lead_id)).size;
+  const funnelMetrics = [
+    { label: "Leads", count: periodLeads.length },
+    { label: "Qualificados", count: leadsWithEvent(["lead_qualified"]) || periodLeads.filter((lead) => ["qualified","replied","interested","slots_viewed","booking_started","scheduled","awaiting_payment","converted","attended"].includes(lead.status)).length },
+    { label: "WhatsApp aberto", count: leadsWithEvent(["whatsapp_opened"]) },
+    { label: "Responderam", count: leadsWithEvent(["lead_replied"]) },
+    { label: "Interessados", count: leadsWithEvent(["interested"]) },
+    { label: "Viram horários", count: leadsWithEvent(["slots_viewed"]) },
+    { label: "Iniciaram agendamento", count: leadsWithEvent(["booking_started"]) },
+    { label: "Agendados", count: leadsWithEvent(["booking_completed"]) },
+    { label: "Compareceram", count: leadsWithEvent(["appointment_completed"]) },
+  ];
+  const operationalAlerts = [
+    { label: "Novos leads", count: leads.filter((lead) => !lead.archived_at && lead.status === "new").length },
+    { label: "Sem contato", count: leads.filter((lead) => !lead.archived_at && ["new","qualified"].includes(lead.status)).length },
+    { label: "Aguardando resposta", count: leads.filter((lead) => !lead.archived_at && lead.status === "contacted").length },
+    { label: "Interessados sem agendamento", count: leads.filter((lead) => !lead.archived_at && lead.status === "interested" && !latestBookingByLead.has(lead.id)).length },
+    { label: "Próxima ação atrasada", count: leads.filter((lead) => !lead.archived_at && lead.next_action_at && new Date(lead.next_action_at) < new Date()).length },
+  ];
   const filteredSlots = slots.filter((slot) =>
     (slotListServiceFilter === "all" || String(slot.service_id) === slotListServiceFilter)
     && (slotListStatusFilter === "all" || slot.status === slotListStatusFilter));
@@ -713,8 +804,20 @@ export default function AdminPage() {
   const filteredLeads = leads.filter((lead) => {
     const query = leadSearch.trim().toLowerCase();
     const matchesQuery = !query || lead.name.toLowerCase().includes(query) || lead.phone.includes(query.replace(/\D/g, "")) || Boolean(lead.email?.toLowerCase().includes(query));
-    return queueForLead(lead) === leadQueue && matchesQuery && (leadStatusFilter === "all" || lead.status === leadStatusFilter) && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter);
+    return queueForLead(lead) === leadQueue
+      && matchesQuery
+      && inSelectedPeriod(lead.created_at)
+      && (leadStatusFilter === "all" || lead.status === leadStatusFilter)
+      && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter)
+      && (leadCityFilter === "all" || lead.city === leadCityFilter)
+      && (leadIntentFilter === "all" || lead.intent_level === leadIntentFilter)
+      && (leadSourceFilter === "all" || leadSource(lead) === leadSourceFilter);
   });
+  const selectedLeadEvents = selectedLead ? leadEvents.filter((event) => event.lead_id === selectedLead.id) : [];
+  const selectedLeadBookings = selectedLead ? bookings.filter((booking) => booking.lead_id === selectedLead.id) : [];
+  const selectedQuizAnswers = selectedLead?.source?.quiz_answers && typeof selectedLead.source.quiz_answers === "object" && !Array.isArray(selectedLead.source.quiz_answers)
+    ? Object.entries(selectedLead.source.quiz_answers as Record<string,string>)
+    : [];
   const visibleAdminSections = adminSections.filter((section) => section.id !== "access" || isMaster);
   const currentSection = visibleAdminSections.find((section) => section.id === activeSection) ?? visibleAdminSections[0];
 
@@ -841,6 +944,11 @@ export default function AdminPage() {
         </div>
       </section>
 
+      <section className="admin-panel operational-alerts">
+        <div className="panel-heading"><div><p className="admin-eyebrow">Prioridades</p><h2>Alertas de atendimento</h2></div><p>Contatos que pedem ação da recepção.</p></div>
+        <div className="alert-grid">{operationalAlerts.map((alert) => <button type="button" key={alert.label} onClick={() => setActiveSection("clients")}><b>{alert.count}</b><span>{alert.label}</span></button>)}</div>
+      </section>
+
       <section className="admin-panel access-approval-panel">
         <div className="panel-heading"><div><p className="admin-eyebrow">Pessoas autorizadas</p><h2>Acesso da recepção</h2></div><p>O master é protegido contra bloqueio. Recepcionistas podem ser desativadas sem apagar o histórico.</p></div>
         <div className="access-request-list">
@@ -957,6 +1065,14 @@ export default function AdminPage() {
 
       {activeSection === "clients" && <section className="admin-panel crm-section">
         <div className="panel-heading"><div><p className="admin-eyebrow">CRM</p><h2>Funil de atendimento</h2></div><p>A recepção acompanha as clientes até o pagamento; depois da confirmação, o atendimento segue para o especialista.</p></div>
+        <div className="funnel-period-toolbar">
+          <div role="group" aria-label="Período do funil">{([['today','Hoje'],['7d','7 dias'],['30d','30 dias'],['custom','Personalizado']] as [FunnelPeriod,string][]).map(([value,label]) => <button type="button" key={value} className={funnelPeriod === value ? "active" : ""} onClick={() => setFunnelPeriod(value)}>{label}</button>)}</div>
+          {funnelPeriod === "custom" && <div className="custom-period"><label>De<input type="date" value={customPeriodStart} onChange={(event) => setCustomPeriodStart(event.target.value)} /></label><label>Até<input type="date" value={customPeriodEnd} onChange={(event) => setCustomPeriodEnd(event.target.value)} /></label></div>}
+        </div>
+        <div className="commercial-funnel-grid" aria-label="Funil comercial do período">
+          {funnelMetrics.map((metric, index) => <article key={metric.label}><span>{String(index + 1).padStart(2,"0")}</span><b>{metric.count}</b><strong>{metric.label}</strong><small>{periodLeads.length ? `${Math.round((metric.count / periodLeads.length) * 100)}% dos leads` : "0% dos leads"}</small></article>)}
+        </div>
+        <div className="crm-subheading"><p className="admin-eyebrow">Filas operacionais</p><span>Organização atual da recepção</span></div>
         <div className="crm-funnel-grid" role="tablist" aria-label="Etapas do funil">
           {(["conversion", "prebooking", "confirmed", "expired", "archived"] as LeadQueue[]).map((queue) => <button key={queue} role="tab" aria-selected={leadQueue === queue} className={`crm-funnel-card ${queue} ${leadQueue === queue ? "active" : ""}`} onClick={() => setLeadQueue(queue)}><span>{leadQueueLabel[queue]}</span><b>{queueCounts[queue]}</b><small>{leadQueueDescription[queue]}</small></button>)}
         </div>
@@ -964,15 +1080,18 @@ export default function AdminPage() {
           <label className="crm-search">Buscar lead<input value={leadSearch} onChange={(event) => setLeadSearch(event.target.value)} placeholder="Nome, WhatsApp ou e-mail" /></label>
           <label>Status<select value={leadStatusFilter} onChange={(event) => setLeadStatusFilter(event.target.value)}><option value="all">Todos os status</option>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label>Procedimento<select value={leadServiceFilter} onChange={(event) => setLeadServiceFilter(event.target.value)}><option value="all">Todos</option>{services.map((service) => <option key={service.slug} value={service.slug}>{service.name}</option>)}</select></label>
-          {(leadSearch || leadStatusFilter !== "all" || leadServiceFilter !== "all") && <button className="crm-clear-filters" onClick={() => { setLeadSearch(""); setLeadStatusFilter("all"); setLeadServiceFilter("all"); }}>Limpar filtros</button>}
+          <label>Cidade<select value={leadCityFilter} onChange={(event) => setLeadCityFilter(event.target.value)}><option value="all">Todas</option>{cities.map((city) => <option key={city} value={city}>{city}</option>)}</select></label>
+          <label>Intenção<select value={leadIntentFilter} onChange={(event) => setLeadIntentFilter(event.target.value)}><option value="all">Todas</option><option value="high">Alta</option><option value="medium">Média</option><option value="low">Baixa</option></select></label>
+          <label>Origem<select value={leadSourceFilter} onChange={(event) => setLeadSourceFilter(event.target.value)}><option value="all">Todas</option>{sources.map((source) => <option key={source} value={source}>{source}</option>)}</select></label>
+          {(leadSearch || leadStatusFilter !== "all" || leadServiceFilter !== "all" || leadCityFilter !== "all" || leadIntentFilter !== "all" || leadSourceFilter !== "all") && <button className="crm-clear-filters" onClick={() => { setLeadSearch(""); setLeadStatusFilter("all"); setLeadServiceFilter("all"); setLeadCityFilter("all"); setLeadIntentFilter("all"); setLeadSourceFilter("all"); }}>Limpar filtros</button>}
         </div>
         <div className="crm-list-heading"><div><p className="admin-eyebrow">Lista atual</p><h3>{leadQueueLabel[leadQueue]}</h3></div><span className="crm-total">{filteredLeads.length} {filteredLeads.length === 1 ? "contato" : "contatos"}</span></div>
         <div className="table-wrap crm-table-wrap">
           <table className="crm-table">
-            <thead><tr><th>Cliente</th><th>Interesse</th><th>Prioridade</th><th>Entrada</th><th>Atendimento</th><th>Etapa</th><th>Contato</th><th>Detalhes</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>Interesse</th><th>Cidade</th><th>Intenção</th><th>Entrada</th><th>Atendimento</th><th>Etapa</th><th>Contato</th><th>Detalhes</th></tr></thead>
             <tbody>
-              {filteredLeads.length === 0 && <tr><td colSpan={8} className="empty-state">Nenhum lead nesta etapa.</td></tr>}
-              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small><small>{lead.email || "Sem e-mail"}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{timingLabel[lead.timing] ?? lead.timing}</td><td>{formatDate(lead.created_at)}</td><td>{leadStatus[lead.status] ?? lead.status}</td><td><span className={`funnel-stage ${queueForLead(lead)}`}>{leadQueueLabel[queueForLead(lead)]}</span></td><td><a className="crm-whatsapp" href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td><td><button className="view-lead" onClick={() => setSelectedLead(lead)}>Abrir perfil</button></td></tr>)}
+              {filteredLeads.length === 0 && <tr><td colSpan={9} className="empty-state">Nenhum lead nesta etapa.</td></tr>}
+              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small><small>{lead.email || "Sem e-mail"}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{lead.city || "Não informada"}</td><td><span className={`intent-badge ${lead.intent_level ?? "unknown"}`}>{lead.intent_level === "high" ? "Alta" : lead.intent_level === "medium" ? "Média" : lead.intent_level === "low" ? "Baixa" : "—"}</span></td><td>{formatDate(lead.created_at)}</td><td>{leadStatus[lead.status] ?? lead.status}</td><td><span className={`funnel-stage ${queueForLead(lead)}`}>{leadQueueLabel[queueForLead(lead)]}</span></td><td><a className="crm-whatsapp" href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td><td><button className="view-lead" onClick={() => setSelectedLead(lead)}>Abrir perfil</button></td></tr>)}
             </tbody>
           </table>
         </div>
@@ -1006,8 +1125,13 @@ export default function AdminPage() {
           <button className="drawer-close" onClick={() => setSelectedLead(null)} aria-label="Fechar">×</button>
           <p className="admin-eyebrow">Perfil da cliente</p><h2>{selectedLead.name}</h2>
           <a className="drawer-whatsapp" href={`https://wa.me/55${selectedLead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">Conversar no WhatsApp ↗</a>
-          <dl><div><dt>Telefone</dt><dd>{selectedLead.phone}</dd></div><div><dt>E-mail</dt><dd>{selectedLead.email ? <a href={`mailto:${selectedLead.email}`}>{selectedLead.email}</a> : "Não informado"}</dd></div><div><dt>Procedimento</dt><dd>{services.find((service) => service.slug === selectedLead.service_slug)?.name ?? selectedLead.service_slug}</dd></div><div><dt>Experiência</dt><dd>{selectedLead.experience ? (experienceLabel[selectedLead.experience] ?? selectedLead.experience) : "Não informada"}</dd></div><div><dt>Prazo</dt><dd>{timingLabel[selectedLead.timing] ?? selectedLead.timing}</dd></div><div><dt>Entrada</dt><dd>{formatDate(selectedLead.created_at)}</dd></div><div><dt>Status do atendimento</dt><dd><select className="drawer-status-select" value={selectedLead.status} onChange={(event) => updateLeadStatus(selectedLead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></dd></div></dl>
-          <div className="source-card"><b>Origem da campanha</b><p>{selectedLead.source?.utm_source || "Acesso direto"}{selectedLead.source?.utm_campaign ? ` · ${selectedLead.source.utm_campaign}` : ""}</p><small>{selectedLead.source?.referrer || "Sem referência externa registrada"}</small></div>
+          <dl><div><dt>Telefone</dt><dd>{selectedLead.phone}</dd></div><div><dt>E-mail</dt><dd>{selectedLead.email ? <a href={`mailto:${selectedLead.email}`}>{selectedLead.email}</a> : "Não informado"}</dd></div><div><dt>Cidade</dt><dd>{selectedLead.city || "Não informada"}</dd></div><div><dt>Procedimento</dt><dd>{services.find((service) => service.slug === selectedLead.service_slug)?.name ?? selectedLead.service_slug}</dd></div><div><dt>Experiência</dt><dd>{selectedLead.experience ? (experienceLabel[selectedLead.experience] ?? selectedLead.experience) : "Não informada"}</dd></div><div><dt>Prazo</dt><dd>{timingLabel[selectedLead.timing] ?? selectedLead.timing}</dd></div><div><dt>Intenção comercial</dt><dd>{selectedLead.intent_level === "high" ? "Alta" : selectedLead.intent_level === "medium" ? "Média" : selectedLead.intent_level === "low" ? "Baixa" : "Não calculada"}</dd></div><div><dt>Entrada</dt><dd>{formatDate(selectedLead.created_at)}</dd></div><div><dt>Status do atendimento</dt><dd><select className="drawer-status-select" value={selectedLead.status} onChange={(event) => updateLeadStatus(selectedLead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></dd></div></dl>
+          <div className="commercial-actions"><b>Ações do atendimento</b><div><button type="button" disabled={busy} onClick={() => setCommercialStatus(selectedLead,"contacted")}>Marcar como contatado</button><button type="button" disabled={busy} onClick={() => setCommercialStatus(selectedLead,"replied")}>Marcar como respondeu</button><button type="button" disabled={busy} onClick={() => setCommercialStatus(selectedLead,"interested")}>Marcar como interessado</button><button type="button" className="danger-link" disabled={busy} onClick={() => setCommercialStatus(selectedLead,"lost")}>Marcar como perdido</button></div></div>
+          <div className="source-card"><b>Origem da campanha</b><p>{leadSource(selectedLead)}{leadCampaign(selectedLead) ? ` · ${leadCampaign(selectedLead)}` : ""}</p><small>{leadReferrer(selectedLead) || "Sem referência externa registrada"}</small></div>
+          {selectedQuizAnswers.length > 0 && <div className="quiz-answer-card"><b>Respostas do quiz</b><dl>{selectedQuizAnswers.map(([key,value]) => <div key={key}><dt>{key.replaceAll("_"," ")}</dt><dd>{String(value)}</dd></div>)}</dl></div>}
+          <div className="follow-up-card"><b>Próxima ação</b><input value={selectedLead.next_action ?? ""} onChange={(event) => setSelectedLead({ ...selectedLead, next_action: event.target.value })} maxLength={500} placeholder="Ex.: retornar pelo WhatsApp" /><input type="datetime-local" value={selectedLead.next_action_at ? new Date(selectedLead.next_action_at).toISOString().slice(0,16) : ""} onChange={(event) => setSelectedLead({ ...selectedLead, next_action_at: event.target.value ? new Date(event.target.value).toISOString() : null })} /><button type="button" disabled={busy} onClick={saveLeadFollowUp}>Salvar próxima ação</button></div>
+          <div className="history-card"><b>Histórico do funil</b>{selectedLeadEvents.length === 0 ? <p>Nenhum evento registrado ainda.</p> : <ol>{selectedLeadEvents.map((event) => <li key={event.id}><span>{event.event_type.replaceAll("_"," ")}</span><small>{formatDate(event.created_at)}</small></li>)}</ol>}</div>
+          <div className="history-card"><b>Histórico de agendamentos</b>{selectedLeadBookings.length === 0 ? <p>Nenhum agendamento.</p> : <ol>{selectedLeadBookings.map((booking) => <li key={booking.id}><span>{bookingStatus[booking.status] ?? booking.status} · {booking.services?.name ?? "Procedimento"}</span><small>{booking.slots ? formatDate(booking.slots.starts_at) : formatDate(booking.created_at)}</small></li>)}</ol>}</div>
           <div className="drawer-note"><b>Observações do atendimento</b><textarea value={selectedLead.notes ?? ""} onChange={(event) => setSelectedLead({ ...selectedLead, notes: event.target.value })} maxLength={2000} placeholder="Ex.: respondeu pelo WhatsApp, prefere horário à tarde, pediu retorno na sexta…" /><div><small>{(selectedLead.notes ?? "").length}/2000</small><button type="button" disabled={busy} onClick={saveLeadNotes}>{busy ? "Salvando…" : "Salvar observações"}</button></div></div>
           <div className="lead-management"><b>Gerenciar cadastro</b><p>{selectedLead.archived_at ? `Arquivado em ${formatDate(selectedLead.archived_at)}. Você pode restaurar este contato ou acessar as opções avançadas.` : "Arquive contatos que não precisam aparecer na lista principal. O histórico e os agendamentos serão preservados."}</p><div className="lead-management-actions">{selectedLead.archived_at ? <button className="secondary-action" onClick={() => restoreLead(selectedLead)}>Restaurar lead</button> : <button className="secondary-action" onClick={() => archiveLead(selectedLead)}>Arquivar lead</button>}</div>{selectedLead.archived_at && <details className="advanced-options"><summary>Opções avançadas</summary><p>A exclusão permanente apaga também agenda, pagamentos e registros vinculados. Esta ação não pode ser desfeita.</p><button className="danger-button" onClick={() => permanentlyDeleteLead(selectedLead)}>Excluir permanentemente</button></details>}</div>
         </aside>

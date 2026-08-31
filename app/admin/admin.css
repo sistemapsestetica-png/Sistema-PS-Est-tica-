@@ -330,3 +330,48 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 @media(max-width:900px){.slot-manager-toolbar{grid-template-columns:1fr 1fr}.slot-manager-toolbar button{width:100%}}
 @media(max-width:650px){.link-form,.new-service-form{grid-template-columns:1fr}.direct-links-panel .panel-heading{align-items:flex-start}.copy-master{width:100%}.staff-card-title,.link-list article{align-items:flex-start;flex-direction:column}.link-actions{width:100%}.link-actions button{flex:1}.slot-manager-toolbar{grid-template-columns:1fr}.slot-list article{grid-template-columns:auto minmax(0,1fr)}.slot-actions{width:100%;grid-column:1/-1;justify-content:flex-end;padding-top:5px}.slot-actions button{flex:1}}
 @media(max-width:700px){.access-request-list article{grid-template-columns:auto 1fr}.access-request-list article>.status-badge,.access-request-list article>button,.access-request-actions{grid-column:1/-1}.access-request-actions{width:100%}.access-request-actions button{flex:1}}
+
+/* Funil comercial e histórico operacional */
+.funnel-period-toolbar { margin: 0 0 14px; display: flex; align-items: end; justify-content: space-between; gap: 14px; }
+.funnel-period-toolbar > div:first-child { display: flex; flex-wrap: wrap; gap: 7px; }
+.funnel-period-toolbar button { min-height: 38px; padding: 8px 13px; color: var(--admin-ink); background: #fff; border: 1px solid var(--admin-line); border-radius: 999px; font-size: 10px; font-weight: 800; cursor: pointer; }
+.funnel-period-toolbar button.active { color: #fff; background: var(--admin-black); border-color: var(--admin-black); }
+.custom-period { display: flex; gap: 8px; }
+.custom-period label { display: grid; gap: 5px; color: var(--admin-muted); font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.custom-period input { min-height: 38px; padding: 7px 9px; border: 1px solid var(--admin-line); border-radius: 2px 9px 2px 9px; background: #fff; }
+.commercial-funnel-grid { margin-bottom: 28px; display: grid; grid-template-columns: repeat(9,minmax(105px,1fr)); gap: 7px; }
+.commercial-funnel-grid article { min-height: 132px; padding: 14px 12px; display: flex; flex-direction: column; gap: 5px; background: linear-gradient(155deg,#fff,#f5f1e8); border: 1px solid var(--admin-line); border-radius: 2px 14px 2px 14px; }
+.commercial-funnel-grid article > span { color: var(--admin-gold-dark); font-size: 8px; font-weight: 800; }
+.commercial-funnel-grid article > b { margin-top: auto; color: var(--admin-black); font: 400 28px Georgia,serif; }
+.commercial-funnel-grid article > strong { min-height: 26px; font-size: 10px; line-height: 1.25; }
+.commercial-funnel-grid article > small { color: var(--admin-muted); font-size: 9px; }
+.crm-subheading { margin: 4px 0 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--admin-line); }
+.crm-subheading span { color: var(--admin-muted); font-size: 10px; }
+.crm-filter-panel { grid-template-columns: minmax(220px,1.4fr) repeat(5,minmax(130px,.7fr)) auto; }
+.intent-badge { padding: 6px 9px; display: inline-block; border-radius: 999px; font-size: 9px; font-weight: 800; }
+.intent-badge.high { color: #81522f; background: #f6e3cf; }
+.intent-badge.medium { color: #806522; background: #f5edd1; }
+.intent-badge.low { color: #52665a; background: #e5eee8; }
+.intent-badge.unknown { color: var(--admin-muted); background: #eeeae7; }
+.alert-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 9px; }
+.alert-grid button { min-height: 95px; padding: 16px; display: grid; gap: 5px; text-align: left; color: var(--admin-ink); background: #fff; border: 1px solid var(--admin-line); border-radius: 2px 13px 2px 13px; cursor: pointer; }
+.alert-grid b { color: var(--admin-black); font: 400 27px Georgia,serif; }
+.alert-grid span { color: var(--admin-muted); font-size: 10px; font-weight: 800; }
+.commercial-actions,.follow-up-card,.quiz-answer-card,.history-card { margin-top: 14px; padding: 20px; border: 1px solid var(--admin-line); border-radius: 2px 14px 2px 14px; background: #fff; }
+.commercial-actions > b,.follow-up-card > b,.quiz-answer-card > b,.history-card > b { color: var(--admin-black); font: 400 18px Georgia,serif; }
+.commercial-actions > div { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.commercial-actions button,.follow-up-card button { min-height: 39px; padding: 8px 11px; color: #fff; background: var(--admin-black); border: 1px solid var(--admin-gold); border-radius: 2px 9px 2px 9px; font-size: 10px; font-weight: 800; cursor: pointer; }
+.commercial-actions button.danger-link { color: #8b4653; background: #fff; border-color: #8b4653; }
+.follow-up-card { display: grid; gap: 10px; }
+.follow-up-card input { min-height: 42px; padding: 9px 11px; color: var(--admin-ink); background: #fff; border: 1px solid var(--admin-line); border-radius: 2px 9px 2px 9px; }
+.quiz-answer-card dl { margin: 12px 0 0; grid-template-columns: 1fr; }
+.quiz-answer-card dl div { padding: 10px 0; }
+.history-card > p { color: var(--admin-muted); font-size: 11px; }
+.history-card ol { margin: 12px 0 0; padding: 0; display: grid; gap: 7px; list-style: none; }
+.history-card li { padding: 9px 0; display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid #eeeae7; }
+.history-card li span { color: var(--admin-ink); font-size: 11px; text-transform: capitalize; }
+.history-card li small { color: var(--admin-muted); font-size: 9px; text-align: right; }
+
+@media(max-width:1300px){.commercial-funnel-grid{grid-template-columns:repeat(5,1fr)}.crm-filter-panel{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:800px){.commercial-funnel-grid{margin-right:-21px;padding-right:21px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(135px,46%);grid-template-columns:none;overflow-x:auto}.funnel-period-toolbar{align-items:flex-start;flex-direction:column}.custom-period{width:100%}.custom-period label{flex:1}.custom-period input{width:100%}.alert-grid{grid-template-columns:1fr 1fr}.commercial-actions>div{grid-template-columns:1fr}}
+@media(max-width:520px){.alert-grid{grid-template-columns:1fr}.commercial-funnel-grid{grid-auto-columns:minmax(145px,62%)}}
