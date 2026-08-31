@@ -85,19 +85,19 @@ type StaffAccessRequest = { id: number; user_id: string; email: string; full_nam
 type Assignment = { professional_id: string; service_id: number };
 type BookingLink = { id: number; token: string; label: string; service_id: number | null; professional_id: string | null; active: boolean; uses: number; created_at: string };
 type AdminSection = "overview" | "clients" | "agenda" | "revenue" | "team" | "access" | "services" | "links" | "settings";
-type LeadQueue = "conversion" | "prebooking" | "confirmed" | "expired" | "archived";
+type LeadQueue = "new" | "conversation" | "interested" | "prebooking" | "confirmed" | "inactive";
 type FunnelPeriod = "today" | "7d" | "30d" | "custom";
 
-const adminSections: { id: AdminSection; label: string; description: string; group: "Operação" | "Gestão" }[] = [
+const adminSections: { id: AdminSection; label: string; description: string; group: "Operação" | "Gestão" | "Sistema" }[] = [
   { id: "overview", label: "Início", description: "Resumo da operação e prioridades", group: "Operação" },
-  { id: "clients", label: "Atendimento", description: "Conversão, pré-agendamentos e clientes", group: "Operação" },
+  { id: "clients", label: "Atendimento", description: "Contatos organizados por próxima ação", group: "Operação" },
   { id: "agenda", label: "Agenda", description: "Horários e atendimentos confirmados", group: "Operação" },
-  { id: "revenue", label: "Faturamento", description: "Recebimentos, saldos e indicadores", group: "Operação" },
+  { id: "revenue", label: "Faturamento", description: "Recebimentos, saldos e indicadores", group: "Gestão" },
   { id: "team", label: "Equipe", description: "Profissionais, acessos e modalidades", group: "Gestão" },
   { id: "access", label: "Acessos", description: "Aprovação e bloqueio de recepcionistas", group: "Gestão" },
-  { id: "services", label: "Catálogo", description: "Procedimentos, preços e duração", group: "Gestão" },
-  { id: "links", label: "Links", description: "Agendas diretas e compartilhamento", group: "Gestão" },
-  { id: "settings", label: "Configurações", description: "Pagamento e regras da clínica", group: "Gestão" },
+  { id: "services", label: "Serviços", description: "Procedimentos, preços e duração", group: "Gestão" },
+  { id: "links", label: "Links", description: "Agendas diretas e compartilhamento", group: "Sistema" },
+  { id: "settings", label: "Configurações", description: "Pagamento e regras da clínica", group: "Sistema" },
 ];
 
 const leadStatus: Record<string, string> = {
@@ -146,19 +146,21 @@ const slotStatusLabel: Record<string, string> = {
 };
 
 const leadQueueLabel: Record<LeadQueue, string> = {
-  conversion: "Para converter",
-  prebooking: "Pré-agendado",
-  confirmed: "Agendado",
-  expired: "Expirado",
-  archived: "Arquivado",
+  new: "Novos",
+  conversation: "Em conversa",
+  interested: "Interessados",
+  prebooking: "Pré-reservados",
+  confirmed: "Agendados",
+  inactive: "Encerrados",
 };
 
 const leadQueueDescription: Record<LeadQueue, string> = {
-  conversion: "Sem reserva ativa",
+  new: "Ainda sem atendimento",
+  conversation: "Contato iniciado",
+  interested: "Prontos para avançar",
   prebooking: "Aguardando o sinal",
   confirmed: "Pagamento confirmado",
-  expired: "Recuperar pelo WhatsApp",
-  archived: "Fora da operação",
+  inactive: "Perdidos, expirados e arquivados",
 };
 
 function formatMoney(cents: number | null) {
@@ -236,7 +238,8 @@ export default function AdminPage() {
   const [funnelPeriod, setFunnelPeriod] = useState<FunnelPeriod>("30d");
   const [customPeriodStart, setCustomPeriodStart] = useState("");
   const [customPeriodEnd, setCustomPeriodEnd] = useState("");
-  const [leadQueue, setLeadQueue] = useState<LeadQueue>("conversion");
+  const [leadQueue, setLeadQueue] = useState<LeadQueue>("new");
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [invites, setInvites] = useState<StaffInvite[]>([]);
@@ -743,19 +746,21 @@ export default function AdminPage() {
   const latestBookingByLead = new Map<number, Booking>();
   bookings.forEach((booking) => { if (!latestBookingByLead.has(booking.lead_id)) latestBookingByLead.set(booking.lead_id, booking); });
   const queueForLead = (lead: Lead): LeadQueue => {
-    if (lead.archived_at) return "archived";
+    if (lead.archived_at || lead.status === "lost") return "inactive";
     const booking = latestBookingByLead.get(lead.id);
-    if (!booking) return "conversion";
-    if (["pending", "awaiting_payment"].includes(booking.status)) return "prebooking";
-    if (["confirmed", "rescheduled", "completed", "no_show"].includes(booking.status)) return "confirmed";
-    if (["expired", "cancelled"].includes(booking.status)) return "expired";
-    return "conversion";
+    if (booking && ["pending", "awaiting_payment"].includes(booking.status)) return "prebooking";
+    if (booking && ["confirmed", "rescheduled", "completed", "no_show"].includes(booking.status)) return "confirmed";
+    if (booking && ["expired", "cancelled"].includes(booking.status)) return "inactive";
+    if (["scheduled", "awaiting_payment", "converted", "attended"].includes(lead.status)) return "confirmed";
+    if (["interested", "slots_viewed", "booking_started"].includes(lead.status)) return "interested";
+    if (["contacted", "replied", "no_answer"].includes(lead.status)) return "conversation";
+    return "new";
   };
   const queueCounts = leads.reduce<Record<LeadQueue, number>>((counts, lead) => {
     counts[queueForLead(lead)] += 1;
     return counts;
-  }, { conversion: 0, prebooking: 0, confirmed: 0, expired: 0, archived: 0 });
-  const newLeads = queueCounts.conversion;
+  }, { new: 0, conversation: 0, interested: 0, prebooking: 0, confirmed: 0, inactive: 0 });
+  const newLeads = queueCounts.new;
   const confirmedBookings = bookings.filter((booking) => ["confirmed", "rescheduled", "completed", "no_show"].includes(booking.status));
   const cities = [...new Set(leads.map((lead) => lead.city).filter((value): value is string => Boolean(value)))].sort();
   const leadSource = (lead: Lead) => typeof lead.source?.utm_source === "string" && lead.source.utm_source ? lead.source.utm_source : "Acesso direto";
@@ -786,12 +791,13 @@ export default function AdminPage() {
     { label: "Agendados", count: leadsWithEvent(["booking_completed"]) },
     { label: "Compareceram", count: leadsWithEvent(["appointment_completed"]) },
   ];
-  const operationalAlerts = [
-    { label: "Novos leads", count: leads.filter((lead) => !lead.archived_at && lead.status === "new").length },
-    { label: "Sem contato", count: leads.filter((lead) => !lead.archived_at && ["new","qualified"].includes(lead.status)).length },
-    { label: "Aguardando resposta", count: leads.filter((lead) => !lead.archived_at && lead.status === "contacted").length },
-    { label: "Interessados sem agendamento", count: leads.filter((lead) => !lead.archived_at && lead.status === "interested" && !latestBookingByLead.has(lead.id)).length },
-    { label: "Próxima ação atrasada", count: leads.filter((lead) => !lead.archived_at && lead.next_action_at && new Date(lead.next_action_at) < new Date()).length },
+  const overdueLeads = leads.filter((lead) => !lead.archived_at && lead.next_action_at && new Date(lead.next_action_at) < new Date()).length;
+  const operationalAlerts: { label: string; description: string; count: number; queue: LeadQueue; overdue?: boolean }[] = [
+    { label: "Retornos atrasados", description: "Resolver primeiro", count: overdueLeads, queue: "conversation", overdue: true },
+    { label: "Novos contatos", description: "Ainda sem atendimento", count: queueCounts.new, queue: "new" },
+    { label: "Em conversa", description: "Aguardando continuidade", count: queueCounts.conversation, queue: "conversation" },
+    { label: "Interessados", description: "Prontos para escolher horário", count: queueCounts.interested, queue: "interested" },
+    { label: "Aguardando sinal", description: "Pré-reserva ainda não confirmada", count: queueCounts.prebooking, queue: "prebooking" },
   ];
   const filteredSlots = slots.filter((slot) =>
     (slotListServiceFilter === "all" || String(slot.service_id) === slotListServiceFilter)
@@ -804,14 +810,20 @@ export default function AdminPage() {
   const filteredLeads = leads.filter((lead) => {
     const query = leadSearch.trim().toLowerCase();
     const matchesQuery = !query || lead.name.toLowerCase().includes(query) || lead.phone.includes(query.replace(/\D/g, "")) || Boolean(lead.email?.toLowerCase().includes(query));
-    return queueForLead(lead) === leadQueue
+    return (showOverdueOnly || queueForLead(lead) === leadQueue)
       && matchesQuery
-      && inSelectedPeriod(lead.created_at)
+      && (!showOverdueOnly || Boolean(lead.next_action_at && new Date(lead.next_action_at) < new Date()))
       && (leadStatusFilter === "all" || lead.status === leadStatusFilter)
       && (leadServiceFilter === "all" || lead.service_slug === leadServiceFilter)
       && (leadCityFilter === "all" || lead.city === leadCityFilter)
       && (leadIntentFilter === "all" || lead.intent_level === leadIntentFilter)
       && (leadSourceFilter === "all" || leadSource(lead) === leadSourceFilter);
+  }).sort((a, b) => {
+    const aDue = a.next_action_at ? new Date(a.next_action_at).getTime() : Number.MAX_SAFE_INTEGER;
+    const bDue = b.next_action_at ? new Date(b.next_action_at).getTime() : Number.MAX_SAFE_INTEGER;
+    if (aDue !== bDue) return aDue - bDue;
+    if (a.intent_level !== b.intent_level) return ({ high: 0, medium: 1, low: 2 }[a.intent_level ?? "low"] - ({ high: 0, medium: 1, low: 2 }[b.intent_level ?? "low"]));
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
   const selectedLeadEvents = selectedLead ? leadEvents.filter((event) => event.lead_id === selectedLead.id) : [];
   const selectedLeadBookings = selectedLead ? bookings.filter((booking) => booking.lead_id === selectedLead.id) : [];
@@ -882,19 +894,20 @@ export default function AdminPage() {
           <header className="section-intro"><p className="admin-eyebrow">Painel / {currentSection.label}</p><h2>{currentSection.label}</h2><p>{currentSection.description}.</p></header>
 
       {activeSection === "overview" && <>
-
-      <section className="stats-grid" aria-label="Resumo">
-        <article><span>Para converter</span><b>{queueCounts.conversion}</b><small>leads sem reserva ativa</small></article>
-        <article><span>Pré-agendados</span><b>{queueCounts.prebooking}</b><small>aguardando pagamento</small></article>
-        <article><span>Agendados</span><b>{queueCounts.confirmed}</b><small>pagamento confirmado</small></article>
-        <article><span>Expirados</span><b>{queueCounts.expired}</b><small>recepção deve recuperar</small></article>
+      <section className="admin-panel today-panel">
+        <div className="panel-heading"><div><p className="admin-eyebrow">Prioridades</p><h2>O que precisa de atenção hoje</h2></div><p>Comece pelos retornos atrasados e pelos contatos mais recentes.</p></div>
+        <div className="today-grid">
+          {operationalAlerts.map((alert, index) => <button type="button" className={index === 0 && alert.count > 0 ? "urgent" : ""} key={alert.label} onClick={() => { setLeadQueue(alert.queue); setShowOverdueOnly(Boolean(alert.overdue)); setLeadStatusFilter("all"); setActiveSection("clients"); }}>
+            <span>{alert.label}</span><b>{alert.count}</b><small>{alert.description}</small><i aria-hidden="true">→</i>
+          </button>)}
+        </div>
       </section>
 
-      <section className="admin-panel overview-actions">
-        <div className="panel-heading"><div><p className="admin-eyebrow">Acesso rápido</p><h2>O que você quer fazer?</h2></div><p>As tarefas mais usadas ficam a um toque de distância.</p></div>
+      <section className="admin-panel overview-actions compact">
+        <div className="panel-heading"><div><p className="admin-eyebrow">Acesso rápido</p><h2>Operação da clínica</h2></div><p>Atalhos para as tarefas fora do atendimento.</p></div>
         <div className="overview-action-grid">
-          <button type="button" onClick={() => setActiveSection("agenda")}><span>Agenda</span><b>Abrir ou bloquear horários</b><small>{openSlots} horário(s) aberto(s)</small></button>
-          <button type="button" onClick={() => { setLeadQueue("conversion"); setActiveSection("clients"); }}><span>Clientes</span><b>Acompanhar novos contatos</b><small>{newLeads} lead(s) para converter</small></button>
+          <button type="button" onClick={() => setActiveSection("agenda")}><span>Agenda</span><b>Gerenciar horários</b><small>{openSlots} horário(s) aberto(s)</small></button>
+          <button type="button" onClick={() => { setLeadQueue("new"); setShowOverdueOnly(false); setActiveSection("clients"); }}><span>Atendimento</span><b>Abrir novos contatos</b><small>{newLeads} aguardando atendimento</small></button>
           <button type="button" onClick={() => setActiveSection("team")}><span>Equipe</span><b>Gerenciar profissionais</b><small>{professionals.length} profissional(is) ativo(s)</small></button>
           <button type="button" onClick={() => setActiveSection("links")}><span>Compartilhar</span><b>Copiar links da agenda</b><small>{bookingLinks.filter((link) => link.active).length} link(s) ativo(s)</small></button>
         </div>
@@ -942,11 +955,6 @@ export default function AdminPage() {
             <div className="access-request-actions"><button type="button" disabled={busy} onClick={() => reviewAccessRequest(request, true)}>Autorizar recepcionista</button><button type="button" className="danger-button" disabled={busy} onClick={() => reviewAccessRequest(request, false)}>Recusar</button></div>
           </article>)}
         </div>
-      </section>
-
-      <section className="admin-panel operational-alerts">
-        <div className="panel-heading"><div><p className="admin-eyebrow">Prioridades</p><h2>Alertas de atendimento</h2></div><p>Contatos que pedem ação da recepção.</p></div>
-        <div className="alert-grid">{operationalAlerts.map((alert) => <button type="button" key={alert.label} onClick={() => setActiveSection("clients")}><b>{alert.count}</b><span>{alert.label}</span></button>)}</div>
       </section>
 
       <section className="admin-panel access-approval-panel">
@@ -1064,37 +1072,45 @@ export default function AdminPage() {
       </>}
 
       {activeSection === "clients" && <section className="admin-panel crm-section">
-        <div className="panel-heading"><div><p className="admin-eyebrow">CRM</p><h2>Funil de atendimento</h2></div><p>A recepção acompanha as clientes até o pagamento; depois da confirmação, o atendimento segue para o especialista.</p></div>
-        <div className="funnel-period-toolbar">
-          <div role="group" aria-label="Período do funil">{([['today','Hoje'],['7d','7 dias'],['30d','30 dias'],['custom','Personalizado']] as [FunnelPeriod,string][]).map(([value,label]) => <button type="button" key={value} className={funnelPeriod === value ? "active" : ""} onClick={() => setFunnelPeriod(value)}>{label}</button>)}</div>
-          {funnelPeriod === "custom" && <div className="custom-period"><label>De<input type="date" value={customPeriodStart} onChange={(event) => setCustomPeriodStart(event.target.value)} /></label><label>Até<input type="date" value={customPeriodEnd} onChange={(event) => setCustomPeriodEnd(event.target.value)} /></label></div>}
+        <div className="panel-heading crm-heading"><div><p className="admin-eyebrow">Atendimento</p><h2>Quem precisa da sua atenção?</h2></div><p>As clientes estão ordenadas pela próxima ação e pelo nível de intenção.</p></div>
+        <div className="crm-funnel-grid" role="tablist" aria-label="Etapas do atendimento">
+          {(["new", "conversation", "interested", "prebooking", "confirmed", "inactive"] as LeadQueue[]).map((queue) => <button key={queue} role="tab" aria-selected={leadQueue === queue} className={`crm-funnel-card ${queue} ${leadQueue === queue ? "active" : ""}`} onClick={() => { setLeadQueue(queue); setShowOverdueOnly(false); }}><span>{leadQueueLabel[queue]}</span><b>{queueCounts[queue]}</b><small>{leadQueueDescription[queue]}</small></button>)}
         </div>
-        <div className="commercial-funnel-grid" aria-label="Funil comercial do período">
-          {funnelMetrics.map((metric, index) => <article key={metric.label}><span>{String(index + 1).padStart(2,"0")}</span><b>{metric.count}</b><strong>{metric.label}</strong><small>{periodLeads.length ? `${Math.round((metric.count / periodLeads.length) * 100)}% dos leads` : "0% dos leads"}</small></article>)}
+        <div className="crm-search-row">
+          <label className="crm-search"><span>Buscar cliente</span><input value={leadSearch} onChange={(event) => setLeadSearch(event.target.value)} placeholder="Nome, WhatsApp ou e-mail" /></label>
+          {showOverdueOnly && <button type="button" className="active-filter" onClick={() => setShowOverdueOnly(false)}>Retornos atrasados ×</button>}
+          <details className="crm-advanced-filters">
+            <summary>Mais filtros</summary>
+            <div className="crm-filter-panel">
+              <label>Status<select value={leadStatusFilter} onChange={(event) => setLeadStatusFilter(event.target.value)}><option value="all">Todos os status</option>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+              <label>Procedimento<select value={leadServiceFilter} onChange={(event) => setLeadServiceFilter(event.target.value)}><option value="all">Todos</option>{services.map((service) => <option key={service.slug} value={service.slug}>{service.name}</option>)}</select></label>
+              <label>Cidade<select value={leadCityFilter} onChange={(event) => setLeadCityFilter(event.target.value)}><option value="all">Todas</option>{cities.map((city) => <option key={city} value={city}>{city}</option>)}</select></label>
+              <label>Intenção<select value={leadIntentFilter} onChange={(event) => setLeadIntentFilter(event.target.value)}><option value="all">Todas</option><option value="high">Alta</option><option value="medium">Média</option><option value="low">Baixa</option></select></label>
+              <label>Origem<select value={leadSourceFilter} onChange={(event) => setLeadSourceFilter(event.target.value)}><option value="all">Todas</option>{sources.map((source) => <option key={source} value={source}>{source}</option>)}</select></label>
+              {(leadStatusFilter !== "all" || leadServiceFilter !== "all" || leadCityFilter !== "all" || leadIntentFilter !== "all" || leadSourceFilter !== "all") && <button type="button" className="crm-clear-filters" onClick={() => { setLeadStatusFilter("all"); setLeadServiceFilter("all"); setLeadCityFilter("all"); setLeadIntentFilter("all"); setLeadSourceFilter("all"); }}>Limpar filtros</button>}
+            </div>
+          </details>
         </div>
-        <div className="crm-subheading"><p className="admin-eyebrow">Filas operacionais</p><span>Organização atual da recepção</span></div>
-        <div className="crm-funnel-grid" role="tablist" aria-label="Etapas do funil">
-          {(["conversion", "prebooking", "confirmed", "expired", "archived"] as LeadQueue[]).map((queue) => <button key={queue} role="tab" aria-selected={leadQueue === queue} className={`crm-funnel-card ${queue} ${leadQueue === queue ? "active" : ""}`} onClick={() => setLeadQueue(queue)}><span>{leadQueueLabel[queue]}</span><b>{queueCounts[queue]}</b><small>{leadQueueDescription[queue]}</small></button>)}
-        </div>
-        <div className="crm-filter-panel">
-          <label className="crm-search">Buscar lead<input value={leadSearch} onChange={(event) => setLeadSearch(event.target.value)} placeholder="Nome, WhatsApp ou e-mail" /></label>
-          <label>Status<select value={leadStatusFilter} onChange={(event) => setLeadStatusFilter(event.target.value)}><option value="all">Todos os status</option>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label>Procedimento<select value={leadServiceFilter} onChange={(event) => setLeadServiceFilter(event.target.value)}><option value="all">Todos</option>{services.map((service) => <option key={service.slug} value={service.slug}>{service.name}</option>)}</select></label>
-          <label>Cidade<select value={leadCityFilter} onChange={(event) => setLeadCityFilter(event.target.value)}><option value="all">Todas</option>{cities.map((city) => <option key={city} value={city}>{city}</option>)}</select></label>
-          <label>Intenção<select value={leadIntentFilter} onChange={(event) => setLeadIntentFilter(event.target.value)}><option value="all">Todas</option><option value="high">Alta</option><option value="medium">Média</option><option value="low">Baixa</option></select></label>
-          <label>Origem<select value={leadSourceFilter} onChange={(event) => setLeadSourceFilter(event.target.value)}><option value="all">Todas</option>{sources.map((source) => <option key={source} value={source}>{source}</option>)}</select></label>
-          {(leadSearch || leadStatusFilter !== "all" || leadServiceFilter !== "all" || leadCityFilter !== "all" || leadIntentFilter !== "all" || leadSourceFilter !== "all") && <button className="crm-clear-filters" onClick={() => { setLeadSearch(""); setLeadStatusFilter("all"); setLeadServiceFilter("all"); setLeadCityFilter("all"); setLeadIntentFilter("all"); setLeadSourceFilter("all"); }}>Limpar filtros</button>}
-        </div>
-        <div className="crm-list-heading"><div><p className="admin-eyebrow">Lista atual</p><h3>{leadQueueLabel[leadQueue]}</h3></div><span className="crm-total">{filteredLeads.length} {filteredLeads.length === 1 ? "contato" : "contatos"}</span></div>
+        <div className="crm-list-heading"><div><p className="admin-eyebrow">Lista atual</p><h3>{showOverdueOnly ? "Retornos atrasados" : leadQueueLabel[leadQueue]}</h3></div><span className="crm-total">{filteredLeads.length} {filteredLeads.length === 1 ? "contato" : "contatos"}</span></div>
         <div className="table-wrap crm-table-wrap">
           <table className="crm-table">
-            <thead><tr><th>Cliente</th><th>Interesse</th><th>Cidade</th><th>Intenção</th><th>Entrada</th><th>Atendimento</th><th>Etapa</th><th>Contato</th><th>Detalhes</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>Interesse</th><th>Próxima ação</th><th>Situação</th><th>Ação</th></tr></thead>
             <tbody>
-              {filteredLeads.length === 0 && <tr><td colSpan={9} className="empty-state">Nenhum lead nesta etapa.</td></tr>}
-              {filteredLeads.map((lead) => <tr key={lead.id}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}</small><small>{lead.email || "Sem e-mail"}</small></button></td><td>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</td><td>{lead.city || "Não informada"}</td><td><span className={`intent-badge ${lead.intent_level ?? "unknown"}`}>{lead.intent_level === "high" ? "Alta" : lead.intent_level === "medium" ? "Média" : lead.intent_level === "low" ? "Baixa" : "—"}</span></td><td>{formatDate(lead.created_at)}</td><td>{leadStatus[lead.status] ?? lead.status}</td><td><span className={`funnel-stage ${queueForLead(lead)}`}>{leadQueueLabel[queueForLead(lead)]}</span></td><td><a className="crm-whatsapp" href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">WhatsApp ↗</a></td><td><button className="view-lead" onClick={() => setSelectedLead(lead)}>Abrir perfil</button></td></tr>)}
+              {filteredLeads.length === 0 && <tr><td colSpan={5} className="empty-state">Nenhum contato nesta etapa.</td></tr>}
+              {filteredLeads.map((lead) => { const overdue = Boolean(lead.next_action_at && new Date(lead.next_action_at) < new Date()); return <tr key={lead.id} className={overdue ? "overdue-row" : ""}><td><button className="lead-open" onClick={() => setSelectedLead(lead)}><b>{lead.name}</b><small>{lead.phone}{lead.city ? ` · ${lead.city}` : ""}</small></button></td><td><b>{services.find((service) => service.slug === lead.service_slug)?.name ?? lead.service_slug}</b><small><span className={`intent-dot ${lead.intent_level ?? "unknown"}`} />Intenção {lead.intent_level === "high" ? "alta" : lead.intent_level === "medium" ? "média" : lead.intent_level === "low" ? "baixa" : "não calculada"}</small></td><td><span className={`next-action ${overdue ? "overdue" : ""}`}><b>{lead.next_action || (leadQueue === "new" ? "Fazer primeiro contato" : "Definir próxima ação")}</b><small>{lead.next_action_at ? formatDate(lead.next_action_at) : "Sem horário definido"}</small></span></td><td><span className={`funnel-stage ${queueForLead(lead)}`}>{leadStatus[lead.status] ?? leadQueueLabel[queueForLead(lead)]}</span></td><td><div className="crm-row-actions"><a className="crm-whatsapp" href={`https://wa.me/55${lead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer" aria-label={`Conversar com ${lead.name} no WhatsApp`}>WhatsApp</a><button className="view-lead" onClick={() => setSelectedLead(lead)}>Abrir</button></div></td></tr>})}
             </tbody>
           </table>
         </div>
+        <details className="performance-details">
+          <summary>Ver desempenho do funil</summary>
+          <div className="funnel-period-toolbar">
+            <div role="group" aria-label="Período do funil">{([['today','Hoje'],['7d','7 dias'],['30d','30 dias'],['custom','Personalizado']] as [FunnelPeriod,string][]).map(([value,label]) => <button type="button" key={value} className={funnelPeriod === value ? "active" : ""} onClick={() => setFunnelPeriod(value)}>{label}</button>)}</div>
+            {funnelPeriod === "custom" && <div className="custom-period"><label>De<input type="date" value={customPeriodStart} onChange={(event) => setCustomPeriodStart(event.target.value)} /></label><label>Até<input type="date" value={customPeriodEnd} onChange={(event) => setCustomPeriodEnd(event.target.value)} /></label></div>}
+          </div>
+          <div className="commercial-funnel-grid" aria-label="Funil comercial do período">
+            {funnelMetrics.map((metric, index) => <article key={metric.label}><span>{String(index + 1).padStart(2,"0")}</span><b>{metric.count}</b><strong>{metric.label}</strong><small>{periodLeads.length ? `${Math.round((metric.count / periodLeads.length) * 100)}% dos leads` : "0% dos leads"}</small></article>)}
+          </div>
+        </details>
       </section>}
 
       {activeSection === "revenue" && <RevenueDashboard />}
@@ -1123,16 +1139,15 @@ export default function AdminPage() {
       {selectedLead && <div className="drawer-backdrop" onClick={() => setSelectedLead(null)} role="presentation">
         <aside className="lead-drawer" onClick={(event) => event.stopPropagation()} aria-label={`Perfil de ${selectedLead.name}`}>
           <button className="drawer-close" onClick={() => setSelectedLead(null)} aria-label="Fechar">×</button>
-          <p className="admin-eyebrow">Perfil da cliente</p><h2>{selectedLead.name}</h2>
-          <a className="drawer-whatsapp" href={`https://wa.me/55${selectedLead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">Conversar no WhatsApp ↗</a>
-          <dl><div><dt>Telefone</dt><dd>{selectedLead.phone}</dd></div><div><dt>E-mail</dt><dd>{selectedLead.email ? <a href={`mailto:${selectedLead.email}`}>{selectedLead.email}</a> : "Não informado"}</dd></div><div><dt>Cidade</dt><dd>{selectedLead.city || "Não informada"}</dd></div><div><dt>Procedimento</dt><dd>{services.find((service) => service.slug === selectedLead.service_slug)?.name ?? selectedLead.service_slug}</dd></div><div><dt>Experiência</dt><dd>{selectedLead.experience ? (experienceLabel[selectedLead.experience] ?? selectedLead.experience) : "Não informada"}</dd></div><div><dt>Prazo</dt><dd>{timingLabel[selectedLead.timing] ?? selectedLead.timing}</dd></div><div><dt>Intenção comercial</dt><dd>{selectedLead.intent_level === "high" ? "Alta" : selectedLead.intent_level === "medium" ? "Média" : selectedLead.intent_level === "low" ? "Baixa" : "Não calculada"}</dd></div><div><dt>Entrada</dt><dd>{formatDate(selectedLead.created_at)}</dd></div><div><dt>Status do atendimento</dt><dd><select className="drawer-status-select" value={selectedLead.status} onChange={(event) => updateLeadStatus(selectedLead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></dd></div></dl>
+          <p className="admin-eyebrow">Atendimento da cliente</p><h2>{selectedLead.name}</h2>
+          <div className="drawer-lead-summary"><span>{services.find((service) => service.slug === selectedLead.service_slug)?.name ?? selectedLead.service_slug}</span><span className={`intent-badge ${selectedLead.intent_level ?? "unknown"}`}>Intenção {selectedLead.intent_level === "high" ? "alta" : selectedLead.intent_level === "medium" ? "média" : selectedLead.intent_level === "low" ? "baixa" : "não calculada"}</span></div>
+          <div className="drawer-primary-actions"><a className="drawer-whatsapp" href={`https://wa.me/55${selectedLead.phone.replace(/^55/, "")}`} target="_blank" rel="noreferrer">Abrir WhatsApp ↗</a><a className="drawer-schedule" href={AGENDA_URL} target="_blank" rel="noreferrer">Abrir agenda ↗</a></div>
+          <div className="follow-up-card priority"><b>Próxima ação</b><input value={selectedLead.next_action ?? ""} onChange={(event) => setSelectedLead({ ...selectedLead, next_action: event.target.value })} maxLength={500} placeholder="Ex.: retornar pelo WhatsApp" /><input type="datetime-local" value={selectedLead.next_action_at ? new Date(selectedLead.next_action_at).toISOString().slice(0,16) : ""} onChange={(event) => setSelectedLead({ ...selectedLead, next_action_at: event.target.value ? new Date(event.target.value).toISOString() : null })} /><button type="button" disabled={busy} onClick={saveLeadFollowUp}>Salvar próxima ação</button></div>
           <div className="commercial-actions"><b>Ações do atendimento</b><div><button type="button" disabled={busy} onClick={() => setCommercialStatus(selectedLead,"contacted")}>Marcar como contatado</button><button type="button" disabled={busy} onClick={() => setCommercialStatus(selectedLead,"replied")}>Marcar como respondeu</button><button type="button" disabled={busy} onClick={() => setCommercialStatus(selectedLead,"interested")}>Marcar como interessado</button><button type="button" className="danger-link" disabled={busy} onClick={() => setCommercialStatus(selectedLead,"lost")}>Marcar como perdido</button></div></div>
-          <div className="source-card"><b>Origem da campanha</b><p>{leadSource(selectedLead)}{leadCampaign(selectedLead) ? ` · ${leadCampaign(selectedLead)}` : ""}</p><small>{leadReferrer(selectedLead) || "Sem referência externa registrada"}</small></div>
-          {selectedQuizAnswers.length > 0 && <div className="quiz-answer-card"><b>Respostas do quiz</b><dl>{selectedQuizAnswers.map(([key,value]) => <div key={key}><dt>{key.replaceAll("_"," ")}</dt><dd>{String(value)}</dd></div>)}</dl></div>}
-          <div className="follow-up-card"><b>Próxima ação</b><input value={selectedLead.next_action ?? ""} onChange={(event) => setSelectedLead({ ...selectedLead, next_action: event.target.value })} maxLength={500} placeholder="Ex.: retornar pelo WhatsApp" /><input type="datetime-local" value={selectedLead.next_action_at ? new Date(selectedLead.next_action_at).toISOString().slice(0,16) : ""} onChange={(event) => setSelectedLead({ ...selectedLead, next_action_at: event.target.value ? new Date(event.target.value).toISOString() : null })} /><button type="button" disabled={busy} onClick={saveLeadFollowUp}>Salvar próxima ação</button></div>
-          <div className="history-card"><b>Histórico do funil</b>{selectedLeadEvents.length === 0 ? <p>Nenhum evento registrado ainda.</p> : <ol>{selectedLeadEvents.map((event) => <li key={event.id}><span>{event.event_type.replaceAll("_"," ")}</span><small>{formatDate(event.created_at)}</small></li>)}</ol>}</div>
-          <div className="history-card"><b>Histórico de agendamentos</b>{selectedLeadBookings.length === 0 ? <p>Nenhum agendamento.</p> : <ol>{selectedLeadBookings.map((booking) => <li key={booking.id}><span>{bookingStatus[booking.status] ?? booking.status} · {booking.services?.name ?? "Procedimento"}</span><small>{booking.slots ? formatDate(booking.slots.starts_at) : formatDate(booking.created_at)}</small></li>)}</ol>}</div>
           <div className="drawer-note"><b>Observações do atendimento</b><textarea value={selectedLead.notes ?? ""} onChange={(event) => setSelectedLead({ ...selectedLead, notes: event.target.value })} maxLength={2000} placeholder="Ex.: respondeu pelo WhatsApp, prefere horário à tarde, pediu retorno na sexta…" /><div><small>{(selectedLead.notes ?? "").length}/2000</small><button type="button" disabled={busy} onClick={saveLeadNotes}>{busy ? "Salvando…" : "Salvar observações"}</button></div></div>
+          <details className="drawer-details"><summary>Dados da cliente</summary><dl><div><dt>Telefone</dt><dd>{selectedLead.phone}</dd></div><div><dt>E-mail</dt><dd>{selectedLead.email ? <a href={`mailto:${selectedLead.email}`}>{selectedLead.email}</a> : "Não informado"}</dd></div><div><dt>Cidade</dt><dd>{selectedLead.city || "Não informada"}</dd></div><div><dt>Experiência</dt><dd>{selectedLead.experience ? (experienceLabel[selectedLead.experience] ?? selectedLead.experience) : "Não informada"}</dd></div><div><dt>Prazo</dt><dd>{timingLabel[selectedLead.timing] ?? selectedLead.timing}</dd></div><div><dt>Entrada</dt><dd>{formatDate(selectedLead.created_at)}</dd></div><div><dt>Status do atendimento</dt><dd><select className="drawer-status-select" value={selectedLead.status} onChange={(event) => updateLeadStatus(selectedLead.id, event.target.value)}>{Object.entries(leadStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></dd></div></dl></details>
+          <details className="drawer-details"><summary>Origem e respostas do quiz</summary><div className="source-card"><b>Origem da campanha</b><p>{leadSource(selectedLead)}{leadCampaign(selectedLead) ? ` · ${leadCampaign(selectedLead)}` : ""}</p><small>{leadReferrer(selectedLead) || "Sem referência externa registrada"}</small></div>{selectedQuizAnswers.length > 0 && <div className="quiz-answer-card"><b>Respostas do quiz</b><dl>{selectedQuizAnswers.map(([key,value]) => <div key={key}><dt>{key.replaceAll("_"," ")}</dt><dd>{String(value)}</dd></div>)}</dl></div>}</details>
+          <details className="drawer-details"><summary>Histórico completo</summary><div className="history-card"><b>Histórico do funil</b>{selectedLeadEvents.length === 0 ? <p>Nenhum evento registrado ainda.</p> : <ol>{selectedLeadEvents.map((event) => <li key={event.id}><span>{event.event_type.replaceAll("_"," ")}</span><small>{formatDate(event.created_at)}</small></li>)}</ol>}</div><div className="history-card"><b>Histórico de agendamentos</b>{selectedLeadBookings.length === 0 ? <p>Nenhum agendamento.</p> : <ol>{selectedLeadBookings.map((booking) => <li key={booking.id}><span>{bookingStatus[booking.status] ?? booking.status} · {booking.services?.name ?? "Procedimento"}</span><small>{booking.slots ? formatDate(booking.slots.starts_at) : formatDate(booking.created_at)}</small></li>)}</ol>}</div></details>
           <div className="lead-management"><b>Gerenciar cadastro</b><p>{selectedLead.archived_at ? `Arquivado em ${formatDate(selectedLead.archived_at)}. Você pode restaurar este contato ou acessar as opções avançadas.` : "Arquive contatos que não precisam aparecer na lista principal. O histórico e os agendamentos serão preservados."}</p><div className="lead-management-actions">{selectedLead.archived_at ? <button className="secondary-action" onClick={() => restoreLead(selectedLead)}>Restaurar lead</button> : <button className="secondary-action" onClick={() => archiveLead(selectedLead)}>Arquivar lead</button>}</div>{selectedLead.archived_at && <details className="advanced-options"><summary>Opções avançadas</summary><p>A exclusão permanente apaga também agenda, pagamentos e registros vinculados. Esta ação não pode ser desfeita.</p><button className="danger-button" onClick={() => permanentlyDeleteLead(selectedLead)}>Excluir permanentemente</button></details>}</div>
         </aside>
       </div>}
