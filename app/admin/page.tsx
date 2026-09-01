@@ -1118,7 +1118,7 @@ export default function AdminPage() {
       {activeSection === "settings" && <>
       <section className="payment-note">
         <div><p className="admin-eyebrow">Pagamento integrado</p><h2>Sinal fixo de reserva</h2><p>A cliente paga {formatMoney(settings?.fixed_deposit_cents ?? 5000)} para confirmar o horário. O valor final é definido após a avaliação e o sinal é abatido automaticamente.</p></div>
-        <span>{settings?.pix_enabled ? "Mercado Pago ativo" : "Pronto para credenciais"}</span>
+        <span>{settings?.pix_enabled ? `${settings?.payment_provider === "asaas" ? "Asaas" : "Provedor"} ativo` : "Pronto para credenciais"}</span>
       </section>
 
       <section className="admin-panel settings-summary">
@@ -1128,7 +1128,7 @@ export default function AdminPage() {
           <label>Expiração da reserva (min)<input type="number" min="5" max="1440" value={settings.reservation_expiry_minutes} onChange={(event) => setSettings({ ...settings, reservation_expiry_minutes: Number(event.target.value) })} /><small>Libera a vaga se o Pix não for pago.</small></label>
           <label>Remarcação mínima (h)<input type="number" min="0" max="720" value={settings.reschedule_notice_hours} onChange={(event) => setSettings({ ...settings, reschedule_notice_hours: Number(event.target.value) })} /><small>Antecedência exigida da cliente.</small></label>
           <label>WhatsApp da clínica<input inputMode="numeric" value={settings.whatsapp} onChange={(event) => setSettings({ ...settings, whatsapp: event.target.value.replace(/\D/g, "").slice(0, 13) })} /><small>País + DDD + número, sem símbolos.</small></label>
-          <div className="settings-provider"><span>Pagamento</span><b>{settings.payment_provider || "Mercado Pago"}</b><small>{settings.pix_enabled ? "Pix automático ativo" : "Aguardando credenciais"}</small></div>
+          <div className="settings-provider"><span>Pagamento</span><b>{settings.payment_provider === "asaas" ? "Asaas" : (settings.payment_provider || "Não configurado")}</b><small>{settings.pix_enabled ? "Pix automático ativo" : "Aguardando credenciais"}</small></div>
           <button type="submit" disabled={busy}>{busy ? "Salvando…" : "Salvar configurações"}</button>
         </form>}
       </section>

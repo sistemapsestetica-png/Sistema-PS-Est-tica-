@@ -4,6 +4,9 @@ verify_jwt = false
 [functions.mercado-pago-webhook]
 verify_jwt = false
 
+[functions.asaas-webhook]
+verify_jwt = false
+
 [auth]
 site_url = "https://profissional.psestetica.com.br"
 additional_redirect_urls = ["https://profissional.psestetica.com.br", "https://painel.psestetica.com.br"]

@@ -87,6 +87,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .prebook-bar small { color: var(--bronze-deep); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .prebook-bar b { font-family: Georgia, serif; font-size: 15px; font-weight: 400; }
 .prebook-bar .primary-button { width: auto; flex: 0 0 auto; padding: 13px 16px; }
+.prebook-cpf { display: grid; flex: 1 1 180px; gap: 6px; color: var(--bronze-deep); font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.prebook-cpf input { width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid rgba(94,67,35,.25); border-radius: 9px; background: #fff; color: var(--ink); font: 500 15px/1.2 Arial, sans-serif; letter-spacing: .03em; }
 .slot-option:hover, .slot-option:focus-visible { border-color: var(--bronze); background: #fcf6ec; transform: translateX(3px); outline: none; }
 .slot-option:disabled { opacity: .55; cursor: wait; }
 .slot-option span:last-child { color: var(--bronze); }

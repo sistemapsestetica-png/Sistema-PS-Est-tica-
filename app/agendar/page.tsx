@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import { trackMetaEvent } from "../../lib/meta-pixel";
 import { formatBrazilianWhatsapp, INVALID_WHATSAPP_MESSAGE, isValidBrazilianWhatsapp, whatsappDigits } from "../../lib/whatsapp";
+import { cpfDigits, formatCpf, INVALID_CPF_MESSAGE, isValidCpf } from "../../lib/cpf";
 import "./agendar.css";
 
 type Service = { id: number; slug: string; name: string; description: string; price_cents: number | null; deposit_percent: number };
@@ -27,6 +28,7 @@ export default function DirectSchedulePage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [lockedProfessional, setLockedProfessional] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -97,6 +99,7 @@ export default function DirectSchedulePage() {
     event.preventDefault();
     if (!selected || busy) return;
     if (!isValidBrazilianWhatsapp(phone)) { setNotice(INVALID_WHATSAPP_MESSAGE); return; }
+    if (!isValidCpf(cpf)) { setNotice(INVALID_CPF_MESSAGE); return; }
     setBusy(true); setNotice("");
     const { data, error } = await supabase.rpc("create_direct_booking", {
       p_service_slug: serviceSlug,
@@ -122,9 +125,9 @@ export default function DirectSchedulePage() {
       currency: "BRL",
       value: selected.deposit_cents / 100,
     }, `booking-${nextBookingId}-schedule`);
-    const { data: pixData, error: pixError } = await supabase.functions.invoke("create-pix", { body: { bookingToken: token } });
+    const { data: pixData, error: pixError } = await supabase.functions.invoke("create-pix", { body: { bookingToken: token, cpf: cpfDigits(cpf) } });
     if (pixError || !pixData?.payment) {
-      setNotice(pixData?.code === "mercado_pago_not_configured" ? "Sua vaga foi separada. O Pix automático será liberado assim que a clínica concluir a configuração do Mercado Pago." : (pixData?.error ?? "A vaga foi separada, mas não foi possível gerar o Pix agora."));
+      setNotice(pixData?.code === "asaas_not_configured" ? "Sua vaga foi separada. O Pix automático será liberado assim que a clínica concluir a configuração do Asaas." : (pixData?.error ?? "A vaga foi separada, mas não foi possível gerar o Pix agora."));
     } else {
       setPix(pixData.payment as Pix);
       trackMetaEvent("InitiateCheckout", {
@@ -154,7 +157,7 @@ export default function DirectSchedulePage() {
           <div className="schedule-step"><span>01</span><div><p>Escolha o serviço</p><h2>Qual cuidado você deseja agendar?</h2></div></div>
           <div className="service-options">{services.map((service) => <button key={service.id} className={serviceSlug === service.slug ? "active" : ""} onClick={() => { setSlots([]); setServiceSlug(service.slug); }}><b>{service.name}</b><small>Valor definido após avaliação · sinal fixo de R$ 50</small></button>)}</div>
           {serviceSlug && <><div className="schedule-step second"><span>02</span><div><p>Escolha o horário</p><h2>Datas disponíveis para {chosenService?.name}</h2></div></div><div className="slot-options direct">{busy && <p>Consultando agenda…</p>}{!busy && slots.length === 0 && <div className="schedule-empty"><b>Nenhuma data aberta neste momento.</b><span>A equipe pode avisar você quando novos horários forem liberados.</span><a href="https://wa.me/5511934580476" target="_blank" rel="noreferrer">Pedir próxima data ↗</a></div>}{slots.map((slot) => <button key={slot.slot_id} className={selected?.slot_id === slot.slot_id ? "active" : ""} onClick={() => setSelected(slot)}><span><small>{slot.professional_name}</small>{dateTime(slot.starts_at)}</span><b>{selected?.slot_id === slot.slot_id ? "✓" : "→"}</b></button>)}</div></>}
-          {selected && <form className="client-form" onSubmit={reserve}><div className="schedule-step third"><span>03</span><div><p>Seus dados</p><h2>Reserve este horário</h2></div></div><label>Nome completo<input required minLength={2} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></label><label>WhatsApp<input required minLength={15} maxLength={15} pattern="\([1-9]\d\) 9\d{4}-\d{4}" title={INVALID_WHATSAPP_MESSAGE} value={phone} onChange={(event) => { setPhone(formatBrazilianWhatsapp(event.target.value)); setNotice(""); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel-national" aria-describedby="whatsapp-help-schedule" /><small id="whatsapp-help-schedule">Informe um celular com DDD e todos os 9 dígitos.</small></label><label>E-mail para o pagamento<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@email.com" autoComplete="email" /></label><div className="deposit-box"><span>Sinal fixo para confirmação</span><b>{money(selected.deposit_cents)}</b><small>O valor final é definido após a avaliação. Este sinal será descontado integralmente.</small></div><button className="schedule-primary" disabled={busy}>{busy ? "Gerando seu Pix…" : "Reservar e gerar Pix"} <span>→</span></button></form>}
+          {selected && <form className="client-form" onSubmit={reserve}><div className="schedule-step third"><span>03</span><div><p>Seus dados</p><h2>Reserve este horário</h2></div></div><label>Nome completo<input required minLength={2} value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" /></label><label>WhatsApp<input required minLength={15} maxLength={15} pattern="\([1-9]\d\) 9\d{4}-\d{4}" title={INVALID_WHATSAPP_MESSAGE} value={phone} onChange={(event) => { setPhone(formatBrazilianWhatsapp(event.target.value)); setNotice(""); }} placeholder="(11) 90000-0000" inputMode="numeric" autoComplete="tel-national" aria-describedby="whatsapp-help-schedule" /><small id="whatsapp-help-schedule">Informe um celular com DDD e todos os 9 dígitos.</small></label><label>E-mail para o pagamento<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@email.com" autoComplete="email" /></label><label>CPF para gerar o Pix<input required value={cpf} onChange={(event) => { setCpf(formatCpf(event.target.value)); setNotice(""); }} placeholder="000.000.000-00" inputMode="numeric" maxLength={14} autoComplete="off" /></label><div className="deposit-box"><span>Sinal fixo para confirmação</span><b>{money(selected.deposit_cents)}</b><small>O valor final é definido após a avaliação. Este sinal será descontado integralmente.</small></div><button className="schedule-primary" disabled={busy}>{busy ? "Gerando seu Pix…" : "Reservar e gerar Pix"} <span>→</span></button></form>}
         </>}
         {notice && <p className="schedule-notice" role="status">{notice}</p>}
       </section>

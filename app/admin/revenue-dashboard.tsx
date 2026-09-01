@@ -20,6 +20,7 @@ type Booking = {
 };
 
 const methodLabel: Record<string, string> = {
+  asaas: "Asaas",
   mercado_pago: "Mercado Pago",
   cash: "Dinheiro",
   card_machine: "Maquininha",
@@ -98,7 +99,7 @@ export function RevenueDashboard() {
   };
 
   const transactions = useMemo(() => bookings.flatMap((booking) => [
-    ...(booking.payments ?? []).filter((payment) => payment.status === "paid" && payment.paid_at).map((payment) => ({ booking, amount: Number(payment.amount_cents), paidAt: payment.paid_at!, method: "Sinal · Mercado Pago" })),
+    ...(booking.payments ?? []).filter((payment) => payment.status === "paid" && payment.paid_at).map((payment) => ({ booking, amount: Number(payment.amount_cents), paidAt: payment.paid_at!, method: `Sinal · ${methodLabel[payment.provider] ?? payment.provider}` })),
     ...(booking.service_payments ?? []).filter((payment) => payment.status === "paid" && payment.paid_at).map((payment) => ({ booking, amount: Number(payment.amount_cents), paidAt: payment.paid_at!, method: methodLabel[payment.method] ?? payment.method })),
   ]), [bookings]);
   const periodTransactions = transactions.filter((transaction) => monthOf(transaction.paidAt) === month);
@@ -148,7 +149,7 @@ export function RevenueDashboard() {
     setBusy(false);
   }
 
-  async function createMercadoPagoLink(booking: Booking) {
+  async function createAsaasLink(booking: Booking) {
     if (busy) return;
     const popup = window.open("about:blank", "_blank");
     setBusy(true); setMessage("");
@@ -156,7 +157,7 @@ export function RevenueDashboard() {
     setBusy(false);
     if (error || !data?.checkoutUrl) {
       popup?.close();
-      setMessage(data?.error ?? "Não foi possível gerar o link do Mercado Pago.");
+      setMessage(data?.error ?? "Não foi possível gerar o link do Asaas.");
       return;
     }
     if (popup) popup.location.href = data.checkoutUrl;
@@ -211,11 +212,11 @@ export function RevenueDashboard() {
       </form>
     </section>
     <section className="admin-panel">
-      <div className="panel-heading"><div><p className="admin-eyebrow">Contas a receber</p><h2>Saldo dos atendimentos</h2></div><p>O link aceita as formas disponibilizadas na sua conta do Mercado Pago.</p></div>
+      <div className="panel-heading"><div><p className="admin-eyebrow">Contas a receber</p><h2>Saldo dos atendimentos</h2></div><p>O link aceita as formas de pagamento disponibilizadas na sua conta Asaas.</p></div>
       <div className="table-wrap"><table><thead><tr><th>Cliente</th><th>Procedimento</th><th>Profissional</th><th>Valor total</th><th>Recebido</th><th>Saldo</th><th>Cobrar</th></tr></thead><tbody>
         {loading && <tr><td colSpan={7} className="empty-state">Carregando faturamento…</td></tr>}
         {!loading && bookings.length === 0 && <tr><td colSpan={7} className="empty-state">Nenhum atendimento confirmado.</td></tr>}
-        {!loading && bookings.map((booking) => { const summary = totals(booking); return <tr key={booking.id}><td><b>{booking.leads?.name ?? "Cliente"}</b><small>{booking.slots ? date(booking.slots.starts_at) : ""}</small></td><td>{booking.services?.name ?? "—"}</td><td>{booking.professional?.full_name ?? "Equipe"}</td><td>{booking.price_finalized && booking.price_cents !== null ? money(booking.price_cents) : <div className="final-price-editor"><input inputMode="decimal" value={finalPriceDrafts[booking.id] ?? ""} onChange={(event) => setFinalPriceDrafts((current) => ({ ...current, [booking.id]: event.target.value.replace(/[^\d,.]/g, "") }))} placeholder="Ex.: 900,00" aria-label={`Valor final de ${booking.leads?.name ?? "cliente"}`} /><button disabled={busy} onClick={() => saveFinalPrice(booking)}>Definir</button></div>}</td><td className="revenue-paid">{money(summary.paid)}</td><td className={summary.outstanding === null ? "revenue-pending-price" : summary.outstanding ? "revenue-due" : "revenue-settled"}>{summary.outstanding === null ? "A definir" : summary.outstanding ? money(summary.outstanding) : "Quitado"}</td><td>{summary.outstanding !== null && summary.outstanding > 0 && ["confirmed", "rescheduled", "completed"].includes(booking.status) ? <button className="revenue-charge" disabled={busy} onClick={() => createMercadoPagoLink(booking)}>Gerar link</button> : "—"}</td></tr>; })}
+        {!loading && bookings.map((booking) => { const summary = totals(booking); return <tr key={booking.id}><td><b>{booking.leads?.name ?? "Cliente"}</b><small>{booking.slots ? date(booking.slots.starts_at) : ""}</small></td><td>{booking.services?.name ?? "—"}</td><td>{booking.professional?.full_name ?? "Equipe"}</td><td>{booking.price_finalized && booking.price_cents !== null ? money(booking.price_cents) : <div className="final-price-editor"><input inputMode="decimal" value={finalPriceDrafts[booking.id] ?? ""} onChange={(event) => setFinalPriceDrafts((current) => ({ ...current, [booking.id]: event.target.value.replace(/[^\d,.]/g, "") }))} placeholder="Ex.: 900,00" aria-label={`Valor final de ${booking.leads?.name ?? "cliente"}`} /><button disabled={busy} onClick={() => saveFinalPrice(booking)}>Definir</button></div>}</td><td className="revenue-paid">{money(summary.paid)}</td><td className={summary.outstanding === null ? "revenue-pending-price" : summary.outstanding ? "revenue-due" : "revenue-settled"}>{summary.outstanding === null ? "A definir" : summary.outstanding ? money(summary.outstanding) : "Quitado"}</td><td>{summary.outstanding !== null && summary.outstanding > 0 && ["confirmed", "rescheduled", "completed"].includes(booking.status) ? <button className="revenue-charge" disabled={busy} onClick={() => createAsaasLink(booking)}>Gerar link</button> : "—"}</td></tr>; })}
       </tbody></table></div>
     </section>
   </>;

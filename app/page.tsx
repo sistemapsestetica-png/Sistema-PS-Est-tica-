@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabase";
 import { PANEL_URL } from "../lib/public-urls";
 import { trackMetaEvent } from "../lib/meta-pixel";
 import { formatBrazilianWhatsapp, INVALID_WHATSAPP_MESSAGE, isValidBrazilianWhatsapp, whatsappDigits } from "../lib/whatsapp";
+import { cpfDigits, formatCpf, INVALID_CPF_MESSAGE, isValidCpf } from "../lib/cpf";
 
 type DayKey = "lavieen" | "laser" | "ultraformer" | "botox";
 type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -116,6 +117,7 @@ export default function Home() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState("");
   const [slots, setSlots] = useState<OpenSlot[]>([]);
@@ -290,6 +292,10 @@ export default function Home() {
 
   async function reserveSlot(slot: OpenSlot) {
     if (!day || saving) return;
+    if (!isValidCpf(cpf)) {
+      setSaveNotice(INVALID_CPF_MESSAGE);
+      return;
+    }
     setSaving(true);
     setSaveNotice("");
     const leadSession = await captureLead();
@@ -329,9 +335,9 @@ export default function Home() {
       currency: "BRL",
       value: nextBooking.deposit_cents / 100,
     }, `booking-${nextBooking.booking_id}-schedule`);
-    const { data: pixData, error: pixError } = await supabase.functions.invoke("create-pix", { body: { bookingToken: nextBooking.booking_token } });
+    const { data: pixData, error: pixError } = await supabase.functions.invoke("create-pix", { body: { bookingToken: nextBooking.booking_token, cpf: cpfDigits(cpf) } });
     if (pixError || !pixData?.payment) {
-      setSaveNotice(pixData?.code === "mercado_pago_not_configured" ? "Sua vaga foi separada. O Pix será exibido assim que a clínica ativar o Mercado Pago." : (pixData?.error ?? "Não foi possível gerar o Pix agora."));
+      setSaveNotice(pixData?.code === "asaas_not_configured" ? "Sua vaga foi separada. O Pix será exibido assim que a clínica ativar o Asaas." : (pixData?.error ?? "Não foi possível gerar o Pix agora."));
     } else {
       setPixPayment(pixData.payment as PixPayment);
       trackMetaEvent("InitiateCheckout", {
@@ -514,7 +520,7 @@ export default function Home() {
                   ))}
                 </div>
               )}
-              {selectedSlot && <div className="prebook-bar"><div><small>Você escolheu</small><b>{formatSlot(selectedSlot.starts_at)}</b></div><button className="primary-button" onClick={() => reserveSlot(selectedSlot)} disabled={saving}>{saving ? "Criando pré-reserva…" : "Pré-reservar este horário"} <span>→</span></button></div>}
+              {selectedSlot && <div className="prebook-bar"><div><small>Você escolheu</small><b>{formatSlot(selectedSlot.starts_at)}</b></div><label className="prebook-cpf">CPF para gerar o Pix<input required inputMode="numeric" autoComplete="off" maxLength={14} value={cpf} onChange={(event) => { setCpf(formatCpf(event.target.value)); setSaveNotice(""); }} placeholder="000.000.000-00" aria-label="CPF para gerar o Pix" /></label><button className="primary-button" onClick={() => reserveSlot(selectedSlot)} disabled={saving}>{saving ? "Criando pré-reserva…" : "Pré-reservar este horário"} <span>→</span></button></div>}
               {!loadingSlots && slots.length === 0 && (
                 <div className="no-slots">
                   <b>Novos horários serão abertos em breve.</b>
