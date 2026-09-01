@@ -406,13 +406,17 @@ table select { min-width: 130px; min-height: 38px; padding: 7px 9px; }
 .crm-advanced-filters[open] > summary { color: #fff; background: var(--admin-black); }
 .crm-advanced-filters .crm-filter-panel { width: min(850px,calc(100vw - 90px)); margin: 8px 0 0; position: absolute; z-index: 20; right: 0; grid-template-columns: repeat(3,minmax(160px,1fr)); box-shadow: 0 24px 55px -30px rgba(20,20,20,.55); }
 .crm-table td { white-space: normal; }
-.crm-table th:nth-child(1) { width: 23%; }
-.crm-table th:nth-child(2) { width: 19%; }
-.crm-table th:nth-child(3) { width: 30%; }
-.crm-table th:nth-child(4) { width: 14%; }
-.crm-table th:nth-child(5) { width: 14%; }
+.crm-table th:nth-child(1) { width: 21%; }
+.crm-table th:nth-child(2) { width: 17%; }
+.crm-table th:nth-child(3) { width: 14%; }
+.crm-table th:nth-child(4) { width: 24%; }
+.crm-table th:nth-child(5) { width: 12%; }
+.crm-table th:nth-child(6) { width: 12%; }
 .crm-row-actions { display: flex; gap: 7px; }
 .next-action { display: grid; gap: 4px; }
+.lead-entry { display: grid; gap: 4px; }
+.lead-entry b { font-size: 11px; font-weight: 700; }
+.lead-entry small { color: var(--admin-muted); }
 .next-action b { font-size: 11px; font-weight: 700; }
 .next-action.overdue b,.next-action.overdue small { color: #8b4653; }
 .overdue-row td:first-child { box-shadow: inset 3px 0 #a34f5c; }
