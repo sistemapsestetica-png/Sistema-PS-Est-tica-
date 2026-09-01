@@ -161,6 +161,60 @@
 .benefitGrid p, .fitCards p, .how li p { margin: 0; color: #68635c; font-size: 13px; line-height: 1.65; }
 .disclaimer { margin: 27px 0 0; color: #777067; font-size: 11px; line-height: 1.6; }
 
+.laserEdition {
+  max-width: none;
+  padding: 96px max(24px, calc((100vw - 1240px) / 2));
+  background: linear-gradient(135deg, #f8f5ef 0%, #f2ede3 100%);
+}
+.editionLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, .65fr);
+  gap: clamp(55px, 7vw, 105px);
+  align-items: stretch;
+}
+.editionCopy { padding: 24px 0; align-self: center; }
+.editionCopy h2 {
+  max-width: 700px;
+  margin: 0;
+  font: 400 clamp(50px, 5.2vw, 72px)/.99 Georgia, "Times New Roman", serif;
+  letter-spacing: -.05em;
+}
+.editionCopy > p:last-child {
+  max-width: 650px;
+  margin: 28px 0 0;
+  color: var(--soft-ink);
+  font-size: 16px;
+  line-height: 1.75;
+}
+.editionAction {
+  min-height: 330px;
+  padding: 38px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #fff;
+  background: radial-gradient(circle at 90% 5%, #514936, transparent 38%), linear-gradient(145deg, #302e29, #171716 72%);
+  border: 1px solid rgba(182, 153, 92, .5);
+  border-radius: 4px 38px 4px 38px;
+  box-shadow: 0 38px 75px -52px rgba(0, 0, 0, .9);
+}
+.editionAction > div { display: grid; gap: 13px; }
+.editionAction small { color: #d9c79f; font-size: 9px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.editionAction strong { max-width: 330px; font: 400 29px/1.15 Georgia, serif; }
+.editionAction .primary { width: 100%; justify-content: space-between; color: var(--ink); background: #fffdf9; box-shadow: none; }
+.editionAction .primary:hover { color: #fff; }
+.editionAction .disclaimer { margin: 0; color: rgba(255, 255, 255, .58); }
+
+@media (max-width: 800px) {
+  .laserEdition { padding: 76px 18px; }
+  .editionLayout { grid-template-columns: 1fr; gap: 34px; }
+  .editionCopy { padding: 0; }
+  .editionCopy h2 { font-size: clamp(39px, 11vw, 52px); }
+  .editionCopy > p:last-child { margin-top: 21px; font-size: 14px; }
+  .editionAction { min-height: 280px; padding: 27px 23px; border-radius: 3px 27px 3px 27px; }
+  .editionAction strong { font-size: 25px; }
+}
+
 .fit { display: grid; grid-template-columns: .85fr 1.15fr; gap: clamp(60px, 9vw, 125px); background: #eeeadf; max-width: none; padding-left: max(24px, calc((100vw - 1240px) / 2)); padding-right: max(24px, calc((100vw - 1240px) / 2)); }
 .fit > div:first-child { position: sticky; top: 110px; align-self: start; }
 .fitCards { border-top: 1px solid #c9c0ae; }
