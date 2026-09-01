@@ -25,12 +25,15 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(request) });
   if (!["GET", "POST"].includes(request.method)) return json(request, { error: "Método não permitido." }, 405);
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  let stage = "request";
   try {
     const url = new URL(request.url);
     const payload = request.method === "POST" ? await request.json() : {};
     const bookingToken = String(payload.bookingToken ?? url.searchParams.get("token") ?? "");
     if (!bookingToken) return json(request, { error: "Reserva inválida." }, 400);
+    stage = "release_expired_reservations";
     await supabase.rpc("release_expired_reservations");
+    stage = "load_booking";
     const { data: booking, error: bookingError } = await supabase.from("bookings")
       .select("id,lead_id,status,deposit_cents,payment_expires_at,public_token,leads(name,email,phone),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name,email)")
       .eq("public_token", bookingToken).single();
@@ -38,12 +41,11 @@ Deno.serve(async (request) => {
     const lead = firstRelation(booking.leads);
     const service = firstRelation(booking.services);
     if (!lead?.email) return json(request, { error: "Informe um e-mail válido para gerar o Pix." }, 422);
+    stage = "load_local_payment";
     const { data: currentPayment } = await supabase.from("payments").select("provider,status,pix_copy_paste,qr_code_base64,ticket_url,expires_at").eq("booking_id", booking.id).maybeSingle();
     if (request.method === "GET" || currentPayment?.status === "paid" || (currentPayment?.provider === "asaas" && currentPayment?.pix_copy_paste)) return json(request, { bookingStatus: booking.status, payment: currentPayment });
     if (booking.status !== "awaiting_payment" || new Date(booking.payment_expires_at) <= new Date()) return json(request, { error: "O prazo desta reserva expirou." }, 409);
     if (currentPayment && currentPayment.provider !== "asaas") return json(request, { error: "Esta reserva possui uma cobrança anterior. Fale com a equipe para gerar um novo Pix." }, 409);
-    const cpf = cpfDigits(payload.cpf);
-    if (!validCpf(cpf)) return json(request, { error: "Informe um CPF válido para gerar o Pix.", code: "invalid_cpf" }, 422);
     if (!isAsaasConfigured()) return json(request, { error: "Pix ainda não configurado.", code: "asaas_not_configured" }, 503);
 
     const details = emailDetails(booking as unknown as Record<string, unknown>);
@@ -53,15 +55,36 @@ Deno.serve(async (request) => {
       await supabase.from("leads").update({ status: "qualified", updated_at: new Date().toISOString() }).eq("id", booking.lead_id).neq("status", "lost");
       [emailSent, professionalEmailSent] = await Promise.all([sendCustomerPrebookingEmail(details), sendProfessionalPrebookingEmail(details)]);
     }
-    const customer = await getOrCreateAsaasCustomer({ leadId: booking.lead_id, name: lead.name ?? "Cliente PS Estética", email: lead.email, phone: lead.phone, cpf });
-    const payment = await asaasFetch("/payments", { method: "POST", body: JSON.stringify({ customer: customer.id, billingType: "PIX", value: Number(booking.deposit_cents) / 100, dueDate: asaasDueDate(booking.payment_expires_at), description: `Sinal de reserva — ${service?.name ?? "PS Estética"}`, externalReference: `booking:${booking.id}` }) });
+    const externalReference = `booking:${booking.id}`;
+    stage = "find_provider_payment";
+    const providerQuery = new URLSearchParams({ externalReference, limit: "10" });
+    const providerPayments = await asaasFetch(`/payments?${providerQuery.toString()}`);
+    let payment = Array.isArray(providerPayments?.data)
+      ? providerPayments.data.find((item: { status?: string }) => !["DELETED", "REFUNDED"].includes(String(item.status ?? "")))
+      : null;
+    if (!payment?.id) {
+      const cpf = cpfDigits(payload.cpf);
+      if (!validCpf(cpf)) return json(request, { error: "Informe um CPF válido para gerar o Pix.", code: "invalid_cpf" }, 422);
+      stage = "create_customer";
+      const customer = await getOrCreateAsaasCustomer({ leadId: booking.lead_id, name: lead.name ?? "Cliente PS Estética", email: lead.email, phone: lead.phone, cpf });
+      stage = "create_provider_payment";
+      payment = await asaasFetch("/payments", { method: "POST", body: JSON.stringify({ customer: customer.id, billingType: "PIX", value: Number(booking.deposit_cents) / 100, dueDate: asaasDueDate(booking.payment_expires_at), description: `Sinal de reserva — ${service?.name ?? "PS Estética"}`, externalReference }) });
+    }
+    stage = "load_pix_qr";
     const qr = await asaasFetch(`/payments/${encodeURIComponent(payment.id)}/pixQrCode`);
-    const { error: saveError } = await supabase.from("payments").upsert({ booking_id: booking.id, provider: "asaas", status: "pending", provider_status: payment.status, amount_cents: booking.deposit_cents, external_id: payment.id, pix_copy_paste: qr.payload ?? null, qr_code_base64: qr.encodedImage ?? null, ticket_url: payment.invoiceUrl ?? null, expires_at: booking.payment_expires_at, paid_at: null, updated_at: new Date().toISOString() }, { onConflict: "booking_id" });
-    if (saveError) throw saveError;
+    stage = "save_local_payment";
+    const paymentRecord = { booking_id: booking.id, provider: "asaas", status: "pending", provider_status: payment.status, amount_cents: booking.deposit_cents, external_id: payment.id, pix_copy_paste: qr.payload ?? null, qr_code_base64: qr.encodedImage ?? null, ticket_url: payment.invoiceUrl ?? null, expires_at: booking.payment_expires_at, paid_at: null, updated_at: new Date().toISOString() };
+    let { error: saveError } = await supabase.from("payments").upsert(paymentRecord, { onConflict: "booking_id" });
+    if (saveError && paymentRecord.qr_code_base64) {
+      console.warn("Asaas payment save retry without QR image", { bookingId: booking.id, code: saveError.code });
+      ({ error: saveError } = await supabase.from("payments").upsert({ ...paymentRecord, qr_code_base64: null }, { onConflict: "booking_id" }));
+    }
+    if (saveError) throw new Error(`payment_save_failed:${saveError.code ?? "unknown"}`);
     await supabase.from("clinic_settings").update({ payment_provider: "asaas", pix_enabled: true, updated_at: new Date().toISOString() }).eq("id", true);
     return json(request, { bookingStatus: booking.status, payment: { status: "pending", pix_copy_paste: qr.payload, qr_code_base64: qr.encodedImage, ticket_url: payment.invoiceUrl, expires_at: booking.payment_expires_at }, emailSent, professionalEmailSent }, 201);
   } catch (error) {
-    console.error("Asaas Pix error", error instanceof Error ? error.message : error);
-    return json(request, { error: "Não foi possível gerar o Pix agora." }, 502);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Asaas Pix error", { stage, message });
+    return json(request, { error: "Não foi possível gerar o Pix agora.", code: "pix_generation_failed", stage }, 502);
   }
 });

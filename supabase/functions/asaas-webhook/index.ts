@@ -11,7 +11,7 @@ async function releaseAwaitingBooking(supabase: ReturnType<typeof createClient>,
   const { data: expired } = await supabase.from("bookings").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", bookingId).eq("status", "awaiting_payment").select("id").maybeSingle();
   if (!expired) return;
   if (booking.lead_id) await supabase.from("leads").update({ status: "contacted", updated_at: new Date().toISOString() }).eq("id", booking.lead_id).eq("status", "qualified");
-  if (booking.slot_id) await supabase.from("slots").update({ status: "open", updated_at: new Date().toISOString() }).eq("id", booking.slot_id).eq("status", "held");
+  if (booking.slot_id) await supabase.from("slots").update({ status: "open", updated_at: new Date().toISOString() }).eq("id", booking.slot_id).in("status", ["reserved", "held"]);
 }
 
 Deno.serve(async (request) => {
