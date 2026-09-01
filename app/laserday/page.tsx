@@ -118,9 +118,10 @@ export default function LaserDayPage() {
             <p>No Laser Day, a PS Estética reserva uma data específica para atendimentos nas áreas participantes. A equipe informa a condição das regiões selecionadas, combinações possíveis e horários disponíveis.</p>
           </div>
           <div className={s.editionAction}>
-            <div><small>Atendimento personalizado</small><strong>Escolha suas regiões e consulte a agenda.</strong></div>
-            <a className={s.primary} href={whatsapp} target="_blank" rel="noreferrer">Quero consultar um horário <span>›</span></a>
-            <p className={s.disclaimer}>São Bernardo do Campo/SP<br />Atendimento pelo WhatsApp da PS Estética.</p>
+            <span className={s.editionIndex}>Próxima edição</span>
+            <div className={s.editionActionCopy}><small>Condição para as áreas que você escolher</small><strong>Receba as combinações disponíveis e encontre o melhor horário.</strong><p>Conte para a equipe quais regiões deseja tratar. Você recebe a condição da edição e tira suas dúvidas antes de decidir.</p></div>
+            <div className={s.editionMeta}><span><b>Local</b>São Bernardo do Campo/SP</span><span><b>Atendimento</b>Direto com a equipe pelo WhatsApp</span></div>
+            <a className={s.primary} href={whatsapp} target="_blank" rel="noreferrer">Consultar condição e horários <span>›</span></a>
           </div>
         </div>
       </section>

@@ -273,22 +273,25 @@
 }
 .editionAction {
   min-height: 330px;
-  padding: 38px;
+  padding: 30px 0 4px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  color: #fff;
-  background: radial-gradient(circle at 90% 5%, #514936, transparent 38%), linear-gradient(145deg, #302e29, #171716 72%);
-  border: 1px solid rgba(182, 153, 92, .5);
-  border-radius: 4px 38px 4px 38px;
-  box-shadow: 0 38px 75px -52px rgba(0, 0, 0, .9);
+  justify-content: center;
+  color: var(--ink);
+  background: transparent;
+  border-top: 1px solid #bfa979;
+  border-bottom: 1px solid #cec3ae;
 }
-.editionAction > div { display: grid; gap: 13px; }
-.editionAction small { color: #d9c79f; font-size: 9px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
-.editionAction strong { max-width: 330px; font: 400 29px/1.15 Georgia, serif; }
-.editionAction .primary { width: 100%; justify-content: space-between; color: var(--ink); background: #fffdf9; box-shadow: none; }
-.editionAction .primary:hover { color: #fff; }
-.editionAction .disclaimer { margin: 0; color: rgba(255, 255, 255, .58); }
+.editionIndex { width: fit-content; margin-bottom: 25px; padding: 7px 11px; color: #735f36; background: #e9dfca; border-radius: 999px; font-size: 8px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.editionActionCopy { display: grid; gap: 13px; }
+.editionAction small { color: #826b3e; font-size: 9px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.editionAction strong { max-width: 430px; font: 400 31px/1.12 Georgia, serif; }
+.editionActionCopy p { max-width: 440px; margin: 3px 0 0; color: var(--soft-ink); font-size: 13px; line-height: 1.65; }
+.editionMeta { margin: 26px 0 22px; display: grid; grid-template-columns: .8fr 1.2fr; border-top: 1px solid #d4cbbb; border-bottom: 1px solid #d4cbbb; }
+.editionMeta span { padding: 14px 13px 14px 0; display: grid; gap: 5px; color: #58544d; font-size: 11px; line-height: 1.4; }
+.editionMeta span + span { padding-left: 17px; border-left: 1px solid #d4cbbb; }
+.editionMeta b { color: #8c7343; font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
+.editionAction .primary { width: 100%; justify-content: space-between; }
 
 .laserExperience {
   position: relative;
@@ -356,8 +359,12 @@
   .editionCopy { padding: 0; }
   .editionCopy h2 { font-size: clamp(39px, 11vw, 52px); }
   .editionCopy > p:last-child { margin-top: 21px; font-size: 14px; }
-  .editionAction { min-height: 280px; padding: 27px 23px; border-radius: 3px 27px 3px 27px; }
-  .editionAction strong { font-size: 25px; }
+  .editionAction { min-height: 0; padding: 27px 0 4px; }
+  .editionIndex { margin-bottom: 21px; }
+  .editionAction strong { font-size: 28px; }
+  .editionMeta { grid-template-columns: 1fr; }
+  .editionMeta span { padding: 12px 0; }
+  .editionMeta span + span { padding-left: 0; border-top: 1px solid #d4cbbb; border-left: 0; }
 }
 
 .fit { display: grid; grid-template-columns: .85fr 1.15fr; gap: clamp(60px, 9vw, 125px); background: #eeeadf; max-width: none; padding-left: max(24px, calc((100vw - 1240px) / 2)); padding-right: max(24px, calc((100vw - 1240px) / 2)); }
