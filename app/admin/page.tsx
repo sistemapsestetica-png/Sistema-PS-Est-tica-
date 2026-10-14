@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import { AGENDA_URL, PANEL_URL, PROFESSIONAL_URL, QUIZ_URL } from "../../lib/public-urls";
 import { RevenueDashboard } from "./revenue-dashboard";
+import { OperationsReport } from "./operations-report";
 import "./admin.css";
 
 type Service = {
@@ -84,15 +85,16 @@ type StaffInvite = { email: string; full_name: string; role: "receptionist" | "p
 type StaffAccessRequest = { id: number; user_id: string; email: string; full_name: string; status: "pending" | "approved" | "rejected"; created_at: string };
 type Assignment = { professional_id: string; service_id: number };
 type BookingLink = { id: number; token: string; label: string; service_id: number | null; professional_id: string | null; active: boolean; uses: number; created_at: string };
-type AdminSection = "overview" | "clients" | "agenda" | "revenue" | "team" | "access" | "services" | "links" | "settings";
+type AdminSection = "overview" | "clients" | "agenda" | "revenue" | "reports" | "team" | "access" | "services" | "links" | "settings";
 type LeadQueue = "new" | "conversation" | "interested" | "prebooking" | "confirmed" | "inactive";
 type FunnelPeriod = "today" | "7d" | "30d" | "custom";
 
 const adminSections: { id: AdminSection; label: string; description: string; group: "Operação" | "Gestão" | "Sistema" }[] = [
   { id: "overview", label: "Início", description: "Resumo da operação e prioridades", group: "Operação" },
-  { id: "clients", label: "Atendimento", description: "Contatos organizados por próxima ação", group: "Operação" },
+  { id: "clients", label: "Atendimento", description: "Contatos organizados por data de entrada", group: "Operação" },
   { id: "agenda", label: "Agenda", description: "Horários e atendimentos confirmados", group: "Operação" },
   { id: "revenue", label: "Faturamento", description: "Recebimentos, saldos e indicadores", group: "Gestão" },
+  { id: "reports", label: "Relatórios", description: "Movimentações, agenda e financeiro", group: "Gestão" },
   { id: "team", label: "Equipe", description: "Profissionais, acessos e modalidades", group: "Gestão" },
   { id: "access", label: "Acessos", description: "Aprovação e bloqueio de recepcionistas", group: "Gestão" },
   { id: "services", label: "Serviços", description: "Procedimentos, preços e duração", group: "Gestão" },
@@ -601,11 +603,12 @@ export default function AdminPage() {
     if (!selectedLead || busy) return;
     const notes = selectedLead.notes?.trim() || null;
     setBusy(true); setMessage("");
-    const { error } = await supabase.from("leads").update({ notes }).eq("id", selectedLead.id);
+    const { data, error } = await supabase.rpc("set_lead_notes", { p_lead_id: selectedLead.id, p_notes: notes });
     setBusy(false);
     if (error) { setMessage(`Não foi possível salvar as observações: ${error.message}`); return; }
-    setLeads((current) => current.map((lead) => lead.id === selectedLead.id ? { ...lead, notes } : lead));
-    setSelectedLead({ ...selectedLead, notes });
+    const persistedNotes = data?.[0]?.notes ?? null;
+    setLeads((current) => current.map((lead) => lead.id === selectedLead.id ? { ...lead, notes: persistedNotes } : lead));
+    setSelectedLead((current) => current?.id === selectedLead.id ? { ...current, notes: persistedNotes } : current);
     setMessage("Observações salvas no perfil da cliente.");
   }
 
@@ -819,11 +822,8 @@ export default function AdminPage() {
       && (leadIntentFilter === "all" || lead.intent_level === leadIntentFilter)
       && (leadSourceFilter === "all" || leadSource(lead) === leadSourceFilter);
   }).sort((a, b) => {
-    const aDue = a.next_action_at ? new Date(a.next_action_at).getTime() : Number.MAX_SAFE_INTEGER;
-    const bDue = b.next_action_at ? new Date(b.next_action_at).getTime() : Number.MAX_SAFE_INTEGER;
-    if (aDue !== bDue) return aDue - bDue;
-    if (a.intent_level !== b.intent_level) return ({ high: 0, medium: 1, low: 2 }[a.intent_level ?? "low"] - ({ high: 0, medium: 1, low: 2 }[b.intent_level ?? "low"]));
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    const byEntryDate = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    return byEntryDate || b.id - a.id;
   });
   const selectedLeadEvents = selectedLead ? leadEvents.filter((event) => event.lead_id === selectedLead.id) : [];
   const selectedLeadBookings = selectedLead ? bookings.filter((booking) => booking.lead_id === selectedLead.id) : [];
@@ -1072,7 +1072,7 @@ export default function AdminPage() {
       </>}
 
       {activeSection === "clients" && <section className="admin-panel crm-section">
-        <div className="panel-heading crm-heading"><div><p className="admin-eyebrow">Atendimento</p><h2>Quem precisa da sua atenção?</h2></div><p>As clientes estão ordenadas pela próxima ação e pelo nível de intenção.</p></div>
+        <div className="panel-heading crm-heading"><div><p className="admin-eyebrow">Atendimento</p><h2>Quem precisa da sua atenção?</h2></div><p>As clientes estão sempre ordenadas pela data de entrada, da mais recente para a mais antiga.</p></div>
         <div className="crm-funnel-grid" role="tablist" aria-label="Etapas do atendimento">
           {(["new", "conversation", "interested", "prebooking", "confirmed", "inactive"] as LeadQueue[]).map((queue) => <button key={queue} role="tab" aria-selected={leadQueue === queue} className={`crm-funnel-card ${queue} ${leadQueue === queue ? "active" : ""}`} onClick={() => { setLeadQueue(queue); setShowOverdueOnly(false); }}><span>{leadQueueLabel[queue]}</span><b>{queueCounts[queue]}</b><small>{leadQueueDescription[queue]}</small></button>)}
         </div>
@@ -1114,6 +1114,7 @@ export default function AdminPage() {
       </section>}
 
       {activeSection === "revenue" && <RevenueDashboard />}
+      {activeSection === "reports" && <OperationsReport />}
 
       {activeSection === "settings" && <>
       <section className="payment-note">

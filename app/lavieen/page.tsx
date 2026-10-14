@@ -129,7 +129,13 @@ export default function LavieenPage() {
     setLead(next);
     if (trackedLead.current !== next.lead_id) {
       trackedLead.current = next.lead_id;
-      trackMetaEvent("Lead", { content_name: "Quiz Lavieen", content_category: "lavieen" });
+      const eventId = `lead-${next.lead_id}-lead`;
+      trackMetaEvent("Lead", { content_name: "Quiz Lavieen", content_category: "lavieen" }, eventId);
+      void supabase.functions.invoke("meta-lead", {
+        body: { lead_id: next.lead_id, reservation_token: next.reservation_token },
+      }).then(({ error }) => {
+        if (error) console.warn("Meta Conversions API Lead event was not sent", error.message);
+      });
     }
     return next;
   }
