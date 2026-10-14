@@ -54,6 +54,7 @@ export function OperationsReport() {
   const [start, setStart] = useState(() => startOfMonth(todayInSaoPaulo()));
   const [end, setEnd] = useState(todayInSaoPaulo);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [notesLeads, setNotesLeads] = useState<Lead[]>([]);
   const [events, setEvents] = useState<LeadEvent[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -74,17 +75,19 @@ export function OperationsReport() {
     if (!start || !end || end < start) return;
     setLoading(true); setError("");
     const { from, to } = dateRange(start, end);
-    const [leadResult, eventResult, bookingResult, paymentResult, servicePaymentResult, slotResult] = await Promise.all([
+    const [leadResult, noteResult, eventResult, bookingResult, paymentResult, servicePaymentResult, slotResult] = await Promise.all([
       supabase.from("leads").select("id,name,service_slug,status,notes,created_at,updated_at,source").gte("created_at", from).lt("created_at", to).order("created_at", { ascending: false }).limit(5000),
+      supabase.from("leads").select("id,name,service_slug,status,notes,created_at,updated_at,source").not("notes", "is", null).gte("updated_at", from).lt("updated_at", to).order("updated_at", { ascending: false }).limit(5000),
       supabase.from("lead_events").select("id,lead_id,event_type,created_at,booking_id,leads(name,service_slug)").gte("created_at", from).lt("created_at", to).order("created_at", { ascending: false }).limit(5000),
       supabase.from("bookings").select("id,status,created_at,updated_at,deposit_cents,leads(name),services(name),slots(starts_at)").gte("created_at", from).lt("created_at", to).order("created_at", { ascending: false }).limit(3000),
       supabase.from("payments").select("id,amount_cents,paid_at,provider,bookings(leads(name),services(name))").eq("status", "paid").gte("paid_at", from).lt("paid_at", to).order("paid_at", { ascending: false }).limit(5000),
       supabase.from("service_payments").select("id,amount_cents,paid_at,method,bookings(leads(name),services(name))").eq("status", "paid").gte("paid_at", from).lt("paid_at", to).order("paid_at", { ascending: false }).limit(5000),
       supabase.from("slots").select("id,starts_at,status,bookings(id,status,leads(name))").gte("starts_at", from).lt("starts_at", to).order("starts_at", { ascending: true }).limit(5000),
     ]);
-    const firstError = leadResult.error || eventResult.error || bookingResult.error || paymentResult.error || servicePaymentResult.error || slotResult.error;
+    const firstError = leadResult.error || noteResult.error || eventResult.error || bookingResult.error || paymentResult.error || servicePaymentResult.error || slotResult.error;
     if (firstError) setError(`Não foi possível gerar o relatório: ${firstError.message}`);
     setLeads((leadResult.data ?? []) as Lead[]);
+    setNotesLeads((noteResult.data ?? []) as Lead[]);
     setEvents((eventResult.data ?? []) as unknown as LeadEvent[]);
     setBookings((bookingResult.data ?? []) as unknown as Booking[]);
     setPayments((paymentResult.data ?? []) as unknown as Payment[]);
@@ -110,7 +113,7 @@ export function OperationsReport() {
       return groups;
     }, {});
     const bySource = leads.reduce<Record<string, number>>((groups, lead) => { const source = sourceLabel(lead.source); groups[source] = (groups[source] ?? 0) + 1; return groups; }, {});
-    const notes = leads.filter((lead) => Boolean(lead.notes?.trim()));
+    const notes = notesLeads.filter((lead) => Boolean(lead.notes?.trim()));
     const activity = [
       ...events.map((event) => ({ at: event.created_at, title: EVENT_LABEL[event.event_type] ?? event.event_type, detail: event.leads ? `${event.leads.name} · ${event.leads.service_slug}` : "" })),
       ...bookings.map((booking) => ({ at: booking.created_at, title: "Pré-reserva criada", detail: `${booking.leads?.name ?? "Cliente"} · ${booking.services?.name ?? "Procedimento"}` })),
@@ -118,7 +121,7 @@ export function OperationsReport() {
       ...servicePayments.filter((payment) => payment.paid_at).map((payment) => ({ at: payment.paid_at!, title: `Recebimento registrado · ${PAYMENT_LABEL[payment.method] ?? payment.method}`, detail: `${payment.bookings?.leads?.name ?? "Cliente"} · ${money(Number(payment.amount_cents))}` })),
     ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
     return { revenue, confirmed, scheduled, cancelled, attended, noShows, contacted, booked, byService, bySource, notes, activity };
-  }, [leads, events, bookings, payments, servicePayments, scheduledSlots]);
+  }, [leads, notesLeads, events, bookings, payments, servicePayments, scheduledSlots]);
 
   const periodDescription = `${dateOnly(start)} a ${dateOnly(end)}`;
   return <section className="operations-report" id="operations-report">
