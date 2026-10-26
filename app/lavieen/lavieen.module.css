@@ -581,3 +581,28 @@
   .experienceImage img { transition: none; }
   .laserExperience:hover .experienceImage img { transform: none; }
 }
+
+/* Laser Day: "Ver mais regiões", erro do campo e foco no título da etapa */
+.moreRegions { width: 100%; margin-top: 8px; padding: 12px 14px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #5a5140; background: transparent; border: 1px dashed #b9ad95; border-radius: 2px 10px 2px 10px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.fieldError { display: block; margin-top: 5px; color: #a3392b; font-size: 12px; }
+.quizCard { scroll-margin-top: 12px; }
+.quizBody h3:focus { outline: none; }
+
+/* Botox: perguntas frequentes e botão do bloco de confiança */
+.faq { order: 6; width: 100%; max-width: 1240px; margin: 0 auto; padding: 120px 24px; border-top: 1px solid #dcd5c8; }
+.faq .sectionIntro { grid-template-columns: .7fr 1.7fr; }
+.faq .sectionIntro > p:last-child { display: none; }
+.faqList { margin-top: 56px; border-top: 1px solid #ccc2b2; }
+.faqList details { border-bottom: 1px solid #ccc2b2; }
+.faqList summary { padding: 24px 40px 24px 0; position: relative; list-style: none; cursor: pointer; font: 400 24px/1.2 Georgia, serif; }
+.faqList summary::-webkit-details-marker { display: none; }
+.faqList summary::after { content: "+"; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); color: #987c47; font: 300 28px/1 Georgia, serif; }
+.faqList details[open] summary::after { content: "–"; }
+.faqList details p { margin: 0 0 26px; max-width: 760px; color: var(--soft-ink); line-height: 1.75; }
+.confidence .primary { margin: 36px auto 0; display: inline-flex; }
+@media (max-width: 620px) {
+  .faq { padding: 78px 16px; }
+  .faq .sectionIntro { grid-template-columns: 1fr; }
+  .faqList { margin-top: 36px; }
+  .faqList summary { padding: 20px 34px 20px 0; font-size: 20px; }
+}

@@ -29,3 +29,19 @@ export function formatBrazilianWhatsapp(value: string) {
 }
 
 export const INVALID_WHATSAPP_MESSAGE = "Digite um WhatsApp válido com DDD e 9 dígitos, por exemplo: (11) 90000-0000.";
+
+// Máscara suave para digitação livre: aceita +55, espaços, hífen e parênteses sem apagar o que a pessoa digita.
+export function maskWhatsappInput(value: string) {
+  const plus = value.trim().startsWith("+");
+  let digits = value.replace(/\D/g, "");
+  if (plus) {
+    if (digits.length < 2 && "55".startsWith(digits)) return `+${digits}`;
+    if (digits.startsWith("55")) digits = digits.slice(2);
+    const national = formatBrazilianWhatsapp(digits.slice(0, 11));
+    return national ? `+55 ${national}` : "+55";
+  }
+  if (digits.length > 11 && digits.startsWith("55")) digits = digits.slice(2);
+  return formatBrazilianWhatsapp(digits.slice(0, 11));
+}
+
+export const SHORT_INVALID_WHATSAPP_MESSAGE = "Confira o DDD e o número do WhatsApp";

@@ -78,9 +78,11 @@ Deno.serve(async (request) => {
 
     const graphVersion = Deno.env.get("META_GRAPH_API_VERSION") ?? "v23.0";
     const pixelId = Deno.env.get("META_PIXEL_ID") ?? "1633028891341714";
-    const eventSourceUrl = lead.service_slug === "lavieen"
-      ? "https://quiz.psestetica.com.br/lavieen"
-      : "https://quiz.psestetica.com.br";
+    const landing: Record<string, { url: string; name: string }> = {
+      lavieen: { url: "https://quiz.psestetica.com.br/lavieen", name: "Quiz Lavieen" },
+      botox: { url: "https://quiz.psestetica.com.br/botox", name: "Quiz Botox" },
+    };
+    const eventSourceUrl = landing[lead.service_slug]?.url ?? "https://quiz.psestetica.com.br";
     const response = await fetch(`https://graph.facebook.com/${graphVersion}/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -92,7 +94,7 @@ Deno.serve(async (request) => {
           event_source_url: eventSourceUrl,
           action_source: "website",
           user_data: userData,
-          custom_data: { content_name: lead.service_slug === "lavieen" ? "Quiz Lavieen" : "Quiz PS Estética", content_category: lead.service_slug },
+          custom_data: { content_name: landing[lead.service_slug]?.name ?? "Quiz PS Estética", content_category: lead.service_slug },
         }],
         ...(Deno.env.get("META_TEST_EVENT_CODE") ? { test_event_code: Deno.env.get("META_TEST_EVENT_CODE") } : {}),
       }),
