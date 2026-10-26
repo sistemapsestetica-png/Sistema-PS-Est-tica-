@@ -1,0 +1,144 @@
+/* Seções da landing /botox. Usa as variáveis e a tipografia do design system do Lavieen (lavieen.module.css). */
+
+/* Landing em fluxo normal: a ordem das seções é a do HTML (no Lavieen o quiz sobe para o topo no mobile). */
+main.landing { display: block; }
+
+.section { width: 100%; padding: 110px 24px; }
+.inner { max-width: 1240px; margin: 0 auto; }
+.narrow { max-width: 860px; margin: 0 auto; }
+.alt { background: #eeeadf; }
+.line { border-top: 1px solid #dcd5c8; }
+
+.eyebrow {
+  margin: 0 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #816b3f;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+.eyebrow::before { content: ""; width: 34px; height: 1px; background: var(--gold); }
+
+.h1, .h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -.045em;
+}
+.h1 { max-width: 900px; font-size: clamp(40px, 5.6vw, 76px); line-height: 1; }
+.h2 { max-width: 860px; font-size: clamp(34px, 4.2vw, 56px); line-height: 1.05; }
+.h3 { margin: 38px 0 10px; font: 400 clamp(24px, 2.4vw, 30px)/1.15 Georgia, serif; letter-spacing: -.02em; }
+.text { max-width: 720px; margin: 22px 0 0; color: var(--soft-ink); font-size: 17px; line-height: 1.75; }
+.h3 + .text { margin-top: 0; }
+.note { max-width: 720px; margin: 28px 0 0; color: #777067; font-size: 12px; line-height: 1.6; }
+
+/* Topo */
+.top { padding-top: clamp(48px, 7vw, 100px); padding-bottom: 80px; }
+.top .text { margin-top: 26px; font-size: 18px; }
+.cta { margin-top: 32px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.ctaCenter .cta { align-items: center; text-align: center; }
+.micro { max-width: 440px; margin: 0; color: #76716a; font-size: 12px; line-height: 1.5; }
+.trust { margin: 36px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; list-style: none; }
+.trust li { padding: 10px 15px; border: 1px solid rgba(23, 23, 21, .2); border-radius: 999px; color: #4e4b46; font-size: 11px; font-weight: 700; letter-spacing: .05em; line-height: 1.3; }
+
+/* Listas de reconhecimento */
+.look { margin: 40px 0 0; padding: 0; list-style: none; border-top: 1px solid #ccc2b2; }
+.look li { padding: 22px 0 22px 34px; position: relative; border-bottom: 1px solid #ccc2b2; font: 400 clamp(19px, 2vw, 24px)/1.35 Georgia, serif; }
+.look li::before { content: ""; position: absolute; left: 4px; top: 33px; width: 14px; height: 1px; background: var(--gold); }
+
+/* Cartões de região */
+.cards { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #ccc2b2; }
+.cards article { padding: 30px 26px 28px; border-right: 1px solid #ccc2b2; }
+.cards article:first-child { border-left: 1px solid #ccc2b2; }
+.cards h3 { margin: 0 0 12px; font: 400 26px/1.1 Georgia, serif; }
+.cards p { margin: 0; color: #68635c; font-size: 14px; line-height: 1.65; }
+
+/* Cuidados da clínica */
+.care { margin: 44px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0; list-style: none; border-top: 1px solid #ccc2b2; }
+.care li { padding: 28px 28px 26px 0; }
+.care li + li { padding-left: 28px; border-left: 1px solid #ccc2b2; }
+.care h3 { margin: 0 0 10px; font: 400 23px/1.15 Georgia, serif; }
+.care p { margin: 0; color: #68635c; font-size: 14px; line-height: 1.65; }
+
+/* Para quem faz sentido */
+.two { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.col { padding: 32px 30px 30px; background: #fffdf8; border: 1px solid #d8cfbf; border-radius: 4px 28px 4px 28px; }
+.col h3 { margin: 0 0 18px; font: 400 24px/1.15 Georgia, serif; }
+.col ul { margin: 0; padding: 0; list-style: none; }
+.col li { padding: 11px 0 11px 28px; position: relative; border-top: 1px solid #e5ddcd; color: #4e4b46; font-size: 15px; line-height: 1.5; }
+.col li::before { position: absolute; left: 0; top: 11px; font-weight: 800; }
+.yes li::before { content: "✓"; color: #8a7448; }
+.no li::before { content: "×"; color: #a3392b; }
+
+/* Passo a passo */
+.steps { margin: 44px 0 0; padding: 0; list-style: none; border-top: 1px solid #ccc2b2; }
+.steps li { padding: 26px 0; display: grid; grid-template-columns: 70px 1fr; column-gap: 20px; border-bottom: 1px solid #ccc2b2; }
+.steps li > span { color: #987c47; font: 38px/1 Georgia, serif; }
+.steps h3 { margin: 0 0 8px; font: 400 25px/1.15 Georgia, serif; }
+.steps p { margin: 0; color: #68635c; font-size: 15px; line-height: 1.65; }
+
+/* Fechamento (faixa escura) */
+.closing { color: #fff; text-align: center; background: #191918; }
+.closing .eyebrow { justify-content: center; color: var(--gold-light); }
+.closing .h2 { margin: 0 auto; color: #fff; }
+.closing .text { margin-left: auto; margin-right: auto; color: rgba(255, 255, 255, .7); }
+.closing .micro { color: rgba(255, 255, 255, .6); }
+.closing .note { margin-left: auto; margin-right: auto; color: rgba(255, 255, 255, .6); font-size: 13px; }
+.closing .light { color: var(--ink); background: #fff; }
+.closing .light:hover { background: #f1ece1; }
+.closing .light span { color: #8a7448; }
+
+/* Botões do resultado do quiz */
+.resultActions { margin: 26px 0 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+
+/* Botão fixo no mobile */
+.sticky { display: none; }
+.footerPad { padding-bottom: 55px; }
+
+@media (max-width: 800px) {
+  .cards { grid-template-columns: 1fr; border-left: 1px solid #ccc2b2; }
+  .cards article { border-left: 0; border-right: 1px solid #ccc2b2; border-bottom: 1px solid #ccc2b2; padding: 24px 20px; }
+  .cards article:first-child { border-left: 0; }
+  .two { grid-template-columns: 1fr; }
+  .care li, .care li + li { padding: 22px 0; border-left: 0; border-bottom: 1px solid #ccc2b2; }
+}
+
+@media (max-width: 620px) {
+  .section { padding: 72px 16px; }
+  .top { padding-top: 36px; padding-bottom: 56px; }
+  .top .text { font-size: 16px; }
+  .text { font-size: 15.5px; }
+  .eyebrow { margin-bottom: 14px; font-size: 9px; letter-spacing: .14em; }
+  .cta { width: 100%; }
+  .cta > :first-child { width: 100%; }
+  .trust li { padding: 9px 12px; font-size: 10.5px; }
+  .steps li { grid-template-columns: 46px 1fr; column-gap: 12px; }
+  .steps li > span { font-size: 30px; }
+  .col { padding: 26px 20px 24px; }
+  .footerPad { padding-bottom: 110px; }
+  .sticky {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    display: block;
+    background: rgba(247, 244, 238, .96);
+    border-top: 1px solid rgba(23, 23, 21, .12);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 -14px 30px -22px rgba(0, 0, 0, .55);
+    transform: translateY(110%);
+    visibility: hidden;
+    transition: transform .28s ease, visibility 0s linear .28s;
+  }
+  .stickyOn { transform: translateY(0); visibility: visible; transition: transform .28s ease, visibility 0s; }
+  .sticky button { width: 100%; min-height: 52px; gap: 14px; padding: 0 16px; font-size: 10.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky, .stickyOn { transition: none; }
+}
