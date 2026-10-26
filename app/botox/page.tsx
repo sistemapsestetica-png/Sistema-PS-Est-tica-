@@ -86,6 +86,8 @@ export default function BotoxPage() {
   const phoneRef = useRef<HTMLInputElement>(null);
   const previousStep = useRef<Step>(0);
   const quizSectionRef = useRef<HTMLElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
+  const barRef = useRef<HTMLSpanElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [quizInView, setQuizInView] = useState(false);
   const current = step >= 2 && step <= 4 ? questions[step - 2] : null;
@@ -136,12 +138,45 @@ export default function BotoxPage() {
     return () => cancelAnimationFrame(frame);
   }, [step]);
 
-  // Botão fixo do mobile: aparece depois do topo e some quando o quiz está à vista ou aberto.
+  // Rolagem: botão fixo do mobile (aparece depois do topo e some com o quiz à vista ou aberto), barra de leitura, cabeçalho e parallax.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 520);
-    onScroll();
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const y = window.scrollY;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      setScrolled(y > 520);
+      const root = rootRef.current;
+      if (root) { root.style.setProperty("--sy", String(Math.round(y))); root.dataset.scrolled = y > 12 ? "1" : "0"; }
+      if (barRef.current) barRef.current.style.transform = `scaleX(${max > 0 ? Math.min(1, y / max) : 0})`;
+    };
+    const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(update); };
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => { window.removeEventListener("scroll", onScroll); if (frame) window.cancelAnimationFrame(frame); };
+  }, []);
+
+  // Revelação ao rolar: só esconde o que está abaixo da dobra e mostra quando entra na tela (sem script ou com movimento reduzido, tudo aparece).
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target as HTMLElement;
+        observer.unobserve(el);
+        el.classList.add(b.revealIn);
+        window.setTimeout(() => el.classList.remove(b.revealPre, b.revealIn), 1500 + (Number.parseFloat(el.style.transitionDelay) || 0));
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+    root.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => {
+      if (el.getBoundingClientRect().top < window.innerHeight * 0.92) return;
+      const siblings = Array.from(el.parentElement?.children ?? []).filter((child) => child.hasAttribute("data-reveal"));
+      el.style.transitionDelay = `${Math.max(0, siblings.indexOf(el)) * 90}ms`;
+      el.classList.add(b.revealPre);
+      observer.observe(el);
+    });
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -168,9 +203,9 @@ export default function BotoxPage() {
     cardRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   }
 
-  const cta = (withMicro: boolean, light = false) => (
-    <div className={b.cta}>
-      <button type="button" className={`${s.primary} ${light ? b.light : ""}`} onClick={goToQuiz}>{CTA_TEXT} <span>›</span></button>
+  const cta = (withMicro: boolean, light = false, hero = false) => (
+    <div className={b.cta} {...(hero ? {} : { "data-reveal": "" })}>
+      <button type="button" className={`${s.primary} ${b.ctaBtn} ${light ? b.light : ""} ${hero ? b.ctaHero : ""}`} onClick={goToQuiz}>{CTA_TEXT} <span>›</span></button>
       {withMicro && <p className={b.micro}>{CTA_MICRO}</p>}
     </div>
   );
@@ -291,81 +326,82 @@ export default function BotoxPage() {
     </button>
   );
 
-  return <main className={`${s.page} ${b.landing}`}>
-    <header className={s.header}>
+  return <main ref={rootRef} className={`${s.page} ${b.landing}`}>
+    <div className={b.bar} aria-hidden="true"><span ref={barRef} /></div>
+    <header className={`${s.header} ${b.headerBar}`}>
       <a href="#inicio" aria-label="PS Estética, início"><Image src="/ps-estetica-logo-oficial.png" width={246} height={80} alt="PS Estética Avançada" priority /></a>
       <a className={s.headerCta} href={whatsapp} target="_blank" rel="noreferrer">Falar com a equipe</a>
     </header>
 
     <section className={`${s.hero} ${b.heroOn}`} id="inicio">
-      <div className={s.heroCopy}>
+      <div className={`${s.heroCopy} ${b.heroIn}`}>
         <p className={s.eyebrow}>Botox • PS Estética • São Bernardo do Campo</p>
         <h1>Botox para suavizar rugas e linhas de expressão, <em>com aparência natural</em></h1>
         <p className={s.heroText}>Responda 5 perguntas rápidas, veja se o Botox faz sentido para você e agende sua avaliação na PS Estética, em São Bernardo do Campo.</p>
-        {cta(true)}
+        {cta(true, false, true)}
         <ul className={b.trust}><li>Avaliação individual antes de qualquer aplicação</li><li>Profissional habilitado</li><li>Atendimento em São Bernardo do Campo, ABC Paulista</li></ul>
       </div>
-      <div className={s.heroPanel}><span className={s.orbit} aria-hidden="true" /><p>Indicação inicial em 1 minuto</p><strong>5 perguntas</strong><ul><li>Avaliação individual antes de qualquer aplicação</li><li>Profissional habilitado</li><li>Atendimento em São Bernardo do Campo, ABC Paulista</li></ul><small>Sem diagnóstico automático. Você será avaliado individualmente.</small></div>
+      <div className={`${s.heroPanel} ${b.panelIn}`}><span className={`${s.orbit} ${b.orbitPulse}`} aria-hidden="true" /><p>Indicação inicial em 1 minuto</p><strong>5 perguntas</strong><ul><li>Avaliação individual antes de qualquer aplicação</li><li>Profissional habilitado</li><li>Atendimento em São Bernardo do Campo, ABC Paulista</li></ul><small>Sem diagnóstico automático. Você será avaliado individualmente.</small></div>
     </section>
 
     <section className={s.benefits}>
-      <div className={s.sectionIntro}><p className={s.eyebrow}>Reconhecimento</p><h2>Você olha no espelho e vê isso?</h2></div>
+      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Reconhecimento</p><h2>Você olha no espelho e vê isso?</h2></div>
       <div className={`${s.benefitGrid} ${b.grid4}`}>
-        <article><span>01</span><h3>Linhas na testa quando levanta a sobrancelha.</h3></article>
-        <article><span>02</span><h3>A linha vertical entre as sobrancelhas, o “11”, que dá cara de bravo ou de cansaço.</h3></article>
-        <article><span>03</span><h3>Pés de galinha ao redor dos olhos quando sorri.</h3></article>
-        <article><span>04</span><h3>Vontade de fazer Botox, mas medo de exagerar e ficar com o rosto sem expressão.</h3></article>
+        <article data-reveal><span>01</span><h3>Linhas na testa quando levanta a sobrancelha.</h3></article>
+        <article data-reveal><span>02</span><h3>A linha vertical entre as sobrancelhas, o “11”, que dá cara de bravo ou de cansaço.</h3></article>
+        <article data-reveal><span>03</span><h3>Pés de galinha ao redor dos olhos quando sorri.</h3></article>
+        <article data-reveal><span>04</span><h3>Vontade de fazer Botox, mas medo de exagerar e ficar com o rosto sem expressão.</h3></article>
       </div>
-      <p className={b.lead}>Se você se reconheceu, o Botox pode ser uma opção para avaliar. E a PS Estética começa pela avaliação, não pela agulha.</p>
+      <p className={b.lead} data-reveal>Se você se reconheceu, o Botox pode ser uma opção para avaliar. E a PS Estética começa pela avaliação, não pela agulha.</p>
       {cta(false)}
     </section>
 
     <div className={b.band}><section className={s.benefits}>
-      <div className={s.sectionIntro}><p className={s.eyebrow}>O que é</p><h2>O que é o Botox e como ele funciona</h2><p>Botox é o nome mais conhecido da toxina botulínica, um medicamento aplicado em pontos específicos do rosto. Os músculos do rosto se contraem quando o nervo manda um sinal. O Botox bloqueia esse sinal em pontos escolhidos. Com o músculo trabalhando com menos força ali, a pele marca menos as rugas de expressão.</p></div>
+      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>O que é</p><h2>O que é o Botox e como ele funciona</h2><p>Botox é o nome mais conhecido da toxina botulínica, um medicamento aplicado em pontos específicos do rosto. Os músculos do rosto se contraem quando o nervo manda um sinal. O Botox bloqueia esse sinal em pontos escolhidos. Com o músculo trabalhando com menos força ali, a pele marca menos as rugas de expressão.</p></div>
       <div className={`${s.benefitGrid} ${b.grid2}`}>
-        <article><span>01</span><h3>O efeito é temporário</h3><p>Ele vai diminuindo aos poucos e o músculo volta a se mover normalmente. Por isso o tratamento é repetido ao longo do tempo, na frequência que a avaliação indicar.</p></article>
-        <article><span>02</span><h3>Por que tanta gente tem medo de ficar com o rosto parado?</h3><p>Porque dose e pontos de aplicação mal planejados tiram movimento demais. Na PS Estética, os dois são definidos olhando como você levanta a sobrancelha e como você sorri.</p></article>
+        <article data-reveal><span>01</span><h3>O efeito é temporário</h3><p>Ele vai diminuindo aos poucos e o músculo volta a se mover normalmente. Por isso o tratamento é repetido ao longo do tempo, na frequência que a avaliação indicar.</p></article>
+        <article data-reveal><span>02</span><h3>Por que tanta gente tem medo de ficar com o rosto parado?</h3><p>Porque dose e pontos de aplicação mal planejados tiram movimento demais. Na PS Estética, os dois são definidos olhando como você levanta a sobrancelha e como você sorri.</p></article>
       </div>
-      <p className={s.disclaimer}>Cada pessoa responde de uma forma. Indicação, dose e protocolo são definidos individualmente por profissional habilitado, e os resultados não são garantidos.</p>
+      <p className={s.disclaimer} data-reveal>Cada pessoa responde de uma forma. Indicação, dose e protocolo são definidos individualmente por profissional habilitado, e os resultados não são garantidos.</p>
     </section></div>
 
     <section className={s.benefits}>
-      <div className={s.sectionIntro}><p className={s.eyebrow}>Onde pode ajudar</p><h2>Onde o Botox pode ajudar</h2><p>Cada região é avaliada separadamente. Você só faz o que for indicado para o seu caso.</p></div>
+      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Onde pode ajudar</p><h2>Onde o Botox pode ajudar</h2><p>Cada região é avaliada separadamente. Você só faz o que for indicado para o seu caso.</p></div>
       <div className={`${s.benefitGrid} ${b.grid3}`}>
-        <article><span>01</span><h3>Testa</h3><p>As linhas horizontais que aparecem quando você levanta a sobrancelha.</p></article>
-        <article><span>02</span><h3>Entre as sobrancelhas</h3><p>As linhas verticais que dão cara de cansaço ou de bravo.</p></article>
-        <article><span>03</span><h3>Ao redor dos olhos</h3><p>Os pés de galinha, que aparecem quando você sorri.</p></article>
+        <article data-reveal><span>01</span><h3>Testa</h3><p>As linhas horizontais que aparecem quando você levanta a sobrancelha.</p></article>
+        <article data-reveal><span>02</span><h3>Entre as sobrancelhas</h3><p>As linhas verticais que dão cara de cansaço ou de bravo.</p></article>
+        <article data-reveal><span>03</span><h3>Ao redor dos olhos</h3><p>Os pés de galinha, que aparecem quando você sorri.</p></article>
       </div>
       {cta(false)}
     </section>
 
     <section className={s.fit}>
-      <div><p className={s.eyebrow}>Nosso cuidado</p><h2>Como a PS Estética cuida do seu Botox</h2></div>
+      <div data-reveal><p className={s.eyebrow}>Nosso cuidado</p><h2>Como a PS Estética cuida do seu Botox</h2></div>
       <div className={s.fitCards}>
-        <article><span>01</span><h3>Avaliação antes de tudo</h3><p>Ninguém aplica nada sem olhar seu histórico de saúde, suas expectativas e a sua expressão.</p></article>
-        <article><span>02</span><h3>Plano feito para o seu rosto</h3><p>Dose e pontos definidos individualmente, sem protocolo genérico.</p></article>
+        <article data-reveal><span>01</span><h3>Avaliação antes de tudo</h3><p>Ninguém aplica nada sem olhar seu histórico de saúde, suas expectativas e a sua expressão.</p></article>
+        <article data-reveal><span>02</span><h3>Plano feito para o seu rosto</h3><p>Dose e pontos definidos individualmente, sem protocolo genérico.</p></article>
         {/* TODO PROFISSIONAL HABILITADO: [[nome e registro profissional (CRM e RQE, se médico; ou o conselho correspondente) do responsável técnico: obrigatório em publicidade de saúde]]. O item "Profissional habilitado." só entra com esse dado. */}
-        <article><span>03</span><h3>Sem pressão</h3><p>Você entende as possibilidades e decide no seu tempo.</p></article>
+        <article data-reveal><span>03</span><h3>Sem pressão</h3><p>Você entende as possibilidades e decide no seu tempo.</p></article>
       </div>
     </section>
 
     <section className={s.benefits}>
-      <div className={s.sectionIntro}><p className={s.eyebrow}>Para quem</p><h2>O Botox faz sentido para você?</h2></div>
+      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Para quem</p><h2>O Botox faz sentido para você?</h2></div>
       <div className={b.two}>
-        <div className={`${b.col} ${b.yes}`}><h3>Pode fazer sentido se você</h3><ul><li>Quer suavizar as linhas sem perder a mobilidade do rosto.</li><li>Quer entender possibilidades e cuidados antes de decidir.</li><li>Pode ir a uma avaliação presencial em São Bernardo do Campo.</li></ul></div>
-        <div className={`${b.col} ${b.no}`}><h3>Não deve fazer</h3><ul><li>Gestantes e lactantes.</li><li>Pessoas com alergia aos componentes.</li><li>Pessoas com infecção na região.</li><li>Pessoas com doenças neuromusculares ou fraqueza muscular.</li></ul></div>
+        <div className={`${b.col} ${b.yes}`} data-reveal><h3>Pode fazer sentido se você</h3><ul><li>Quer suavizar as linhas sem perder a mobilidade do rosto.</li><li>Quer entender possibilidades e cuidados antes de decidir.</li><li>Pode ir a uma avaliação presencial em São Bernardo do Campo.</li></ul></div>
+        <div className={`${b.col} ${b.no}`} data-reveal><h3>Não deve fazer</h3><ul><li>Gestantes e lactantes.</li><li>Pessoas com alergia aos componentes.</li><li>Pessoas com infecção na região.</li><li>Pessoas com doenças neuromusculares ou fraqueza muscular.</li></ul></div>
       </div>
-      <p className={s.disclaimer}>Por isso a avaliação e o histórico de saúde vêm antes de qualquer aplicação.</p>
+      <p className={s.disclaimer} data-reveal>Por isso a avaliação e o histórico de saúde vêm antes de qualquer aplicação.</p>
     </section>
 
     <div className={b.band}><section className={`${s.how} ${b.howWide}`}>
-      <div className={s.sectionIntro}><p className={s.eyebrow}>Passo a passo</p><h2>Do quiz à sessão de Botox em 5 passos</h2></div>
+      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Passo a passo</p><h2>Do quiz à sessão de Botox em 5 passos</h2></div>
       <ol className={b.steps5}>
-        <li><span>1</span><div><h3>Responda o quiz</h3><p>5 perguntas, menos de 1 minuto.</p></div></li>
-        <li><span>2</span><div><h3>Receba a indicação inicial</h3><p>Você vê se a avaliação de Botox é um bom próximo passo.</p></div></li>
-        <li><span>3</span><div><h3>Escolha o horário</h3><p>Pré-agende online ou fale direto pelo WhatsApp.</p></div></li>
-        <li><span>4</span><div><h3>Faça a avaliação presencial</h3><p>Um profissional habilitado analisa seu histórico, suas expectativas e a sua expressão.</p></div></li>
-        <li><span>5</span><div><h3>Faça a sessão, se for indicada</h3><p>A aplicação só acontece se o profissional indicar e se você decidir seguir.</p></div></li>
+        <li data-reveal><span>1</span><div><h3>Responda o quiz</h3><p>5 perguntas, menos de 1 minuto.</p></div></li>
+        <li data-reveal><span>2</span><div><h3>Receba a indicação inicial</h3><p>Você vê se a avaliação de Botox é um bom próximo passo.</p></div></li>
+        <li data-reveal><span>3</span><div><h3>Escolha o horário</h3><p>Pré-agende online ou fale direto pelo WhatsApp.</p></div></li>
+        <li data-reveal><span>4</span><div><h3>Faça a avaliação presencial</h3><p>Um profissional habilitado analisa seu histórico, suas expectativas e a sua expressão.</p></div></li>
+        <li data-reveal><span>5</span><div><h3>Faça a sessão, se for indicada</h3><p>A aplicação só acontece se o profissional indicar e se você decidir seguir.</p></div></li>
       </ol>
       {cta(false)}
     </section></div>
@@ -374,32 +410,34 @@ export default function BotoxPage() {
 
     {/* TODO QUEM VAI CUIDAR DE VOCÊ (versão completa): [[foto, nome, registro profissional e 2 linhas sobre o profissional responsável]] [[foto e endereço da clínica]]. Enquanto isso, só o texto abaixo. */}
     <section className={s.benefits}>
-      <div className={s.sectionIntro}><p className={s.eyebrow}>Quem vai cuidar de você</p><p className={b.lead} style={{ margin: 0 }}>PS Estética Avançada, em São Bernardo do Campo, ABC Paulista. Atendimento individualizado.</p></div>
+      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Quem vai cuidar de você</p><p className={b.lead} style={{ margin: 0 }} data-reveal>PS Estética Avançada, em São Bernardo do Campo, ABC Paulista. Atendimento individualizado.</p></div>
     </section>
 
-    <section className={s.faq}><div className={s.sectionIntro}><p className={s.eyebrow}>Dúvidas</p><h2>Perguntas frequentes sobre Botox</h2></div>
+    <section className={s.faq}><div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Dúvidas</p><h2>Perguntas frequentes sobre Botox</h2></div>
       {/* TODO FAQ (textos renderizados, aguardando confirmação da clínica): [[confirmar o prazo de efeito máximo com o profissional responsável]] [[confirmar o protocolo de pós-aplicação da clínica]] [[confirmar o valor/condição: se houver valor da avaliação ou condição promocional, informar aqui e no fechamento]] */}
-      <div className={s.faqList}>{faq.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</div></section>
+      <div className={`${s.faqList} ${b.faqx}`}>{faq.map(([question, answer]) => <details key={question} data-reveal><summary>{question}</summary><p>{answer}</p></details>)}</div></section>
 
     <section className={`${s.confidence} ${b.closing}`}>
-      <p className={s.eyebrow}>Decisão com segurança</p>
-      <h2>Descubra em 1 minuto se o Botox serve para você</h2>
-      <p>São 5 perguntas sobre as regiões que você quer avaliar, o seu histórico e o que você espera do resultado. No final, você escolhe um horário para a avaliação ou fala com a equipe pelo WhatsApp.</p>
+      <p className={s.eyebrow} data-reveal>Decisão com segurança</p>
+      <h2 data-reveal>Descubra em 1 minuto se o Botox serve para você</h2>
+      <p data-reveal>São 5 perguntas sobre as regiões que você quer avaliar, o seu histórico e o que você espera do resultado. No final, você escolhe um horário para a avaliação ou fala com a equipe pelo WhatsApp.</p>
       {cta(true, true)}
-      <p className={b.closingNote}>A avaliação vem antes de qualquer aplicação. Você só faz Botox se for indicado e se quiser.</p>
+      <p className={b.closingNote} data-reveal>A avaliação vem antes de qualquer aplicação. Você só faz Botox se for indicado e se quiser.</p>
     </section>
 
     <section className={s.quizSection} id="diagnostico" ref={quizSectionRef}>
       <div className={s.quizIntro}><p className={s.eyebrow}>Seu quiz de Botox</p><h2>Poucas respostas para uma conversa mais objetiva.</h2><p>Leva cerca de um minuto. Ao final, você pode escolher um horário para a avaliação ou falar com a equipe pelo WhatsApp.</p></div>
-      <div className={s.quizCard} ref={cardRef} aria-live="polite">
+      <div className={`${s.quizCard} ${b.cardTop}`} ref={cardRef} aria-live="polite">
         <div className={s.quizTop}><span>{step === 0 ? "Pronto para começar" : step <= 5 ? `Pergunta ${step} de 5` : step === 6 ? "Seus dados" : step === 7 ? "Indicação e agenda" : "Pré-reserva"}</span><b>{progress}%</b></div><div className={s.progress}><span style={{ width: `${progress}%` }} /></div>
-        {step === 0 && <div className={s.quizBody}><p className={s.quizKicker}>Quiz Botox • PS Estética</p><h3>Quiz de Botox da PS Estética</h3><p className={s.quizText}>5 perguntas, menos de 1 minuto. Você recebe uma indicação inicial e pode escolher o horário da sua avaliação.</p><button className={s.primary} onClick={start}>Começar o quiz <span>›</span></button><p className={s.cardTrust}>Sem diagnóstico automático. Você será avaliado individualmente.</p></div>}
+        <div key={step} className={b.stepIn}>
+        {step === 0 && <div className={s.quizBody}><p className={s.quizKicker}>5 perguntas • menos de 1 minuto</p><h3>Vamos ver se o Botox faz sentido para você</h3><p className={s.quizText}>No final, você recebe uma indicação inicial e escolhe o horário da sua avaliação.</p><ol className={b.preview}><li><span>1</span>Regiões que você quer avaliar</li><li><span>2</span>Seu histórico com o procedimento</li><li><span>3</span>O que você espera do resultado</li><li><span>4</span>Quando você quer fazer</li><li><span>5</span>Sua cidade</li></ol><button className={s.primary} onClick={start}>Começar o quiz <span>›</span></button><p className={s.cardTrust}>Sem diagnóstico automático. Você será avaliado individualmente.</p></div>}
         {step === 1 && <div className={`${s.quizBody} ${s.regionsStep}`}><p className={s.quizKicker}>Vamos começar pelo seu objetivo</p><h3>Quais regiões você gostaria de avaliar?</h3><p className={s.quizText}>Escolha quantas quiser.</p><div className={s.options}>{regions.map((region, index) => (index < primaryRegionCount || moreRegionsOpen) && regionButton(region))}</div>{!moreRegionsOpen && <button type="button" className={s.moreRegions} aria-expanded="false" onClick={() => setShowMoreRegions(true)}>Ver mais regiões <span aria-hidden="true">+</span></button>}<div className={s.regionsAction}><button type="button" className={s.primary} disabled={selectedRegions.length === 0} onClick={() => setStep(2)}>{selectedRegions.length === 0 ? "Escolha uma opção" : `Continuar • ${selectedRegions.length} ${selectedRegions.length === 1 ? "opção" : "opções"}`} <span>›</span></button></div></div>}
         {current && <div className={s.quizBody}><p className={s.quizKicker}>{current.eyebrow}</p><h3>{current.title}</h3><div className={s.options}>{current.options.map((option) => <button key={option} className={answers[current.key] === option ? s.selected : ""} onClick={() => choose(option)}><span>{option}</span><i>›</i></button>)}</div><button className={s.back} onClick={() => setStep((step - 1) as Step)}>Voltar</button></div>}
         {step === 5 && <div className={s.quizBody}><p className={s.quizKicker}>Localização do atendimento</p><h3>Você está em São Bernardo do Campo ou região?</h3><p className={s.quizText}>Essa informação ajuda a equipe a priorizar a melhor forma de atendimento.</p><div className={s.options}>{cityOptions.map((option) => <button key={option} className={cityChoice === option ? s.selected : ""} onClick={() => { setCityChoice(option); setLead(null); setNotice(""); if (option !== "Outra cidade") window.setTimeout(() => setStep(6), 140); }}><span>{option}</span><i>›</i></button>)}</div>{cityChoice === "Outra cidade" && <div className={s.contactForm}><label>Qual cidade?<input required minLength={2} maxLength={120} value={otherCity} onChange={(event) => { setOtherCity(event.target.value); setLead(null); }} placeholder="Digite sua cidade" autoComplete="address-level2" /></label><button type="button" className={s.primary} disabled={otherCity.trim().length < 2} onClick={() => setStep(6)}>Continuar <span>›</span></button></div>}<button className={s.back} onClick={() => setStep(4)}>Voltar</button></div>}
         {step === 6 && <form className={`${s.quizBody} ${s.contactForm}`} onSubmit={submitContact}><p className={s.quizKicker}>Sua indicação inicial está quase pronta</p><h3>Deixe seu nome e WhatsApp para ver a indicação.</h3><p className={s.quizText}>Você também poderá escolher um horário para a avaliação na PS Estética.</p><label>Nome<input required value={name} onChange={(e) => { setName(e.target.value); setLead(null); }} autoComplete="name" enterKeyHint="next" placeholder="Como podemos chamar você?" minLength={2} /></label><label>WhatsApp<input ref={phoneRef} type="tel" value={phone} onChange={(e) => { setPhone(maskWhatsappInput(e.target.value)); setLead(null); setNotice(""); }} onBlur={() => { if (phone) setPhoneTouched(true); }} autoComplete="tel-national" inputMode="numeric" enterKeyHint="send" placeholder="(11) 90000-0000" aria-invalid={phoneError} aria-describedby={phoneError ? "botox-phone-error" : undefined} />{phoneError && <small id="botox-phone-error" className={s.fieldError} role="alert">{SHORT_INVALID_WHATSAPP_MESSAGE}</small>}</label><button className={s.primary} disabled={loading} type="submit">{loading ? "Preparando sua indicação…" : "Ver minha indicação"} <span>›</span></button>{notice && <p className={s.notice}>{notice}</p>}<button className={s.back} type="button" onClick={() => setStep(5)}>Voltar</button><small className={s.privacy}>Seus dados serão usados apenas para o atendimento da PS Estética.</small></form>}
-        {step === 7 && <div className={s.quizBody}><h3>Sua indicação inicial</h3><p className={s.resultText}>Pelas suas respostas, a avaliação de Botox pode ser um bom próximo passo. Quem confirma é o profissional, na avaliação presencial.</p><div className={s.answerSummary}><span>O que você busca</span><strong>{answers.goal}</strong></div><div className={b.resultActions}><button type="button" className={s.primary} onClick={() => document.getElementById("horarios")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Escolher meu horário <span>›</span></button><a className={s.whatsapp} href={whatsapp} target="_blank" rel="noreferrer">Falar com a equipe no WhatsApp</a></div><div className={s.scheduleHead} id="horarios"><p className={s.quizKicker}>Próximo passo opcional</p><h4>Escolha um horário para sua avaliação</h4></div>{loading && <p className={s.notice}>Consultando a agenda…</p>}{!loading && slots.length > 0 && <div className={s.slots}>{slots.map((slot) => <button key={slot.slot_id} onClick={() => { setSelected(slot); setNotice(""); }} className={selected?.slot_id === slot.slot_id ? s.selectedSlot : ""}><span><small>{selected?.slot_id === slot.slot_id ? "Selecionado" : "Disponível"}</small>{formatSlot(slot.starts_at)}</span><i>{selected?.slot_id === slot.slot_id ? "✓" : "›"}</i></button>)}</div>}{!loading && slots.length === 0 && <div className={s.empty}><b>Não encontrou um horário?</b><p>A equipe pode consultar outras possibilidades para você.</p><a href={whatsapp} target="_blank" rel="noreferrer">Falar pelo WhatsApp</a></div>}{selected && <form className={s.reserveBox} onSubmit={reserve}><div><small>Horário escolhido</small><b>{formatSlot(selected.starts_at)}</b></div><label>E-mail para receber a confirmação<input required type="email" value={email} onChange={(e) => { setEmail(e.target.value); setNotice(""); }} autoComplete="email" placeholder="voce@exemplo.com" /></label><label>CPF para gerar o Pix<input required inputMode="numeric" autoComplete="off" maxLength={14} value={cpf} onChange={(event) => { setCpf(formatCpf(event.target.value)); setNotice(""); }} placeholder="000.000.000-00" /></label><button className={s.primary} disabled={loading} type="submit">{loading ? "Criando pré-reserva…" : "Pré-reservar este horário"} <span>›</span></button></form>}{!loading && slots.length > 0 && <a className={s.whatsapp} href={whatsapp} target="_blank" rel="noreferrer">Prefiro falar com a equipe no WhatsApp</a>}{notice && <p className={s.notice}>{notice}</p>}</div>}
+        {step === 7 && <div className={s.quizBody}><h3>Sua indicação inicial</h3><p className={s.resultText}>Pelas suas respostas, a avaliação de Botox pode ser um bom próximo passo. Quem confirma é o profissional, na avaliação presencial.</p><div className={s.answerSummary}><span>O que você busca</span><strong>{answers.goal}</strong></div><div className={b.resultActions}><button type="button" className={s.primary} onClick={() => document.getElementById("horarios")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Escolher meu horário <span>›</span></button><a className={s.whatsapp} href={whatsapp} target="_blank" rel="noreferrer">Falar com a equipe no WhatsApp</a></div><div className={`${s.scheduleHead} ${b.anchorTop}`} id="horarios"><p className={s.quizKicker}>Próximo passo opcional</p><h4>Escolha um horário para sua avaliação</h4></div>{loading && <p className={s.notice}>Consultando a agenda…</p>}{!loading && slots.length > 0 && <div className={s.slots}>{slots.map((slot) => <button key={slot.slot_id} onClick={() => { setSelected(slot); setNotice(""); }} className={selected?.slot_id === slot.slot_id ? s.selectedSlot : ""}><span><small>{selected?.slot_id === slot.slot_id ? "Selecionado" : "Disponível"}</small>{formatSlot(slot.starts_at)}</span><i>{selected?.slot_id === slot.slot_id ? "✓" : "›"}</i></button>)}</div>}{!loading && slots.length === 0 && <div className={s.empty}><b>Não encontrou um horário?</b><p>A equipe pode consultar outras possibilidades para você.</p><a href={whatsapp} target="_blank" rel="noreferrer">Falar pelo WhatsApp</a></div>}{selected && <form className={s.reserveBox} onSubmit={reserve}><div><small>Horário escolhido</small><b>{formatSlot(selected.starts_at)}</b></div><label>E-mail para receber a confirmação<input required type="email" value={email} onChange={(e) => { setEmail(e.target.value); setNotice(""); }} autoComplete="email" placeholder="voce@exemplo.com" /></label><label>CPF para gerar o Pix<input required inputMode="numeric" autoComplete="off" maxLength={14} value={cpf} onChange={(event) => { setCpf(formatCpf(event.target.value)); setNotice(""); }} placeholder="000.000.000-00" /></label><button className={s.primary} disabled={loading} type="submit">{loading ? "Criando pré-reserva…" : "Pré-reservar este horário"} <span>›</span></button></form>}{!loading && slots.length > 0 && <a className={s.whatsapp} href={whatsapp} target="_blank" rel="noreferrer">Prefiro falar com a equipe no WhatsApp</a>}{notice && <p className={s.notice}>{notice}</p>}</div>}
         {step === 8 && booking && <div className={s.quizBody}><p className={s.resultLabel}>Horário separado para você</p><h3>{formatSlot(booking.starts_at)}</h3><p className={s.quizText}>A pré-reserva é confirmada após o pagamento do sinal. O valor será descontado do atendimento.</p>{paid && <p className={s.success}>Pagamento confirmado. Seu horário está garantido.</p>}{!paid && pix?.qr_code_base64 && <div className={s.pixBox}><div><small>Sinal da avaliação</small><strong>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(booking.deposit_cents / 100)}</strong><p>Escaneie o QR Code ou copie o código Pix.</p>{pix.pix_copy_paste && <button type="button" onClick={copyPix}>Copiar código Pix</button>}</div><Image unoptimized src={`data:image/png;base64,${pix.qr_code_base64}`} width={140} height={140} alt="QR Code para pagamento Pix" /></div>}{notice && <p className={s.notice}>{notice}</p>}<a className={s.whatsapp} href={whatsapp} target="_blank" rel="noreferrer">Falar com a equipe no WhatsApp</a></div>}
+        </div>
       </div>
     </section>
     <footer className={`${s.footer} ${b.footerPad}`}><Image src="/ps-estetica-logo-oficial.png" width={246} height={80} alt="PS Estética" /><p>São Bernardo do Campo • ABC Paulista</p><small>O conteúdo desta página é informativo. A indicação de qualquer procedimento depende de avaliação individual por profissional habilitado, e os resultados variam de pessoa para pessoa.</small>{/* TODO RESPONSÁVEL TÉCNICO no rodapé: "Responsável técnico: [[nome, registro profissional e RQE, se houver]]". Não renderizar sem o dado. */}</footer>

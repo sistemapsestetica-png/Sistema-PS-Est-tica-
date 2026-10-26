@@ -118,3 +118,119 @@ main.landing .howWide .sectionIntro > p:last-child { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .sticky, .stickyOn { transition: none; }
 }
+
+/* ===================== Acabamento premium e movimento ===================== */
+main.landing { --ease: cubic-bezier(.22, 1, .36, 1); overflow: clip; }
+
+/* Barra de progresso de leitura no topo */
+.bar { position: fixed; z-index: 60; top: 0; left: 0; right: 0; height: 2px; pointer-events: none; }
+.bar span { display: block; height: 100%; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, #8f7541, #dbc99f); }
+
+/* Cabeçalho fixo com vidro */
+main.landing .headerBar { position: sticky; top: 0; z-index: 45; transition: height .35s var(--ease), box-shadow .35s ease, background-color .35s ease; }
+main.landing[data-scrolled="1"] .headerBar { background: rgba(247, 244, 238, .97); box-shadow: 0 14px 34px -26px rgba(0, 0, 0, .55); }
+@media (min-width: 621px) { main.landing[data-scrolled="1"] .headerBar { height: 64px; } }
+main.landing .cardTop { scroll-margin-top: 84px; }
+main.landing .anchorTop { scroll-margin-top: 88px; }
+
+/* Botão principal: brilho que cruza, elevação e seta que avança */
+main.landing .ctaBtn { position: relative; overflow: hidden; transition: transform .35s var(--ease), box-shadow .35s ease, background .25s ease; }
+main.landing .ctaBtn::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .3) 50%, transparent 62%); transform: translateX(-130%); }
+main.landing .ctaBtn:hover { transform: translateY(-3px); box-shadow: 0 28px 46px -24px rgba(0, 0, 0, .85); }
+main.landing .ctaBtn:hover::after { transform: translateX(130%); transition: transform .9s var(--ease); }
+main.landing .ctaBtn:active { transform: translateY(0) scale(.98); }
+main.landing .ctaBtn span { transition: transform .35s var(--ease); }
+main.landing .ctaBtn:hover span { transform: translateX(5px); }
+main.landing .light::after { background: linear-gradient(105deg, transparent 38%, rgba(138, 116, 72, .25) 50%, transparent 62%); }
+
+/* Cartões e colunas */
+main.landing .grid2 article, main.landing .grid3 article, main.landing .grid4 article { transition: background-color .4s ease; }
+main.landing .grid2 article:hover, main.landing .grid3 article:hover, main.landing .grid4 article:hover { background: rgba(255, 253, 248, .8); }
+main.landing .col { transition: transform .55s var(--ease), box-shadow .55s ease; }
+main.landing .col:hover { transform: translateY(-6px); box-shadow: 0 44px 72px -46px rgba(0, 0, 0, .55); }
+main.landing .steps5 li > span { transition: color .4s ease, transform .5s var(--ease); }
+main.landing .steps5 li:hover > span { color: #b6995c; transform: translateY(-4px); }
+
+/* Fechamento: luz dourada que se move devagar */
+main.landing .closing { position: relative; overflow: hidden; isolation: isolate; }
+main.landing .closing::before { content: ""; position: absolute; inset: -35%; z-index: -1; pointer-events: none; background: radial-gradient(38% 34% at 24% 32%, rgba(182, 153, 92, .24), transparent 70%), radial-gradient(34% 30% at 76% 70%, rgba(219, 201, 159, .15), transparent 70%); }
+
+/* FAQ */
+main.landing .faqx summary::after { transition: transform .45s var(--ease), color .3s ease; }
+main.landing .faqx details[open] summary::after { content: "+"; transform: translateY(-50%) rotate(135deg); }
+main.landing .faqx summary { transition: color .3s ease, padding-left .4s var(--ease); }
+main.landing .faqx summary:hover { color: #8a7448; padding-left: 8px; }
+
+/* Tela inicial do quiz: roteiro das 5 perguntas */
+.preview { margin: 0 0 28px; padding: 0; list-style: none; border-top: 1px solid #e5ddcd; }
+.preview li { padding: 12px 0; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #e5ddcd; color: #4e4b46; font-size: 14.5px; line-height: 1.4; }
+.preview li span { width: 28px; height: 28px; flex: none; display: grid; place-items: center; color: #8a7448; border: 1px solid #cdbf9f; border-radius: 50%; font: 14px Georgia, serif; transition: background .35s ease, color .35s ease, transform .45s var(--ease); }
+.preview li:hover span { color: #fff; background: #8a7448; transform: scale(1.1); }
+
+@keyframes rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes focusIn { from { opacity: 0; transform: translateY(32px); filter: blur(10px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes panelIn { from { opacity: 0; transform: translateY(44px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+@keyframes dotGlow { 0% { box-shadow: 0 0 0 0 rgba(219, 201, 159, .55); } 100% { box-shadow: 0 0 0 16px rgba(219, 201, 159, 0); } }
+@keyframes sheen { 0%, 62%, 100% { transform: translateX(-130%); } 80% { transform: translateX(130%); } }
+@keyframes drift { 0% { transform: translate3d(-4%, -3%, 0) scale(1); } 100% { transform: translate3d(5%, 4%, 0) scale(1.12); } }
+@keyframes stepIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes optIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(1); } 45% { transform: scale(1.025); } 100% { transform: scale(1); } }
+@keyframes glow { 0%, 100% { box-shadow: 0 19px 38px -26px rgba(0, 0, 0, .8); } 50% { box-shadow: 0 0 0 5px rgba(182, 153, 92, .25), 0 19px 38px -26px rgba(0, 0, 0, .8); } }
+@keyframes faqIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Entrada do topo */
+  main.landing .heroIn > * { animation: rise .95s var(--ease) both; }
+  main.landing .heroIn > :nth-child(1) { animation-delay: .05s; }
+  main.landing .heroIn > :nth-child(2) { animation-name: focusIn; animation-duration: 1.15s; animation-delay: .15s; }
+  main.landing .heroIn > :nth-child(3) { animation-delay: .4s; }
+  main.landing .heroIn > :nth-child(4) { animation-delay: .55s; }
+  main.landing .heroIn > :nth-child(5) { animation-delay: .7s; }
+  main.landing .panelIn { animation: panelIn 1.2s var(--ease) .3s both, float 8s ease-in-out 1.6s infinite; }
+  main.landing .panelIn li { animation: rise .8s var(--ease) both; }
+  main.landing .panelIn li:nth-child(1) { animation-delay: .9s; }
+  main.landing .panelIn li:nth-child(2) { animation-delay: 1s; }
+  main.landing .panelIn li:nth-child(3) { animation-delay: 1.1s; }
+  main.landing .orbitPulse { animation: breathe 5s ease-in-out infinite; }
+  main.landing .orbitPulse::after { animation: dotGlow 2.8s ease-out infinite; }
+  main.landing .heroOn::before { transform: translateY(calc(-50% + var(--sy, 0) * -0.07px)); }
+  main.landing .ctaHero::after { animation: sheen 6s ease-in-out 2.6s infinite; }
+  main.landing .closing::before { animation: drift 20s ease-in-out infinite alternate; }
+
+  /* Revelação ao rolar (as classes são aplicadas por script; sem script tudo aparece) */
+  main.landing .revealPre { opacity: 0; transform: translateY(34px); transition: opacity 1s var(--ease), transform 1s var(--ease); }
+  main.landing .revealPre.revealIn { opacity: 1; transform: none; }
+  main.landing .revealPre [class*="__eyebrow"]::before { transform: scaleX(0); transform-origin: left; transition: transform 1.1s var(--ease) .25s; }
+  main.landing .revealPre.revealIn [class*="__eyebrow"]::before { transform: scaleX(1); }
+
+  /* Quiz: transição entre etapas */
+  main.landing .stepIn { animation: stepIn .6s var(--ease) backwards; }
+  main.landing .stepIn [class*="__options"] > button { animation: optIn .65s var(--ease) backwards; }
+  main.landing .stepIn [class*="__options"] > button:nth-child(1) { animation-delay: .08s; }
+  main.landing .stepIn [class*="__options"] > button:nth-child(2) { animation-delay: .13s; }
+  main.landing .stepIn [class*="__options"] > button:nth-child(3) { animation-delay: .18s; }
+  main.landing .stepIn [class*="__options"] > button:nth-child(4) { animation-delay: .23s; }
+  main.landing .stepIn [class*="__options"] > button:nth-child(5) { animation-delay: .28s; }
+  main.landing .stepIn [class*="__options"] > button:nth-child(6) { animation-delay: .33s; }
+  main.landing .stepIn [class*="__options"] > button:nth-child(n+7) { animation-delay: .38s; }
+  main.landing .stepIn [class*="__options"] > button[aria-pressed="true"] { animation: pop .4s var(--ease); }
+  main.landing .preview li { animation: rise .7s var(--ease) backwards; }
+  main.landing .preview li:nth-child(1) { animation-delay: .2s; }
+  main.landing .preview li:nth-child(2) { animation-delay: .27s; }
+  main.landing .preview li:nth-child(3) { animation-delay: .34s; }
+  main.landing .preview li:nth-child(4) { animation-delay: .41s; }
+  main.landing .preview li:nth-child(5) { animation-delay: .48s; }
+  main.landing .faqx details[open] p { animation: faqIn .5s var(--ease); }
+}
+
+@media (max-width: 620px) {
+  main.landing .cardTop { scroll-margin-top: 70px; }
+  main.landing .anchorTop { scroll-margin-top: 74px; }
+}
+
+@media (max-width: 620px) and (prefers-reduced-motion: no-preference) {
+  main.landing .stickyOn button { animation: glow 3.2s ease-in-out infinite; }
+}
