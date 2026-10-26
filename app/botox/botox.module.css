@@ -1,139 +1,151 @@
-/* Ajustes da landing /botox sobre o design system do Lavieen (lavieen.module.css).
-   As seções usam as próprias classes do Lavieen; aqui ficam só os acertos que o /botox precisa. */
+/* Landing /botox. Usa as variáveis e a tipografia do design system do Lavieen (lavieen.module.css).
+   As seções de texto e as fotos seguem o mesmo vocabulário visual: Georgia nos títulos, dourado, cartões de cantos assimétricos. */
 
-/* Landing em fluxo normal: a ordem das seções é a do HTML (no Lavieen o quiz sobe para o topo no mobile). */
-main.landing { display: block; }
+main.landing { --ease: cubic-bezier(.22, 1, .36, 1); display: block; overflow: clip; }
 
-/* Faixa bege de ponta a ponta atrás de uma seção centralizada (mesma cor do bloco "fit" do Lavieen). */
+/* ---------- Estrutura das seções ---------- */
+.sec { width: 100%; max-width: 1240px; margin: 0 auto; padding: 112px 24px; }
 .band { width: 100%; background: #eeeadf; }
-.band > section { border-top: 0; }
+.rule { border-top: 1px solid #dcd5c8; }
+.split { display: grid; align-items: center; gap: clamp(44px, 7vw, 108px); }
+.mediaLeft { grid-template-columns: minmax(0, .88fr) minmax(0, 1.12fr); }
+.mediaRight { grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); }
+.copy { min-width: 0; }
+.title { margin: 0; font: 400 clamp(36px, 4.3vw, 58px)/1.03 Georgia, "Times New Roman", serif; letter-spacing: -.04em; }
+.p { max-width: 580px; margin: 22px 0 0; color: var(--soft-ink); font-size: 16.5px; line-height: 1.75; }
+.lead { max-width: 600px; margin: 30px 0 0; color: var(--soft-ink); font: 400 clamp(18px, 1.8vw, 22px)/1.5 Georgia, serif; }
+.note { max-width: 580px; margin: 26px 0 0; color: #777067; font-size: 11.5px; line-height: 1.6; }
+.head { max-width: 760px; margin-bottom: 52px; }
+.head .p { margin-top: 18px; }
 
-/* CTA único e microcopy */
+/* ---------- Fotos ---------- */
+.frame { position: relative; margin: 0; aspect-ratio: 4 / 5; overflow: hidden; background: #d9d0bd; border: 1px solid rgba(182, 153, 92, .45); border-radius: 4px 54px 4px 54px; box-shadow: 0 42px 80px -50px rgba(0, 0, 0, .7); }
+.frame img { object-fit: cover; transition: transform 1.6s var(--ease); }
+.frame:hover img { transform: scale(1.045); }
+.frame::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, transparent 58%, rgba(23, 23, 21, .38)); }
+.wide { aspect-ratio: 5 / 4; }
+.tag { position: absolute; z-index: 2; left: 16px; bottom: 16px; padding: 6px 11px; color: #fff; background: rgba(23, 23, 21, .55); backdrop-filter: blur(8px); border-radius: 999px; font-size: 9.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+
+/* ---------- Topo ---------- */
+.heroMedia { position: relative; z-index: 2; width: 100%; max-width: 520px; margin-left: auto; aspect-ratio: 4 / 5; max-height: 640px; }
+.glass { position: absolute; z-index: 3; left: 18px; right: 18px; bottom: 18px; padding: 20px 22px 18px; color: #fff; background: linear-gradient(145deg, rgba(48, 46, 41, .8), rgba(22, 22, 21, .86)); backdrop-filter: blur(14px); border: 1px solid rgba(182, 153, 92, .42); border-radius: 4px 28px 4px 28px; }
+.glass p { margin: 0 0 6px; display: flex; align-items: center; gap: 9px; color: var(--gold-light); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.glass strong { display: block; font: 400 38px/1 Georgia, serif; }
+.glass small { display: block; margin-top: 10px; color: rgba(255, 255, 255, .62); font-size: 12px; line-height: 1.5; }
+.liveDot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--gold-light); box-shadow: 0 0 0 0 rgba(219, 201, 159, .55); }
+.heroMedia .tag { top: 16px; bottom: auto; }
+
 .cta { margin: 36px 0 0; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
 .micro { max-width: 460px; margin: 0; color: #76716a; font-size: 11px; line-height: 1.5; }
-.lead { max-width: 760px; margin: 36px 0 0; color: var(--soft-ink); font: 400 clamp(19px, 2vw, 24px)/1.5 Georgia, serif; }
+.wa { margin-top: 20px; display: inline-flex; align-items: center; gap: 8px; color: #4e4b46; font-size: 12.5px; font-weight: 700; text-decoration: underline; text-decoration-color: rgba(138, 116, 72, .5); text-underline-offset: 5px; transition: color .3s ease; }
+.wa:hover { color: #8a7448; }
 
-/* Faixa de confiança: no desktop vai dentro do painel escuro; no mobile aparece como etiquetas. */
-.trust { display: none; margin: 30px 0 0; padding: 0; flex-wrap: wrap; gap: 10px; list-style: none; }
-.trust li { padding: 10px 14px; border: 1px solid rgba(23, 23, 21, .2); border-radius: 999px; color: #4e4b46; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; line-height: 1.3; }
+/* Faixa de confiança logo abaixo do topo */
+.strip { width: 100%; background: #fffdf8; border-top: 1px solid #dcd5c8; border-bottom: 1px solid #dcd5c8; }
+.strip ul { max-width: 1240px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: repeat(4, 1fr); list-style: none; }
+.strip li { padding: 22px 20px 22px 0; display: flex; align-items: center; gap: 12px; color: #3f3c37; font-size: 12.5px; font-weight: 700; letter-spacing: .02em; line-height: 1.35; }
+.strip li + li { padding-left: 22px; border-left: 1px solid #e1d9c8; }
+.strip li::before { content: "✓"; width: 26px; height: 26px; flex: none; display: grid; place-items: center; color: #8a7448; background: #f0eadc; border-radius: 50%; font-weight: 800; }
 
-/* Grades numeradas do Lavieen com outro número de colunas */
-main.landing .grid2, main.landing .grid3, main.landing .grid4 { display: grid; }
-main.landing .grid2 { grid-template-columns: repeat(2, 1fr); }
-main.landing .grid3 { grid-template-columns: repeat(3, 1fr); }
-main.landing .grid4 { grid-template-columns: repeat(4, 1fr); }
-main.landing .grid2 article, main.landing .grid3 article, main.landing .grid4 article { min-height: 220px; }
-main.landing .grid4 h3 { margin-top: 56px; font-size: 21px; line-height: 1.2; }
-main.landing .grid2 h3 { margin-top: 56px; }
-main.landing .grid3 h3 { margin-top: 56px; }
-main.landing .grid2 article:last-child, main.landing .grid3 article:last-child, main.landing .grid4 article:last-child { border-right: 1px solid #ccc2b2; }
-main.landing .grid2 p, main.landing .grid3 p { max-width: 460px; }
+/* ---------- Listas numeradas ---------- */
+.nums { margin: 34px 0 0; padding: 0; list-style: none; border-bottom: 1px solid #d7ceba; }
+.nums li { padding: 18px 0; display: grid; grid-template-columns: 40px 1fr; align-items: baseline; border-top: 1px solid #d7ceba; }
+.nums li > span { color: #917746; font: 14px Georgia, serif; }
+.nums li > div { font: 400 clamp(18px, 1.7vw, 22px)/1.38 Georgia, serif; }
+.nums li > div b { display: block; font-weight: 400; }
+.nums li > div p { margin: 7px 0 0; color: #68635c; font: 14.5px/1.65 "Segoe UI", Arial, sans-serif; }
 
-/* Para quem faz sentido e quem não deve fazer: mesmo cartão do quiz do Lavieen */
-.two { margin-top: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
-.col { position: relative; padding: 38px 38px 34px; background: #fffdf8; border: 1px solid #d8cfbf; border-radius: 4px 35px 4px 35px; box-shadow: 0 32px 70px -50px rgba(0, 0, 0, .45); }
+/* Cartões de apoio */
+.mini { margin-top: 28px; display: grid; gap: 14px; }
+.mini article { padding: 22px 24px 20px; background: #fffdf8; border: 1px solid #d8cfbf; border-left: 3px solid var(--gold); border-radius: 3px 20px 3px 20px; transition: transform .5s var(--ease), box-shadow .5s ease; }
+.mini article:hover { transform: translateY(-4px); box-shadow: 0 30px 56px -40px rgba(0, 0, 0, .5); }
+.mini h3 { margin: 0 0 8px; font: 400 22px/1.2 Georgia, serif; }
+.mini p { margin: 0; color: #68635c; font-size: 14.5px; line-height: 1.65; }
+
+/* Regiões com foto */
+.regions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.regions article { overflow: hidden; background: #fffdf8; border: 1px solid #d8cfbf; border-radius: 4px 32px 4px 32px; transition: transform .6s var(--ease), box-shadow .6s ease; }
+.regions article:hover { transform: translateY(-8px); box-shadow: 0 46px 74px -46px rgba(0, 0, 0, .55); }
+.regions figure { position: relative; margin: 0; aspect-ratio: 4 / 3; overflow: hidden; background: #d9d0bd; }
+.regions figure img { object-fit: cover; transition: transform 1.6s var(--ease); }
+.regions article:hover figure img { transform: scale(1.06); }
+.regions .tag { left: 12px; bottom: 12px; }
+.regions .body { padding: 22px 24px 26px; }
+.regions .body span { color: #917746; font: 13px Georgia, serif; }
+.regions h3 { margin: 10px 0 8px; font: 400 26px/1.12 Georgia, serif; }
+.regions p { margin: 0; color: #68635c; font-size: 14.5px; line-height: 1.65; }
+.after { margin-top: 44px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 22px 40px; }
+.after .lead { margin: 0; }
+.after .cta { margin: 0; }
+
+/* Cartão "quem cuida" dentro da seção de cuidado */
+.who { margin-top: 28px; padding: 22px 24px; background: #fffdf8; border: 1px solid #d8cfbf; border-radius: 3px 20px 3px 20px; }
+.who .eyebrowSm { margin: 0 0 8px; color: #816b3f; font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+.who p:last-child { margin: 0; color: #4e4b46; font-size: 15px; line-height: 1.65; }
+
+/* Para quem / quem não deve */
+.stack { margin-top: 30px; display: grid; gap: 18px; }
+.col { position: relative; padding: 32px 32px 26px; background: #fffdf8; border: 1px solid #d8cfbf; border-radius: 4px 35px 4px 35px; box-shadow: 0 32px 70px -50px rgba(0, 0, 0, .45); transition: transform .55s var(--ease), box-shadow .55s ease; }
 .col::before { content: ""; position: absolute; inset: 8px; pointer-events: none; border: 1px solid rgba(182, 153, 92, .2); border-radius: 3px 28px 3px 28px; }
 .col > * { position: relative; }
-.col h3 { margin: 0 0 20px; font: 400 clamp(24px, 2.4vw, 30px)/1.1 Georgia, serif; letter-spacing: -.02em; }
+.col:hover { transform: translateY(-5px); box-shadow: 0 44px 72px -46px rgba(0, 0, 0, .55); }
+.col h3 { margin: 0 0 14px; font: 400 clamp(22px, 2.2vw, 28px)/1.1 Georgia, serif; letter-spacing: -.02em; }
 .col ul { margin: 0; padding: 0; list-style: none; }
-.col li { padding: 13px 0 13px 30px; position: relative; border-top: 1px solid #e5ddcd; color: #4e4b46; font-size: 15px; line-height: 1.55; }
-.col li::before { position: absolute; left: 0; top: 13px; font-weight: 800; }
+.col li { padding: 11px 0 11px 30px; position: relative; border-top: 1px solid #e5ddcd; color: #4e4b46; font-size: 14.5px; line-height: 1.55; }
+.col li::before { position: absolute; left: 0; top: 11px; font-weight: 800; }
 .yes li::before { content: "✓"; color: #8a7448; }
 .no li::before { content: "×"; color: #a3392b; }
 
-/* Passo a passo em 5 colunas (o Lavieen usa 3) */
-main.landing .steps5 { margin: 68px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); list-style: none; border-top: 1px solid #ccc2b2; }
-main.landing .steps5 li { min-height: 270px; padding: 27px 22px 24px 0; display: flex; flex-direction: column; justify-content: space-between; border-right: 1px solid #ccc2b2; }
-main.landing .steps5 li + li { padding-left: 22px; }
-main.landing .steps5 li:last-child { border-right: 0; }
-main.landing .steps5 li > span { color: #987c47; font: 42px Georgia, serif; }
-main.landing .steps5 h3 { margin: 0 0 10px; font: 400 21px/1.15 Georgia, serif; }
-main.landing .steps5 p { margin: 0; color: #68635c; font-size: 13px; line-height: 1.65; }
-main.landing .howWide .sectionIntro > p:last-child { display: none; }
+/* Passo a passo */
+.steps { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); list-style: none; border-top: 1px solid #ccc2b2; }
+.steps li { min-height: 270px; padding: 27px 22px 24px 0; display: flex; flex-direction: column; justify-content: space-between; border-right: 1px solid #ccc2b2; }
+.steps li + li { padding-left: 22px; }
+.steps li:last-child { border-right: 0; }
+.steps li > span { color: #987c47; font: 42px Georgia, serif; transition: color .4s ease, transform .5s var(--ease); }
+.steps li:hover > span { color: #b6995c; transform: translateY(-4px); }
+.steps h3 { margin: 0 0 10px; font: 400 21px/1.15 Georgia, serif; }
+.steps p { margin: 0; color: #68635c; font-size: 13px; line-height: 1.65; }
+.afterSteps { margin-top: 12px; }
 
-/* Fechamento: mesma faixa escura do Lavieen, com botão claro */
+/* FAQ em duas colunas: título e CTA à esquerda, perguntas à direita */
+.faqSplit { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(44px, 7vw, 108px); align-items: start; }
+.faqAside { position: sticky; top: 110px; }
+.faqx { margin-top: 0; border-top: 1px solid #ccc2b2; }
+.faqx summary { transition: color .3s ease, padding-left .4s var(--ease); }
+.faqx summary:hover { color: #8a7448; padding-left: 8px; }
+.faqx summary::after { transition: transform .45s var(--ease); }
+.faqx details[open] summary::after { content: "+"; transform: translateY(-50%) rotate(135deg); }
+
+/* Fechamento: faixa escura do Lavieen com botão claro */
+main.landing .closing { position: relative; overflow: hidden; isolation: isolate; }
+main.landing .closing::before { content: ""; position: absolute; inset: -35%; z-index: -1; pointer-events: none; background: radial-gradient(38% 34% at 24% 32%, rgba(182, 153, 92, .24), transparent 70%), radial-gradient(34% 30% at 76% 70%, rgba(219, 201, 159, .15), transparent 70%); }
 .closing .light { color: var(--ink); background: #fff; }
 .closing .light:hover { background: #f1ece1; }
 .closing .light span { color: #8a7448; }
 .closing > .cta { margin: 36px auto 0; align-items: center; text-align: center; }
 .closing .micro { color: rgba(255, 255, 255, .6); }
+.closing .wa { color: rgba(255, 255, 255, .78); text-decoration-color: rgba(219, 201, 159, .5); }
+.closing .wa:hover { color: var(--gold-light); }
 .closingNote { max-width: 640px; margin: 30px auto 0; color: rgba(255, 255, 255, .6); font-size: 13px; line-height: 1.65; }
+
+/* Tela inicial do quiz: roteiro das 5 perguntas */
+.preview { margin: 0 0 28px; padding: 0; list-style: none; border-top: 1px solid #e5ddcd; }
+.preview li { padding: 12px 0; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #e5ddcd; color: #4e4b46; font-size: 14.5px; line-height: 1.4; }
+.preview li span { width: 28px; height: 28px; flex: none; display: grid; place-items: center; color: #8a7448; border: 1px solid #cdbf9f; border-radius: 50%; font: 14px Georgia, serif; transition: background .35s ease, color .35s ease, transform .45s var(--ease); }
+.preview li:hover span { color: #fff; background: #8a7448; transform: scale(1.1); }
 
 /* Botões do resultado do quiz */
 .resultActions { margin: 26px 0 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
 
-/* Botão fixo no mobile */
-.sticky { display: none; }
-.footerPad { padding-bottom: 55px; }
-
-@media (max-width: 900px) {
-  main.landing .grid4 { grid-template-columns: repeat(2, 1fr); }
-  main.landing .steps5 { grid-template-columns: 1fr; }
-  main.landing .steps5 li, main.landing .steps5 li + li { min-height: 0; padding: 24px 0; display: grid; grid-template-columns: 56px 1fr; column-gap: 14px; border-right: 0; border-bottom: 1px solid #ccc2b2; }
-  main.landing .steps5 li > span { font-size: 34px; }
-}
-
-@media (max-width: 800px) {
-  .two { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 620px) {
-  /* No Lavieen o herói some no mobile (o quiz vem primeiro). Aqui ele fica, no mesmo estilo. */
-  main.landing .heroOn { display: block; min-height: 0; padding: 30px 16px 54px; }
-  .trust { display: flex; }
-  .cta { width: 100%; margin-top: 22px; }
-  .cta > button { width: 100%; }
-  main.landing .grid2, main.landing .grid3, main.landing .grid4 { grid-template-columns: 1fr; }
-  main.landing .grid2 article, main.landing .grid3 article, main.landing .grid4 article { min-height: 0; padding: 22px 4px; display: grid; grid-template-columns: 45px 1fr; border-right: 0; border-bottom: 1px solid #ccc2b2; }
-  main.landing .grid2 article:first-child, main.landing .grid3 article:first-child, main.landing .grid4 article:first-child { border-left: 0; }
-  main.landing .grid2 article:last-child, main.landing .grid3 article:last-child, main.landing .grid4 article:last-child { border-right: 0; }
-  main.landing .grid2 h3, main.landing .grid3 h3, main.landing .grid4 h3 { margin: 0 0 8px; font-size: 22px; align-self: start; }
-  main.landing .grid2 p, main.landing .grid3 p { grid-column: 2; }
-  main.landing .grid4 h3 { grid-column: 2; }
-  .col { padding: 28px 20px 24px; }
-  .col::before { inset: 6px; border-radius: 2px 17px 2px 17px; }
-  .lead { font-size: 18px; }
-  .closing .light { width: 100%; }
-  .footerPad { padding-bottom: 110px; }
-  .sticky {
-    position: fixed;
-    z-index: 40;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-    display: block;
-    background: rgba(247, 244, 238, .96);
-    border-top: 1px solid rgba(23, 23, 21, .12);
-    backdrop-filter: blur(14px);
-    box-shadow: 0 -14px 30px -22px rgba(0, 0, 0, .55);
-    transform: translateY(110%);
-    visibility: hidden;
-    transition: transform .28s ease, visibility 0s linear .28s;
-  }
-  .stickyOn { transform: translateY(0); visibility: visible; transition: transform .28s ease, visibility 0s; }
-  .sticky button { width: 100%; min-height: 52px; gap: 14px; padding: 0 16px; font-size: 10.5px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sticky, .stickyOn { transition: none; }
-}
-
-/* ===================== Acabamento premium e movimento ===================== */
-main.landing { --ease: cubic-bezier(.22, 1, .36, 1); overflow: clip; }
-
-/* Barra de progresso de leitura no topo */
+/* ---------- Barra de leitura, cabeçalho e botão principal ---------- */
 .bar { position: fixed; z-index: 60; top: 0; left: 0; right: 0; height: 2px; pointer-events: none; }
 .bar span { display: block; height: 100%; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, #8f7541, #dbc99f); }
-
-/* Cabeçalho fixo com vidro */
 main.landing .headerBar { position: sticky; top: 0; z-index: 45; transition: height .35s var(--ease), box-shadow .35s ease, background-color .35s ease; }
 main.landing[data-scrolled="1"] .headerBar { background: rgba(247, 244, 238, .97); box-shadow: 0 14px 34px -26px rgba(0, 0, 0, .55); }
 @media (min-width: 621px) { main.landing[data-scrolled="1"] .headerBar { height: 64px; } }
 main.landing .cardTop { scroll-margin-top: 84px; }
 main.landing .anchorTop { scroll-margin-top: 88px; }
 
-/* Botão principal: brilho que cruza, elevação e seta que avança */
 main.landing .ctaBtn { position: relative; overflow: hidden; transition: transform .35s var(--ease), box-shadow .35s ease, background .25s ease; }
 main.landing .ctaBtn::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .3) 50%, transparent 62%); transform: translateX(-130%); }
 main.landing .ctaBtn:hover { transform: translateY(-3px); box-shadow: 0 28px 46px -24px rgba(0, 0, 0, .85); }
@@ -143,36 +155,17 @@ main.landing .ctaBtn span { transition: transform .35s var(--ease); }
 main.landing .ctaBtn:hover span { transform: translateX(5px); }
 main.landing .light::after { background: linear-gradient(105deg, transparent 38%, rgba(138, 116, 72, .25) 50%, transparent 62%); }
 
-/* Cartões e colunas */
-main.landing .grid2 article, main.landing .grid3 article, main.landing .grid4 article { transition: background-color .4s ease; }
-main.landing .grid2 article:hover, main.landing .grid3 article:hover, main.landing .grid4 article:hover { background: rgba(255, 253, 248, .8); }
-main.landing .col { transition: transform .55s var(--ease), box-shadow .55s ease; }
-main.landing .col:hover { transform: translateY(-6px); box-shadow: 0 44px 72px -46px rgba(0, 0, 0, .55); }
-main.landing .steps5 li > span { transition: color .4s ease, transform .5s var(--ease); }
-main.landing .steps5 li:hover > span { color: #b6995c; transform: translateY(-4px); }
+/* Botão fixo no mobile */
+.sticky { display: none; }
+.footerPad { padding-bottom: 55px; }
+.credit { margin-top: 10px; color: #8b857b; font-size: 10.5px; }
 
-/* Fechamento: luz dourada que se move devagar */
-main.landing .closing { position: relative; overflow: hidden; isolation: isolate; }
-main.landing .closing::before { content: ""; position: absolute; inset: -35%; z-index: -1; pointer-events: none; background: radial-gradient(38% 34% at 24% 32%, rgba(182, 153, 92, .24), transparent 70%), radial-gradient(34% 30% at 76% 70%, rgba(219, 201, 159, .15), transparent 70%); }
-
-/* FAQ */
-main.landing .faqx summary::after { transition: transform .45s var(--ease), color .3s ease; }
-main.landing .faqx details[open] summary::after { content: "+"; transform: translateY(-50%) rotate(135deg); }
-main.landing .faqx summary { transition: color .3s ease, padding-left .4s var(--ease); }
-main.landing .faqx summary:hover { color: #8a7448; padding-left: 8px; }
-
-/* Tela inicial do quiz: roteiro das 5 perguntas */
-.preview { margin: 0 0 28px; padding: 0; list-style: none; border-top: 1px solid #e5ddcd; }
-.preview li { padding: 12px 0; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #e5ddcd; color: #4e4b46; font-size: 14.5px; line-height: 1.4; }
-.preview li span { width: 28px; height: 28px; flex: none; display: grid; place-items: center; color: #8a7448; border: 1px solid #cdbf9f; border-radius: 50%; font: 14px Georgia, serif; transition: background .35s ease, color .35s ease, transform .45s var(--ease); }
-.preview li:hover span { color: #fff; background: #8a7448; transform: scale(1.1); }
-
+/* ---------- Animações ---------- */
 @keyframes rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
 @keyframes focusIn { from { opacity: 0; transform: translateY(32px); filter: blur(10px); } to { opacity: 1; transform: none; filter: blur(0); } }
 @keyframes panelIn { from { opacity: 0; transform: translateY(44px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
-@keyframes dotGlow { 0% { box-shadow: 0 0 0 0 rgba(219, 201, 159, .55); } 100% { box-shadow: 0 0 0 16px rgba(219, 201, 159, 0); } }
+@keyframes dotGlow { 0% { box-shadow: 0 0 0 0 rgba(219, 201, 159, .55); } 100% { box-shadow: 0 0 0 12px rgba(219, 201, 159, 0); } }
 @keyframes sheen { 0%, 62%, 100% { transform: translateX(-130%); } 80% { transform: translateX(130%); } }
 @keyframes drift { 0% { transform: translate3d(-4%, -3%, 0) scale(1); } 100% { transform: translate3d(5%, 4%, 0) scale(1.12); } }
 @keyframes stepIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
@@ -182,7 +175,6 @@ main.landing .faqx summary:hover { color: #8a7448; padding-left: 8px; }
 @keyframes faqIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* Entrada do topo */
   main.landing .heroIn > * { animation: rise .95s var(--ease) both; }
   main.landing .heroIn > :nth-child(1) { animation-delay: .05s; }
   main.landing .heroIn > :nth-child(2) { animation-name: focusIn; animation-duration: 1.15s; animation-delay: .15s; }
@@ -190,19 +182,16 @@ main.landing .faqx summary:hover { color: #8a7448; padding-left: 8px; }
   main.landing .heroIn > :nth-child(4) { animation-delay: .55s; }
   main.landing .heroIn > :nth-child(5) { animation-delay: .7s; }
   main.landing .panelIn { animation: panelIn 1.2s var(--ease) .3s both, float 8s ease-in-out 1.6s infinite; }
-  main.landing .panelIn li { animation: rise .8s var(--ease) both; }
-  main.landing .panelIn li:nth-child(1) { animation-delay: .9s; }
-  main.landing .panelIn li:nth-child(2) { animation-delay: 1s; }
-  main.landing .panelIn li:nth-child(3) { animation-delay: 1.1s; }
-  main.landing .orbitPulse { animation: breathe 5s ease-in-out infinite; }
-  main.landing .orbitPulse::after { animation: dotGlow 2.8s ease-out infinite; }
+  main.landing .liveDot { animation: dotGlow 2.4s ease-out infinite; }
   main.landing .heroOn::before { transform: translateY(calc(-50% + var(--sy, 0) * -0.07px)); }
   main.landing .ctaHero::after { animation: sheen 6s ease-in-out 2.6s infinite; }
   main.landing .closing::before { animation: drift 20s ease-in-out infinite alternate; }
 
-  /* Revelação ao rolar (as classes são aplicadas por script; sem script tudo aparece) */
+  /* Revelação ao rolar (classes aplicadas por script; sem script ou com movimento reduzido tudo aparece) */
   main.landing .revealPre { opacity: 0; transform: translateY(34px); transition: opacity 1s var(--ease), transform 1s var(--ease); }
   main.landing .revealPre.revealIn { opacity: 1; transform: none; }
+  main.landing .revealPre img { transform: scale(1.14); transition: transform 1.8s var(--ease); }
+  main.landing .revealPre.revealIn img { transform: scale(1); }
   main.landing .revealPre [class*="__eyebrow"]::before { transform: scaleX(0); transform-origin: left; transition: transform 1.1s var(--ease) .25s; }
   main.landing .revealPre.revealIn [class*="__eyebrow"]::before { transform: scaleX(1); }
 
@@ -226,11 +215,72 @@ main.landing .faqx summary:hover { color: #8a7448; padding-left: 8px; }
   main.landing .faqx details[open] p { animation: faqIn .5s var(--ease); }
 }
 
+/* ---------- Responsivo ---------- */
+@media (max-width: 1000px) {
+  .steps { grid-template-columns: 1fr; }
+  .steps li, .steps li + li { min-height: 0; padding: 24px 0; display: grid; grid-template-columns: 56px 1fr; column-gap: 14px; border-right: 0; border-bottom: 1px solid #ccc2b2; }
+  .steps li > span { font-size: 34px; }
+}
+
+@media (max-width: 900px) {
+  .sec { padding: 84px 22px; }
+  .mediaLeft, .mediaRight, .faqSplit { grid-template-columns: 1fr; }
+  .split > .frame { order: 2; max-width: 560px; }
+  .heroMedia { margin: 0 auto; }
+  .regions { grid-template-columns: 1fr; max-width: 560px; }
+  .faqAside { position: static; }
+  .strip ul { grid-template-columns: repeat(2, 1fr); padding: 0 16px; }
+  .strip li { padding: 18px 12px 18px 0; }
+  .strip li + li { padding-left: 0; border-left: 0; }
+  .strip li:nth-child(even) { padding-left: 16px; border-left: 1px solid #e1d9c8; }
+  .strip li:nth-child(n+3) { border-top: 1px solid #e1d9c8; }
+}
+
 @media (max-width: 620px) {
+  /* No Lavieen o topo some no mobile (o quiz vem primeiro). Aqui ele fica, no mesmo estilo. */
+  main.landing .heroOn { display: block; min-height: 0; padding: 30px 16px 54px; }
+  main.landing .heroOn .heroMedia { margin-top: 34px; max-height: none; aspect-ratio: 4 / 4.6; }
+  .glass { left: 12px; right: 12px; bottom: 12px; padding: 16px 18px 14px; }
+  .glass strong { font-size: 32px; }
+  .sec { padding: 68px 16px; }
+  .title { font-size: clamp(33px, 9.4vw, 40px); }
+  .p { font-size: 15.5px; }
+  .head { margin-bottom: 34px; }
+  .cta { width: 100%; margin-top: 22px; }
+  .cta > button { width: 100%; }
+  .after { margin-top: 32px; }
+  .frame { border-radius: 3px 34px 3px 34px; }
+  .col { padding: 26px 20px 20px; }
+  .col::before { inset: 6px; border-radius: 2px 17px 2px 17px; }
+  .lead { font-size: 18px; }
+  .closing .light { width: 100%; }
+  .footerPad { padding-bottom: 110px; }
   main.landing .cardTop { scroll-margin-top: 70px; }
   main.landing .anchorTop { scroll-margin-top: 74px; }
+  .sticky {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    display: block;
+    background: rgba(247, 244, 238, .96);
+    border-top: 1px solid rgba(23, 23, 21, .12);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 -14px 30px -22px rgba(0, 0, 0, .55);
+    transform: translateY(110%);
+    visibility: hidden;
+    transition: transform .28s ease, visibility 0s linear .28s;
+  }
+  .stickyOn { transform: translateY(0); visibility: visible; transition: transform .28s ease, visibility 0s; }
+  .sticky button { width: 100%; min-height: 52px; gap: 14px; padding: 0 16px; font-size: 10.5px; }
 }
 
 @media (max-width: 620px) and (prefers-reduced-motion: no-preference) {
   main.landing .stickyOn button { animation: glow 3.2s ease-in-out infinite; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky, .stickyOn { transition: none; }
 }

@@ -42,6 +42,10 @@ const faq = [
   ["Preciso decidir agora?", "Não. O quiz e a avaliação servem para você entender as possibilidades. A aplicação só acontece se for indicada e se você decidir seguir."],
 ];
 
+function Shot({ src, alt, sizes, pos = "50% 50%", priority = false }: { src: string; alt: string; sizes: string; pos?: string; priority?: boolean }) {
+  return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} style={{ objectPosition: pos }} />;
+}
+
 const CTA_TEXT = "Quero agendar minha avaliação de Botox";
 const CTA_MICRO = "Quiz de 1 minuto. Sem compromisso. A aplicação só acontece depois da avaliação.";
 
@@ -339,89 +343,122 @@ export default function BotoxPage() {
         <h1>Botox para suavizar rugas e linhas de expressão, <em>com aparência natural</em></h1>
         <p className={s.heroText}>Responda 5 perguntas rápidas, veja se o Botox faz sentido para você e agende sua avaliação na PS Estética, em São Bernardo do Campo.</p>
         {cta(true, false, true)}
-        <ul className={b.trust}><li>Avaliação individual antes de qualquer aplicação</li><li>Profissional habilitado</li><li>Atendimento em São Bernardo do Campo, ABC Paulista</li></ul>
+        <a className={b.wa} href={whatsapp} target="_blank" rel="noreferrer">Prefere falar direto com a equipe? Chame no WhatsApp</a>
       </div>
-      <div className={`${s.heroPanel} ${b.panelIn}`}><span className={`${s.orbit} ${b.orbitPulse}`} aria-hidden="true" /><p>Indicação inicial em 1 minuto</p><strong>5 perguntas</strong><ul><li>Avaliação individual antes de qualquer aplicação</li><li>Profissional habilitado</li><li>Atendimento em São Bernardo do Campo, ABC Paulista</li></ul><small>Sem diagnóstico automático. Você será avaliado individualmente.</small></div>
+      <figure className={`${b.frame} ${b.heroMedia} ${b.panelIn}`}>
+        <Shot src="/botox/hero.jpg" alt="Imagem ilustrativa: profissional de saúde aplicando toxina botulínica na testa de uma mulher" sizes="(max-width: 900px) 100vw, 520px" pos="50% 42%" priority />
+        <span className={b.tag}>Imagem ilustrativa</span>
+        <figcaption className={b.glass}><p><span className={b.liveDot} />Indicação inicial em 1 minuto</p><strong>5 perguntas</strong><small>Sem diagnóstico automático. Você será avaliado individualmente.</small></figcaption>
+      </figure>
     </section>
 
-    <section className={s.benefits}>
-      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Reconhecimento</p><h2>Você olha no espelho e vê isso?</h2></div>
-      <div className={`${s.benefitGrid} ${b.grid4}`}>
-        <article data-reveal><span>01</span><h3>Linhas na testa quando levanta a sobrancelha.</h3></article>
-        <article data-reveal><span>02</span><h3>A linha vertical entre as sobrancelhas, o “11”, que dá cara de bravo ou de cansaço.</h3></article>
-        <article data-reveal><span>03</span><h3>Pés de galinha ao redor dos olhos quando sorri.</h3></article>
-        <article data-reveal><span>04</span><h3>Vontade de fazer Botox, mas medo de exagerar e ficar com o rosto sem expressão.</h3></article>
+    <section className={b.strip} aria-label="Por que começar pela avaliação"><ul><li>Avaliação individual antes de qualquer aplicação</li><li>Profissional habilitado</li><li>Atendimento em São Bernardo do Campo, ABC Paulista</li><li>Quiz de 1 minuto. Sem compromisso.</li></ul></section>
+
+    <section className={b.sec}><div className={`${b.split} ${b.mediaLeft}`}>
+      <figure className={b.frame} data-reveal>
+        <Shot src="/botox/espelho.jpg" alt="Imagem ilustrativa: mulher olhando o próprio rosto no espelho" sizes="(max-width: 900px) 100vw, 480px" pos="30% 50%" />
+        <span className={b.tag}>Imagem ilustrativa</span>
+      </figure>
+      <div className={b.copy}>
+        <div data-reveal><p className={s.eyebrow}>Reconhecimento</p><h2 className={b.title}>Você olha no espelho e vê isso?</h2></div>
+        <ol className={b.nums}>
+          <li data-reveal><span>01</span><div>Linhas na testa quando levanta a sobrancelha.</div></li>
+          <li data-reveal><span>02</span><div>A linha vertical entre as sobrancelhas, o “11”, que dá cara de bravo ou de cansaço.</div></li>
+          <li data-reveal><span>03</span><div>Pés de galinha ao redor dos olhos quando sorri.</div></li>
+          <li data-reveal><span>04</span><div>Vontade de fazer Botox, mas medo de exagerar e ficar com o rosto sem expressão.</div></li>
+        </ol>
+        <p className={b.lead} data-reveal>Se você se reconheceu, o Botox pode ser uma opção para avaliar. E a PS Estética começa pela avaliação, não pela agulha.</p>
+        {cta(false)}
       </div>
-      <p className={b.lead} data-reveal>Se você se reconheceu, o Botox pode ser uma opção para avaliar. E a PS Estética começa pela avaliação, não pela agulha.</p>
-      {cta(false)}
+    </div></section>
+
+    <div className={b.band}><section className={b.sec}><div className={`${b.split} ${b.mediaRight}`}>
+      <div className={b.copy}>
+        <div data-reveal><p className={s.eyebrow}>O que é</p><h2 className={b.title}>O que é o Botox e como ele funciona</h2><p className={b.p}>Botox é o nome mais conhecido da toxina botulínica, um medicamento aplicado em pontos específicos do rosto. Os músculos do rosto se contraem quando o nervo manda um sinal. O Botox bloqueia esse sinal em pontos escolhidos. Com o músculo trabalhando com menos força ali, a pele marca menos as rugas de expressão.</p></div>
+        <div className={b.mini}>
+          <article data-reveal><h3>O efeito é temporário</h3><p>Ele vai diminuindo aos poucos e o músculo volta a se mover normalmente. Por isso o tratamento é repetido ao longo do tempo, na frequência que a avaliação indicar.</p></article>
+          <article data-reveal><h3>Por que tanta gente tem medo de ficar com o rosto parado?</h3><p>Porque dose e pontos de aplicação mal planejados tiram movimento demais. Na PS Estética, os dois são definidos olhando como você levanta a sobrancelha e como você sorri.</p></article>
+        </div>
+        <p className={b.note} data-reveal>Cada pessoa responde de uma forma. Indicação, dose e protocolo são definidos individualmente por profissional habilitado, e os resultados não são garantidos.</p>
+      </div>
+      <figure className={b.frame} data-reveal>
+        <Shot src="/botox/mecanismo.jpg" alt="Imagem ilustrativa: aplicação de toxina botulínica com seringa fina na região da testa" sizes="(max-width: 900px) 100vw, 460px" pos="50% 40%" />
+        <span className={b.tag}>Imagem ilustrativa</span>
+      </figure>
+    </div></section></div>
+
+    <section className={b.sec}>
+      <div className={b.head} data-reveal><p className={s.eyebrow}>Onde pode ajudar</p><h2 className={b.title}>Onde o Botox pode ajudar</h2><p className={b.p}>Cada região é avaliada separadamente. Você só faz o que for indicado para o seu caso.</p></div>
+      <div className={b.regions}>
+        <article data-reveal><figure><Shot src="/botox/testa.jpg" alt="Imagem ilustrativa: aplicação na região da testa" sizes="(max-width: 900px) 100vw, 400px" pos="50% 30%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>01</span><h3>Testa</h3><p>As linhas horizontais que aparecem quando você levanta a sobrancelha.</p></div></article>
+        <article data-reveal><figure><Shot src="/botox/glabela.jpg" alt="Imagem ilustrativa: aplicação na região entre as sobrancelhas" sizes="(max-width: 900px) 100vw, 400px" pos="50% 42%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>02</span><h3>Entre as sobrancelhas</h3><p>As linhas verticais que dão cara de cansaço ou de bravo.</p></div></article>
+        <article data-reveal><figure><Shot src="/botox/olhos.jpg" alt="Imagem ilustrativa: aplicação ao redor dos olhos" sizes="(max-width: 900px) 100vw, 400px" pos="50% 22%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>03</span><h3>Ao redor dos olhos</h3><p>Os pés de galinha, que aparecem quando você sorri.</p></div></article>
+      </div>
+      <div className={b.after}>{cta(false)}</div>
     </section>
 
-    <div className={b.band}><section className={s.benefits}>
-      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>O que é</p><h2>O que é o Botox e como ele funciona</h2><p>Botox é o nome mais conhecido da toxina botulínica, um medicamento aplicado em pontos específicos do rosto. Os músculos do rosto se contraem quando o nervo manda um sinal. O Botox bloqueia esse sinal em pontos escolhidos. Com o músculo trabalhando com menos força ali, a pele marca menos as rugas de expressão.</p></div>
-      <div className={`${s.benefitGrid} ${b.grid2}`}>
-        <article data-reveal><span>01</span><h3>O efeito é temporário</h3><p>Ele vai diminuindo aos poucos e o músculo volta a se mover normalmente. Por isso o tratamento é repetido ao longo do tempo, na frequência que a avaliação indicar.</p></article>
-        <article data-reveal><span>02</span><h3>Por que tanta gente tem medo de ficar com o rosto parado?</h3><p>Porque dose e pontos de aplicação mal planejados tiram movimento demais. Na PS Estética, os dois são definidos olhando como você levanta a sobrancelha e como você sorri.</p></article>
+    <div className={b.band}><section className={b.sec}><div className={`${b.split} ${b.mediaLeft}`}>
+      <figure className={b.frame} data-reveal>
+        <Shot src="/botox/avaliacao.jpg" alt="Imagem ilustrativa: profissional de saúde avaliando uma paciente em consultório" sizes="(max-width: 900px) 100vw, 480px" pos="62% 50%" />
+        <span className={b.tag}>Imagem ilustrativa</span>
+      </figure>
+      <div className={b.copy}>
+        <div data-reveal><p className={s.eyebrow}>Nosso cuidado</p><h2 className={b.title}>Como a PS Estética cuida do seu Botox</h2></div>
+        <ol className={b.nums}>
+          <li data-reveal><span>01</span><div><b>Avaliação antes de tudo</b><p>Ninguém aplica nada sem olhar seu histórico de saúde, suas expectativas e a sua expressão.</p></div></li>
+          <li data-reveal><span>02</span><div><b>Plano feito para o seu rosto</b><p>Dose e pontos definidos individualmente, sem protocolo genérico.</p></div></li>
+          {/* TODO PROFISSIONAL HABILITADO: [[nome e registro profissional (CRM e RQE, se médico; ou o conselho correspondente) do responsável técnico: obrigatório em publicidade de saúde]]. O item "Profissional habilitado." só entra com esse dado. */}
+          <li data-reveal><span>03</span><div><b>Sem pressão</b><p>Você entende as possibilidades e decide no seu tempo.</p></div></li>
+        </ol>
+        {/* TODO QUEM VAI CUIDAR DE VOCÊ (versão completa): [[foto, nome, registro profissional e 2 linhas sobre o profissional responsável]] [[foto e endereço da clínica]]. Enquanto isso, só o texto abaixo. */}
+        <div className={b.who} data-reveal><p className={b.eyebrowSm}>Quem vai cuidar de você</p><p>PS Estética Avançada, em São Bernardo do Campo, ABC Paulista. Atendimento individualizado.</p></div>
       </div>
-      <p className={s.disclaimer} data-reveal>Cada pessoa responde de uma forma. Indicação, dose e protocolo são definidos individualmente por profissional habilitado, e os resultados não são garantidos.</p>
-    </section></div>
+    </div></section></div>
 
-    <section className={s.benefits}>
-      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Onde pode ajudar</p><h2>Onde o Botox pode ajudar</h2><p>Cada região é avaliada separadamente. Você só faz o que for indicado para o seu caso.</p></div>
-      <div className={`${s.benefitGrid} ${b.grid3}`}>
-        <article data-reveal><span>01</span><h3>Testa</h3><p>As linhas horizontais que aparecem quando você levanta a sobrancelha.</p></article>
-        <article data-reveal><span>02</span><h3>Entre as sobrancelhas</h3><p>As linhas verticais que dão cara de cansaço ou de bravo.</p></article>
-        <article data-reveal><span>03</span><h3>Ao redor dos olhos</h3><p>Os pés de galinha, que aparecem quando você sorri.</p></article>
+    <section className={b.sec}><div className={`${b.split} ${b.mediaRight}`}>
+      <div className={b.copy}>
+        <div data-reveal><p className={s.eyebrow}>Para quem</p><h2 className={b.title}>O Botox faz sentido para você?</h2></div>
+        <div className={b.stack}>
+          <div className={`${b.col} ${b.yes}`} data-reveal><h3>Pode fazer sentido se você</h3><ul><li>Quer suavizar as linhas sem perder a mobilidade do rosto.</li><li>Quer entender possibilidades e cuidados antes de decidir.</li><li>Pode ir a uma avaliação presencial em São Bernardo do Campo.</li></ul></div>
+          <div className={`${b.col} ${b.no}`} data-reveal><h3>Não deve fazer</h3><ul><li>Gestantes e lactantes.</li><li>Pessoas com alergia aos componentes.</li><li>Pessoas com infecção na região.</li><li>Pessoas com doenças neuromusculares ou fraqueza muscular.</li></ul></div>
+        </div>
+        <p className={b.note} data-reveal>Por isso a avaliação e o histórico de saúde vêm antes de qualquer aplicação.</p>
       </div>
-      {cta(false)}
-    </section>
+      <figure className={b.frame} data-reveal>
+        <Shot src="/botox/natural.jpg" alt="Imagem ilustrativa: mulher com expressão natural e tranquila" sizes="(max-width: 900px) 100vw, 460px" pos="38% 40%" />
+        <span className={b.tag}>Imagem ilustrativa</span>
+      </figure>
+    </div></section>
 
-    <section className={s.fit}>
-      <div data-reveal><p className={s.eyebrow}>Nosso cuidado</p><h2>Como a PS Estética cuida do seu Botox</h2></div>
-      <div className={s.fitCards}>
-        <article data-reveal><span>01</span><h3>Avaliação antes de tudo</h3><p>Ninguém aplica nada sem olhar seu histórico de saúde, suas expectativas e a sua expressão.</p></article>
-        <article data-reveal><span>02</span><h3>Plano feito para o seu rosto</h3><p>Dose e pontos definidos individualmente, sem protocolo genérico.</p></article>
-        {/* TODO PROFISSIONAL HABILITADO: [[nome e registro profissional (CRM e RQE, se médico; ou o conselho correspondente) do responsável técnico: obrigatório em publicidade de saúde]]. O item "Profissional habilitado." só entra com esse dado. */}
-        <article data-reveal><span>03</span><h3>Sem pressão</h3><p>Você entende as possibilidades e decide no seu tempo.</p></article>
-      </div>
-    </section>
-
-    <section className={s.benefits}>
-      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Para quem</p><h2>O Botox faz sentido para você?</h2></div>
-      <div className={b.two}>
-        <div className={`${b.col} ${b.yes}`} data-reveal><h3>Pode fazer sentido se você</h3><ul><li>Quer suavizar as linhas sem perder a mobilidade do rosto.</li><li>Quer entender possibilidades e cuidados antes de decidir.</li><li>Pode ir a uma avaliação presencial em São Bernardo do Campo.</li></ul></div>
-        <div className={`${b.col} ${b.no}`} data-reveal><h3>Não deve fazer</h3><ul><li>Gestantes e lactantes.</li><li>Pessoas com alergia aos componentes.</li><li>Pessoas com infecção na região.</li><li>Pessoas com doenças neuromusculares ou fraqueza muscular.</li></ul></div>
-      </div>
-      <p className={s.disclaimer} data-reveal>Por isso a avaliação e o histórico de saúde vêm antes de qualquer aplicação.</p>
-    </section>
-
-    <div className={b.band}><section className={`${s.how} ${b.howWide}`}>
-      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Passo a passo</p><h2>Do quiz à sessão de Botox em 5 passos</h2></div>
-      <ol className={b.steps5}>
+    <div className={b.band}><section className={b.sec}>
+      <div className={b.head} data-reveal><p className={s.eyebrow}>Passo a passo</p><h2 className={b.title}>Do quiz à sessão de Botox em 5 passos</h2></div>
+      <ol className={b.steps}>
         <li data-reveal><span>1</span><div><h3>Responda o quiz</h3><p>5 perguntas, menos de 1 minuto.</p></div></li>
         <li data-reveal><span>2</span><div><h3>Receba a indicação inicial</h3><p>Você vê se a avaliação de Botox é um bom próximo passo.</p></div></li>
         <li data-reveal><span>3</span><div><h3>Escolha o horário</h3><p>Pré-agende online ou fale direto pelo WhatsApp.</p></div></li>
         <li data-reveal><span>4</span><div><h3>Faça a avaliação presencial</h3><p>Um profissional habilitado analisa seu histórico, suas expectativas e a sua expressão.</p></div></li>
         <li data-reveal><span>5</span><div><h3>Faça a sessão, se for indicada</h3><p>A aplicação só acontece se o profissional indicar e se você decidir seguir.</p></div></li>
       </ol>
-      {cta(false)}
+      <div className={b.afterSteps}>{cta(false)}</div>
     </section></div>
 
     {/* TODO PROVA SOCIAL (seção não renderizada até ter conteúdo real). Título previsto: "Quem já fez conta como foi". Conteúdo: [[vídeos curtos de 15 a 20s e/ou prints de depoimentos de pacientes reais, com autorização por escrito]] [[nota e número de avaliações do Google]]. Não publicar sem conteúdo real. */}
 
-    {/* TODO QUEM VAI CUIDAR DE VOCÊ (versão completa): [[foto, nome, registro profissional e 2 linhas sobre o profissional responsável]] [[foto e endereço da clínica]]. Enquanto isso, só o texto abaixo. */}
-    <section className={s.benefits}>
-      <div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Quem vai cuidar de você</p><p className={b.lead} style={{ margin: 0 }} data-reveal>PS Estética Avançada, em São Bernardo do Campo, ABC Paulista. Atendimento individualizado.</p></div>
-    </section>
-
-    <section className={s.faq}><div className={s.sectionIntro} data-reveal><p className={s.eyebrow}>Dúvidas</p><h2>Perguntas frequentes sobre Botox</h2></div>
+    <section className={b.sec}><div className={b.faqSplit}>
+      <div className={b.faqAside} data-reveal>
+        <p className={s.eyebrow}>Dúvidas</p><h2 className={b.title}>Perguntas frequentes sobre Botox</h2>
+        {cta(false)}
+      </div>
       {/* TODO FAQ (textos renderizados, aguardando confirmação da clínica): [[confirmar o prazo de efeito máximo com o profissional responsável]] [[confirmar o protocolo de pós-aplicação da clínica]] [[confirmar o valor/condição: se houver valor da avaliação ou condição promocional, informar aqui e no fechamento]] */}
-      <div className={`${s.faqList} ${b.faqx}`}>{faq.map(([question, answer]) => <details key={question} data-reveal><summary>{question}</summary><p>{answer}</p></details>)}</div></section>
+      <div className={`${s.faqList} ${b.faqx}`}>{faq.map(([question, answer]) => <details key={question} data-reveal><summary>{question}</summary><p>{answer}</p></details>)}</div>
+    </div></section>
 
     <section className={`${s.confidence} ${b.closing}`}>
       <p className={s.eyebrow} data-reveal>Decisão com segurança</p>
       <h2 data-reveal>Descubra em 1 minuto se o Botox serve para você</h2>
       <p data-reveal>São 5 perguntas sobre as regiões que você quer avaliar, o seu histórico e o que você espera do resultado. No final, você escolhe um horário para a avaliação ou fala com a equipe pelo WhatsApp.</p>
       {cta(true, true)}
+      <a className={b.wa} href={whatsapp} target="_blank" rel="noreferrer">Prefere falar direto com a equipe? Chame no WhatsApp</a>
       <p className={b.closingNote} data-reveal>A avaliação vem antes de qualquer aplicação. Você só faz Botox se for indicado e se quiser.</p>
     </section>
 
@@ -440,7 +477,7 @@ export default function BotoxPage() {
         </div>
       </div>
     </section>
-    <footer className={`${s.footer} ${b.footerPad}`}><Image src="/ps-estetica-logo-oficial.png" width={246} height={80} alt="PS Estética" /><p>São Bernardo do Campo • ABC Paulista</p><small>O conteúdo desta página é informativo. A indicação de qualquer procedimento depende de avaliação individual por profissional habilitado, e os resultados variam de pessoa para pessoa.</small>{/* TODO RESPONSÁVEL TÉCNICO no rodapé: "Responsável técnico: [[nome, registro profissional e RQE, se houver]]". Não renderizar sem o dado. */}</footer>
+    <footer className={`${s.footer} ${b.footerPad}`}><Image src="/ps-estetica-logo-oficial.png" width={246} height={80} alt="PS Estética" /><p>São Bernardo do Campo • ABC Paulista</p><small>O conteúdo desta página é informativo. A indicação de qualquer procedimento depende de avaliação individual por profissional habilitado, e os resultados variam de pessoa para pessoa.</small><small className={b.credit}>Fotos ilustrativas do banco de imagens Pexels. As imagens não mostram pacientes nem resultados da PS Estética.</small>{/* TODO RESPONSÁVEL TÉCNICO no rodapé: "Responsável técnico: [[nome, registro profissional e RQE, se houver]]". Não renderizar sem o dado. */}</footer>
     <div className={`${b.sticky} ${stickyVisible ? b.stickyOn : ""}`} aria-hidden={!stickyVisible}><button type="button" className={s.primary} tabIndex={stickyVisible ? 0 : -1} onClick={goToQuiz}>{CTA_TEXT} <span>›</span></button></div>
   </main>;
 }
