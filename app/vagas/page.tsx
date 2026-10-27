@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef, useState } from "react";
 import Image from "next/image";
 import { Lora } from "next/font/google";
 import v from "./vagas.module.css";
@@ -26,9 +25,6 @@ function WhatsIcon() {
 }
 
 export default function VagasPage() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
-
   // Evento padrão do Meta para o clique no WhatsApp (só dispara se o Pixel carregou).
   const track = (place: string) => {
     try {
@@ -39,18 +35,9 @@ export default function VagasPage() {
     }
   };
 
-  const toggleSound = () => {
-    const el = videoRef.current;
-    if (!el) return;
-    const next = !muted;
-    el.muted = next;
-    setMuted(next);
-    if (!next) { el.currentTime = 0; void el.play().catch(() => undefined); }
-  };
-
   const cta = (place: string, extra = "") => (
     <a className={`${v.cta} ${extra}`} href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" onClick={() => track(place)}>
-      <WhatsIcon /> Quero me candidatar pelo WhatsApp
+      <WhatsIcon /> Quero me candidatar agora
     </a>
   );
 
@@ -81,21 +68,7 @@ export default function VagasPage() {
           </div>
         </div>
 
-        <div className={v.videoCol}>
-          <div className={v.videoFrame}>
-            <video ref={videoRef} src="/vagas/video.mp4" poster="/vagas/video-poster.jpg" autoPlay muted loop playsInline preload="metadata" aria-label="Vídeo: PS Estética está contratando cabeleireiro(a) e manicure" />
-            <button type="button" className={v.sound} onClick={toggleSound} aria-pressed={!muted}>
-              {muted ? "Ativar o som" : "Silenciar"}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className={v.roleSec}>
-        <div className={v.wrap}>
-          <p className={v.eyebrow}>Duas vagas</p>
-          <h2>Para quem faz a <em>diferença</em> nos detalhes</h2>
-          <div className={v.arches}>
+        <div className={v.arches}>
             <figure>
               <div className={v.arch}><Image src="/vagas/cabelo.jpg" alt="Profissional escovando e modelando os cabelos de uma cliente" fill sizes="(max-width: 860px) 44vw, 260px" /></div>
               <figcaption><strong>Cabeleireiro(a)</strong><span>Vaga aberta</span></figcaption>
@@ -105,7 +78,6 @@ export default function VagasPage() {
               <figcaption><strong>Manicure</strong><span>Vaga aberta</span></figcaption>
             </figure>
           </div>
-        </div>
       </section>
 
       <section className={v.band}>
