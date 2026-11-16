@@ -18,5 +18,6 @@
 .page .eventDate b{font-family:var(--bf-serif),Georgia,serif;font-size:19px;font-weight:400;line-height:1.4}
 .page .footer{background:transparent}
 .page .header{padding-top:18px;padding-bottom:18px}
-.page .header img{width:156px;height:auto}
-@media(max-width:650px){.page .header{padding-top:12px;padding-bottom:12px}.page .header img{width:128px;height:auto}.page .hero{padding-top:23px}}
+.page .header img{width:112px;height:auto;opacity:.95}
+.page .footer img{width:108px;height:auto;opacity:.95}
+@media(max-width:650px){.page .header{padding-top:14px;padding-bottom:14px}.page .header img{width:94px;height:auto}.page .hero{padding-top:23px}}

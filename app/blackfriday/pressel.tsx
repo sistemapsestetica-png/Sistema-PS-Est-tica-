@@ -48,7 +48,7 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
   return <main ref={root} className={`${s.page} ${serifClass}`}>
     <div className={s.ambient} aria-hidden="true" />
     <header className={s.header}>
-      <Image src="/blackfriday/logo-vertical.png" width={156} height={109} alt="PS Estética Avançada — SPA & Salão de Beleza" priority />
+      <Image src="/blackfriday/logo-vertical.png" width={112} height={78} alt="PS Estética Avançada — SPA & Salão de Beleza" priority />
       <span>São Bernardo do Campo <i aria-hidden="true" /> SP</span>
     </header>
 
@@ -98,6 +98,6 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
       </div>
     </section>
 
-    <footer className={s.footer}><Image src="/blackfriday/logo-vertical.png" alt="PS Estética" width={135} height={94} /><p>Av. Imperador Pedro II, 635 · Nova Petrópolis<br />São Bernardo do Campo/SP</p><small>Ao entrar no grupo, você opta por receber as mensagens da campanha no WhatsApp. Pode sair quando quiser.</small><small>Procedimentos sujeitos à avaliação profissional e à disponibilidade da agenda.</small></footer>
+    <footer className={s.footer}><Image src="/blackfriday/logo-vertical.png" alt="PS Estética" width={108} height={75} /><p>Av. Imperador Pedro II, 635 · Nova Petrópolis<br />São Bernardo do Campo/SP</p><small>Ao entrar no grupo, você opta por receber as mensagens da campanha no WhatsApp. Pode sair quando quiser.</small><small>Procedimentos sujeitos à avaliação profissional e à disponibilidade da agenda.</small></footer>
   </main>;
 }
