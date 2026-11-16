@@ -16,7 +16,11 @@
 @media(prefers-reduced-motion:reduce){.page *{animation:none!important;transition:none!important;scroll-behavior:auto!important}.reveal{opacity:1;transform:none}}
 .page.page h1,.page.page h2,.page.page h3,.page .filmCaption,.page .day,.page .inviteTitle>span,.page .treatments p{font-family:var(--bf-serif),Georgia,serif}
 .page .eventDate b{font-family:var(--bf-serif),Georgia,serif;font-size:19px;font-weight:400;line-height:1.4}
-.page .footer{background:transparent}
+.page .footer{background:transparent;grid-template-columns:minmax(0,1fr);width:100%;max-width:none;margin:0;align-items:center;padding:36px 24px;gap:16px}
+.page .footer p{font-size:12px;line-height:1.8}
+.page .footer small{font-size:10px;line-height:1.8;color:#aa9c87;max-width:520px}
+.page .footer small+small{margin-top:0}
+@media(max-width:650px){.page .footer{padding:30px 20px;gap:14px}}
 .page .header{padding-top:18px;padding-bottom:18px}
 .page .header img{width:112px;height:auto;opacity:.95}
 .page .footer img{width:108px;height:auto;opacity:.95}
