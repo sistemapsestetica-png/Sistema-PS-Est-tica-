@@ -95,3 +95,26 @@
 }
 @media(max-width:650px){.firstScreen{min-height:calc(100svh - 117px)}}
 @media(max-width:350px) and (max-height:650px){.firstScreen{padding-bottom:16px;gap:12px}.firstScreen h1{font-size:35px}.firstScreen .lead{font-size:13px}.firstScreen .eventDate{margin:0;padding:10px 0}}
+.film .soundPrompt{top:16px;bottom:auto;left:14px;right:auto;max-width:calc(100% - 28px);min-height:0;padding:10px 14px;font-size:12px}
+.soundPrompt .playIcon{width:32px;height:32px}
+.soundPrompt small{font-size:10px}
+@media(prefers-reduced-motion:no-preference){
+  .firstScreen>.eyebrow{animation:rise .7s .05s both}
+  .firstScreen>h1{animation:rise .85s .12s both}
+  .firstScreen>.lead{animation:rise .85s .22s both}
+  .firstScreen>.eventDate{animation:rise .85s .32s both}
+  .firstScreen>.heroAction{animation:rise .85s .42s both}
+  .cta{overflow:hidden;isolation:isolate;transition:transform .25s,box-shadow .25s,border-color .25s}
+  .cta::before{content:"";position:absolute;inset:-60% auto -60% -55%;width:30%;pointer-events:none;background:linear-gradient(90deg,transparent,#fff8,transparent);transform:skewX(-20deg);animation:goldSweep 6s 2s ease-in-out infinite}
+  .cta>svg:last-child{transition:transform .25s}
+  .cta:hover>svg:last-child{transform:translateX(4px)}
+  .heroAction .cta{animation:goldGlow 4s 1.5s ease-in-out infinite}
+  .benefits article{transition:transform .35s,border-color .35s}
+  .benefits article:hover{transform:translateX(5px);border-color:#e2c17d88}
+  .visible .benefits article{animation:rise .65s both}
+  .visible .benefits article:nth-child(2){animation-delay:.12s}
+  .visible .benefits article:nth-child(3){animation-delay:.24s}
+  .questions details[open] p{animation:rise .3s both}
+}
+@keyframes goldSweep{0%,65%,100%{left:-55%;opacity:0}70%{opacity:.7}88%{left:125%;opacity:0}}
+@keyframes goldGlow{0%,100%{box-shadow:0 8px 30px #bd91451f}50%{box-shadow:0 10px 35px #bd91454d}}

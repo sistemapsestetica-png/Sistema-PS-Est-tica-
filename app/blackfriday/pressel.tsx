@@ -18,8 +18,30 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
   const root = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const trackedView = useRef(false);
   const trackedVideo = useRef(false);
+
+  useEffect(() => {
+    const player = video.current;
+    if (!player) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let userPaused = false;
+    let visible = false;
+    const observePause = () => { if (visible && !document.hidden && !player.ended) userPaused = true; };
+    const resume = () => {
+      if (visible && !document.hidden && !userPaused && !player.ended && !reduced) void player.play().catch(() => {});
+      else if (!visible || document.hidden) player.pause();
+    };
+    const observer = new IntersectionObserver(entries => {
+      visible = entries[0].intersectionRatio >= 0.3;
+      resume();
+    }, { threshold: [0, 0.3] });
+    player.addEventListener("pause", observePause);
+    document.addEventListener("visibilitychange", resume);
+    observer.observe(player);
+    return () => { observer.disconnect(); player.removeEventListener("pause", observePause); document.removeEventListener("visibilitychange", resume); player.pause(); };
+  }, []);
 
   useEffect(() => {
     const href = groupTrackingHref();
@@ -50,10 +72,15 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
   async function playVideo() {
     if (!video.current) return;
     video.current.muted = false;
+    video.current.currentTime = 0;
     try {
-      await video.current.play(); setStarted(true);
-      if (!trackedVideo.current) { trackedVideo.current = true; trackBlackFriday("blackfriday_video_play", "video"); }
-    } catch { setStarted(false); }
+      await video.current.play(); setSoundEnabled(true);
+    } catch { video.current.muted = true; setSoundEnabled(false); }
+  }
+
+  function onVideoPlay() {
+    setStarted(true);
+    if (!trackedVideo.current) { trackedVideo.current = true; trackBlackFriday("blackfriday_video_play", "video"); }
   }
 
   return <main ref={root} className={`${s.page} ${serifClass}`}>
@@ -78,8 +105,8 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
       <div className={s.filmColumn}>
         <div className={s.filmTop}><span>Um convite da Priscila</span><span>PS / 2026</span></div>
         <div className={s.film} data-playing={started}>
-          <video ref={video} src="/blackfriday/convite-sem-logo.mp4" poster="/blackfriday/poster-sem-logo.jpg" playsInline preload="none" controls={started} onPlay={() => setStarted(true)} aria-label="Priscila apresenta a Black Friday da PS Estética" />
-          {!started && <button className={s.play} onClick={() => void playVideo()} type="button" aria-label="Assistir ao convite da Priscila com som"><span className={s.playIcon}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m9 5 11 7-11 7V5Z" /></svg></span><span>Assista ao convite<small>Toque para ouvir</small></span></button>}
+          <video ref={video} src="/blackfriday/convite-sem-logo.mp4" poster="/blackfriday/poster-sem-logo.jpg" muted playsInline preload="metadata" controls={started} onPlay={onVideoPlay} onVolumeChange={event => setSoundEnabled(!event.currentTarget.muted && event.currentTarget.volume > 0)} aria-label="Priscila apresenta a Black Friday da PS Estética" />
+          {!soundEnabled && <button className={`${s.play} ${started ? s.soundPrompt : ""}`} onClick={() => void playVideo()} type="button" aria-label="Ativar som e assistir ao convite desde o início"><span className={s.playIcon}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m11 5-6 4H2v6h3l6 4V5Zm4 3a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span>{started ? "Ativar som" : "Assista ao convite"}<small>{started ? "Ouça o convite desde o início" : "Toque para ouvir"}</small></span></button>}
         </div>
         <p className={s.filmCaption}>O seu próximo cuidado começa com uma escolha.</p>
         <div className={s.videoAction}>{cta("video", "Entrar no grupo")}</div>
