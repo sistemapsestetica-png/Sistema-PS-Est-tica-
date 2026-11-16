@@ -21,9 +21,11 @@ accepts only the three page-specific events, and shares event_name/event_id
 with the browser Pixel for deduplication. It forwards fbp/fbc when available,
 IP and user agent. No email/phone is collected on this group-entry page.
 
-Current activation blocker: Supabase secrets lookup returned HTTP 403 and
-Vercel has no META_CONVERSIONS_API_TOKEN configured. Until configured the
-endpoint explicitly returns 503; browser tracking continues normally.
+With no Vercel token, this endpoint relays validated events to the dedicated
+Supabase function meta-blackfriday, which uses the existing Meta secrets there.
+No database tables or existing lead/payment functions are changed. Deploy only
+this new function with --no-verify-jwt --use-api (public tracking endpoint,
+restricted event names and origin; it never accepts Lead or Purchase).
 No production test conversions should be generated to validate delivery.
 Validate a real click in Meta Test Events once a test code is available, or
 inspect the next genuine Contact's Browser/Server deduplication in Meta.

@@ -16,7 +16,9 @@ export async function POST(request: NextRequest) {
     const body = JSON.parse(raw);
     if (!eventNames.has(body.event_name) || !places.has(body.place) || !/^bf-[0-9a-f-]{36}$/i.test(body.event_id || "")) return NextResponse.json({ error: "Invalid event" }, { status: 400 });
     const token = process.env.META_CONVERSIONS_API_TOKEN;
-    if (!token) return NextResponse.json({ error: "Server tracking not configured" }, { status: 503 });
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    if (!token && (!supabaseUrl || !supabaseKey)) return NextResponse.json({ error: "Server tracking not configured" }, { status: 503 });
     const attribution: Record<string, string> = {};
     for (const key of attributionKeys) if (typeof body.attribution?.[key] === "string") attribution[key] = body.attribution[key].slice(0, 512);
     const userData: Record<string, string> = {};
@@ -26,13 +28,16 @@ export async function POST(request: NextRequest) {
     const agent = request.headers.get("user-agent");
     if (agent) userData.client_user_agent = agent;
     const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1633028891341714";
-    const response = await fetch(`https://graph.facebook.com/${process.env.META_GRAPH_API_VERSION || "v23.0"}/${pixelId}/events`, {
-      method: "POST", signal: AbortSignal.timeout(5000),
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    const endpoint = token ? `https://graph.facebook.com/${process.env.META_GRAPH_API_VERSION || "v23.0"}/${pixelId}/events` : `${supabaseUrl}/functions/v1/meta-blackfriday`;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    else { headers.apikey = supabaseKey!; headers.Origin = canonicalOrigin; }
+    const response = await fetch(endpoint, {
+      method: "POST", signal: AbortSignal.timeout(8000), headers,
       body: JSON.stringify({ data: [{ event_name: body.event_name, event_id: body.event_id, event_time: Math.floor(Date.now() / 1000), action_source: "website", event_source_url: `${canonicalOrigin}/blackfriday${Object.keys(attribution).length ? `?${new URLSearchParams(attribution)}` : ""}`, user_data: userData, custom_data: { content_name: "black-friday-2026", content_category: body.place, ...attribution } }] }),
     });
     const result = await response.json();
-    if (!response.ok || result.events_received !== 1) return NextResponse.json({ error: "Provider rejected event" }, { status: 502 });
+    if (!response.ok || (token ? result.events_received !== 1 : result.ok !== true)) return NextResponse.json({ error: "Provider rejected event" }, { status: 502 });
     return NextResponse.json({ ok: true });
   } catch { return NextResponse.json({ error: "Tracking unavailable" }, { status: 502 }); }
 }
