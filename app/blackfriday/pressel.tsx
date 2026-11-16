@@ -65,11 +65,13 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
 
     <section className={s.hero} aria-labelledby="black-friday-title">
       <div className={s.heroCopy}>
+        <div className={s.firstScreen}>
         <p className={s.eyebrow}><span /> Black Friday · edição 2026</p>
         <h1 id="black-friday-title">Este ano,<br />o presente é<br /><em>cuidar de você.</em></h1>
         <p className={s.lead}>Entre no grupo da Black Friday e receba as <strong>condições especiais da PS Estética</strong> em primeira mão.</p>
         <div className={s.eventDate}><span className={s.day}>27<small>NOV</small></span><div><b>Uma sexta-feira especial.</b><span>27 de novembro · das 9h às 19h</span></div></div>
         <div className={s.heroAction}>{cta("hero")}<p>Grupo no WhatsApp · acesso gratuito</p></div>
+        </div>
         <div className={s.note}><span aria-hidden="true">✧</span><p>Os valores serão revelados no grupo.<br />Você conhece as condições antes de decidir.</p></div>
       </div>
 
