@@ -16,7 +16,7 @@ const benefits = [
 export function BlackFriday({ serifClass }: { serifClass: string }) {
   const root = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     const nodes = root.current?.querySelectorAll<HTMLElement>("[data-reveal]");
@@ -41,8 +41,7 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
   async function playVideo() {
     if (!video.current) return;
     video.current.muted = false;
-    video.current.controls = true;
-    try { await video.current.play(); setPlaying(true); } catch { setPlaying(false); }
+    try { await video.current.play(); setStarted(true); } catch { setStarted(false); }
   }
 
   return <main ref={root} className={`${s.page} ${serifClass}`}>
@@ -56,7 +55,7 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
       <div className={s.heroCopy}>
         <p className={s.eyebrow}><span /> Black Friday · edição 2026</p>
         <h1 id="black-friday-title">Este ano,<br />o presente é<br /><em>cuidar de você.</em></h1>
-        <p className={s.lead}>A Black Friday da PS Estética está chegando. Entre no grupo para conhecer as <strong>condições especiais</strong> e acompanhar a abertura das ofertas.</p>
+        <p className={s.lead}>Entre no grupo da Black Friday e receba as <strong>condições especiais da PS Estética</strong> em primeira mão.</p>
         <div className={s.eventDate}><span className={s.day}>27<small>NOV</small></span><div><b>Uma sexta-feira especial.</b><span>27 de novembro · das 9h às 19h</span></div></div>
         <div className={s.heroAction}>{cta("hero")}<p>Grupo no WhatsApp · acesso gratuito</p></div>
         <div className={s.note}><span aria-hidden="true">✧</span><p>Os valores serão revelados no grupo.<br />Você conhece as condições antes de decidir.</p></div>
@@ -64,16 +63,17 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
 
       <div className={s.filmColumn}>
         <div className={s.filmTop}><span>Um convite da Priscila</span><span>PS / 2026</span></div>
-        <div className={s.film}>
-          <video ref={video} src="/blackfriday/convite-sem-logo.mp4" poster="/blackfriday/poster-sem-logo.jpg" playsInline preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} aria-label="Priscila apresenta a Black Friday da PS Estética" />
-          {!playing && <button className={s.play} onClick={() => void playVideo()} type="button" aria-label="Assistir ao convite da Priscila com som"><span className={s.playIcon}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m9 5 11 7-11 7V5Z" /></svg></span><span>Assista ao convite<small>Toque para ouvir</small></span></button>}
+        <div className={s.film} data-playing={started}>
+          <video ref={video} src="/blackfriday/convite-sem-logo.mp4" poster="/blackfriday/poster-sem-logo.jpg" playsInline preload="none" controls={started} onPlay={() => setStarted(true)} aria-label="Priscila apresenta a Black Friday da PS Estética" />
+          {!started && <button className={s.play} onClick={() => void playVideo()} type="button" aria-label="Assistir ao convite da Priscila com som"><span className={s.playIcon}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m9 5 11 7-11 7V5Z" /></svg></span><span>Assista ao convite<small>Toque para ouvir</small></span></button>}
         </div>
         <p className={s.filmCaption}>O seu próximo cuidado começa com uma escolha.</p>
+        <div className={s.videoAction}>{cta("video", "Entrar no grupo")}</div>
         <span className={s.orbit} aria-hidden="true" />
       </div>
     </section>
 
-    <div className={s.treatments} aria-label="Procedimentos participantes"><span>Um dia. Diferentes possibilidades.</span><p>Botox <i /> Lavieen <i /> Preenchimento labial <i /> Depilação a laser</p></div>
+    <div className={s.treatments} aria-label="Procedimentos participantes"><span>Um dia. Diferentes possibilidades.</span><p><span>Botox</span><span>Lavieen</span><span>Preenchimento labial</span><span>Depilação a laser</span></p></div>
 
     <section className={s.group} data-reveal aria-labelledby="group-title">
       <div className={s.groupIntro}><p className={s.eyebrow}>Por dentro da Black Friday</p><h2 id="group-title">O cuidado é seu.<br /><em>O convite também.</em></h2><p>Reunimos as informações em um só lugar para você acompanhar a nossa edição especial com tranquilidade.</p></div>
@@ -83,8 +83,8 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
     <section className={s.invite} data-reveal>
       <p className={s.eyebrow}>Anote na sua agenda</p>
       <div className={s.inviteTitle}><span>27</span><div><h2>novembro</h2><p>sexta-feira, das 9h às 19h</p></div></div>
-      <p className={s.inviteCopy}>Entre no grupo e deixe as notificações ativadas.<br />A equipe avisa quando as ofertas abrirem.</p>
-      {cta("convite", "Quero acompanhar a Black Friday")}
+      <p className={s.inviteCopy}>Entre no grupo e deixe as notificações ativadas.<br /> A equipe avisa quando as ofertas abrirem.</p>
+      {cta("convite")}
       <small>As condições especiais serão apresentadas no grupo e são válidas para o dia do evento.</small>
     </section>
 
