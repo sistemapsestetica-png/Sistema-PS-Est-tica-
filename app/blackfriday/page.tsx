@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Black Friday PS Estética | 27 de novembro",
   description: "Entre no grupo da Black Friday da PS Estética e receba as condições especiais de 27 de novembro. São Bernardo do Campo.",
   alternates: { canonical: "https://quiz.psestetica.com.br/blackfriday" },
-  openGraph: { title: "O seu próximo cuidado começa aqui.", description: "Black Friday PS Estética. 27 de novembro, das 9h às 19h. Entre no grupo para conhecer as condições.", images: [{ url: "/blackfriday/poster.jpg", width: 720, height: 1280 }], locale: "pt_BR", type: "website" },
+  openGraph: { title: "O seu próximo cuidado começa aqui.", description: "Black Friday PS Estética. 27 de novembro, das 9h às 19h. Entre no grupo para conhecer as condições.", images: [{ url: "/blackfriday/poster-sem-logo.jpg", width: 720, height: 1280 }], locale: "pt_BR", type: "website" },
 };
 
 export default function Page() {

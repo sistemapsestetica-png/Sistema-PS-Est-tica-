@@ -48,7 +48,7 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
   return <main ref={root} className={`${s.page} ${serifClass}`}>
     <div className={s.ambient} aria-hidden="true" />
     <header className={s.header}>
-      <Image src="/ps-estetica-logo-oficial.png" width={182} height={55} alt="PS Estética Avançada — SPA & Salão de Beleza" priority />
+      <Image src="/blackfriday/logo-vertical.png" width={156} height={109} alt="PS Estética Avançada — SPA & Salão de Beleza" priority />
       <span>São Bernardo do Campo <i aria-hidden="true" /> SP</span>
     </header>
 
@@ -65,7 +65,7 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
       <div className={s.filmColumn}>
         <div className={s.filmTop}><span>Um convite da Priscila</span><span>PS / 2026</span></div>
         <div className={s.film}>
-          <video ref={video} src="/blackfriday/convite.mp4" poster="/blackfriday/poster.jpg" playsInline preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} aria-label="Priscila apresenta a Black Friday da PS Estética" />
+          <video ref={video} src="/blackfriday/convite-sem-logo.mp4" poster="/blackfriday/poster-sem-logo.jpg" playsInline preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} aria-label="Priscila apresenta a Black Friday da PS Estética" />
           {!playing && <button className={s.play} onClick={() => void playVideo()} type="button" aria-label="Assistir ao convite da Priscila com som"><span className={s.playIcon}><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m9 5 11 7-11 7V5Z" /></svg></span><span>Assista ao convite<small>Toque para ouvir</small></span></button>}
         </div>
         <p className={s.filmCaption}>O seu próximo cuidado começa com uma escolha.</p>
@@ -98,6 +98,6 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
       </div>
     </section>
 
-    <footer className={s.footer}><Image src="/ps-estetica-logo-oficial.png" alt="PS Estética" width={156} height={48} /><p>Av. Imperador Pedro II, 635 · Nova Petrópolis<br />São Bernardo do Campo/SP</p><small>Ao entrar no grupo, você opta por receber as mensagens da campanha no WhatsApp. Pode sair quando quiser.</small><small>Procedimentos sujeitos à avaliação profissional e à disponibilidade da agenda.</small></footer>
+    <footer className={s.footer}><Image src="/blackfriday/logo-vertical.png" alt="PS Estética" width={135} height={94} /><p>Av. Imperador Pedro II, 635 · Nova Petrópolis<br />São Bernardo do Campo/SP</p><small>Ao entrar no grupo, você opta por receber as mensagens da campanha no WhatsApp. Pode sair quando quiser.</small><small>Procedimentos sujeitos à avaliação profissional e à disponibilidade da agenda.</small></footer>
   </main>;
 }
