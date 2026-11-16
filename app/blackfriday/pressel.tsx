@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import s from "./pressel.module.css";
+import { groupTrackingHref, trackBlackFriday } from "./tracking";
 
 function Arrow() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 function WhatsApp() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 11.6a8 8 0 0 1-11.8 7l-4.4 1.2L5 15.5A8 8 0 1 1 20 11.6Z" stroke="currentColor" strokeWidth="1.5" /><path d="M9 8c.4 2.9 2.2 4.8 5.3 5.7l1-1.4 1.8 1c-.1 1.8-1.2 2.5-2.7 2.1-4.4-1.1-7-4.2-7.2-7.3 0-.7.6-1.4 1.3-1.4L9 8Z" fill="currentColor" /></svg>; }
@@ -17,6 +18,17 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
   const root = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
+  const trackedView = useRef(false);
+  const trackedVideo = useRef(false);
+
+  useEffect(() => {
+    const href = groupTrackingHref();
+    root.current?.querySelectorAll<HTMLAnchorElement>("[data-bf-group]").forEach(link => { link.href = href; });
+    if (!trackedView.current) {
+      trackedView.current = true;
+      trackBlackFriday("ViewContent", "page");
+    }
+  }, []);
 
   useEffect(() => {
     const nodes = root.current?.querySelectorAll<HTMLElement>("[data-reveal]");
@@ -30,18 +42,18 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
 
   function track(place: string) {
     // A click is contact intent, not proof of a lead or of group membership.
-    try {
-      const fbq = (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq;
-      fbq?.("track", "Contact", { content_name: "black-friday-2026", content_category: place });
-    } catch { /* analytics must never block navigation */ }
+    trackBlackFriday("Contact", place);
   }
 
-  const cta = (place: string, label = "Quero entrar no grupo") => <a className={s.cta} href="/grupovip" onClick={() => track(place)}><WhatsApp /><span>{label}</span><Arrow /></a>;
+  const cta = (place: string, label = "Quero entrar no grupo") => <a className={s.cta} data-bf-group href="/grupovip" onClick={event => { event.currentTarget.href = groupTrackingHref(); track(place); }}><WhatsApp /><span>{label}</span><Arrow /></a>;
 
   async function playVideo() {
     if (!video.current) return;
     video.current.muted = false;
-    try { await video.current.play(); setStarted(true); } catch { setStarted(false); }
+    try {
+      await video.current.play(); setStarted(true);
+      if (!trackedVideo.current) { trackedVideo.current = true; trackBlackFriday("blackfriday_video_play", "video"); }
+    } catch { setStarted(false); }
   }
 
   return <main ref={root} className={`${s.page} ${serifClass}`}>
