@@ -1,0 +1,30 @@
+[Unit]
+Description=PS Estetica Black Friday WhatsApp group monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/ps-blackfriday-monitor
+EnvironmentFile=/etc/ps-blackfriday-monitor.env
+ExecStart=/usr/local/bin/node src/main.mjs
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/ps-blackfriday-monitor
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

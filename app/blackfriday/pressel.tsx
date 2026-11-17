@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import s from "./pressel.module.css";
-import { groupTrackingHref, trackBlackFriday } from "./tracking";
+import { groupTrackingHref, recordBlackFridayVisit, trackBlackFriday } from "./tracking";
 
 function Arrow() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>; }
 function WhatsApp() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 11.6a8 8 0 0 1-11.8 7l-4.4 1.2L5 15.5A8 8 0 1 1 20 11.6Z" stroke="currentColor" strokeWidth="1.5" /><path d="M9 8c.4 2.9 2.2 4.8 5.3 5.7l1-1.4 1.8 1c-.1 1.8-1.2 2.5-2.7 2.1-4.4-1.1-7-4.2-7.2-7.3 0-.7.6-1.4 1.3-1.4L9 8Z" fill="currentColor" /></svg>; }
@@ -45,6 +46,7 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
 
   useEffect(() => {
     const href = groupTrackingHref();
+    recordBlackFridayVisit();
     root.current?.querySelectorAll<HTMLAnchorElement>("[data-bf-group]").forEach(link => { link.href = href; });
     if (!trackedView.current) {
       trackedView.current = true;
@@ -136,6 +138,6 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
       </div>
     </section>
 
-    <footer className={s.footer}><Image src="/blackfriday/logo-vertical.png" alt="PS Estética" width={108} height={75} /><p>Av. Imperador Pedro II, 635 · Nova Petrópolis<br />São Bernardo do Campo/SP</p><small>Ao entrar no grupo, você opta por receber as mensagens da campanha no WhatsApp. Pode sair quando quiser.</small><small>Procedimentos sujeitos à avaliação profissional e à disponibilidade da agenda.</small></footer>
+    <footer className={s.footer}><Image src="/blackfriday/logo-vertical.png" alt="PS Estética" width={108} height={75} /><p>Av. Imperador Pedro II, 635 · Nova Petrópolis<br />São Bernardo do Campo/SP</p><small>Ao entrar no grupo, você opta por receber as mensagens da campanha no WhatsApp. Pode sair quando quiser.</small><small>Procedimentos sujeitos à avaliação profissional e à disponibilidade da agenda.</small><Link href="/blackfriday/privacidade">Privacidade da campanha</Link></footer>
   </main>;
 }

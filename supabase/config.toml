@@ -13,6 +13,9 @@ verify_jwt = false
 [functions.meta-blackfriday]
 verify_jwt = false
 
+[functions.blackfriday-group-tracking]
+verify_jwt = false
+
 [auth]
 site_url = "https://profissional.psestetica.com.br"
 additional_redirect_urls = ["https://profissional.psestetica.com.br", "https://painel.psestetica.com.br"]

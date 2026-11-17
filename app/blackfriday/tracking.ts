@@ -1,5 +1,6 @@
 export const attributionKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "utm_id", "campaign_id", "adset_id", "ad_id", "placement", "fbclid"] as const;
 const storageKey = "ps-blackfriday-attribution-v1";
+const visitStorageKey = "ps-blackfriday-visit-v1";
 const maxAge = 30 * 24 * 60 * 60 * 1000;
 type Attribution = Partial<Record<typeof attributionKeys[number], string>>;
 type Touch = { capturedAt: number; values: Attribution };
@@ -51,6 +52,22 @@ function matchingData(touch: Touch) {
     try { document.cookie = `_fbc=${encodeURIComponent(fbc)}; Max-Age=${maxAge / 1000}; Path=/; SameSite=Lax; Secure`; } catch { /* A genuine URL click ID remains usable when cookie writes are blocked. */ }
   }
   return { fbp: metaIdPattern.test(fbp) ? fbp : "", fbc: metaIdPattern.test(fbc) ? fbc : "" };
+}
+
+export function recordBlackFridayVisit() {
+  try {
+    const touch = captureAttribution();
+    let visitId = localStorage.getItem(visitStorageKey) || "";
+    if (!/^[0-9a-f-]{36}$/i.test(visitId)) {
+      visitId = crypto.randomUUID();
+      localStorage.setItem(visitStorageKey, visitId);
+    }
+    const matching = matchingData(touch);
+    void fetch("/api/blackfriday/visits", {
+      method: "POST", keepalive: true, headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visit_id: visitId, attribution: touch.values, ...matching }),
+    }).catch(() => {});
+  } catch { /* Visit persistence must never affect the page. */ }
 }
 
 async function sendServerEvent(eventName: string, eventId: string, place: string, touch: Touch) {
