@@ -6,9 +6,23 @@ Stored first-party under ps-blackfriday-attribution-v1 for 30 days.
 A new tagged visit replaces the prior campaign; an untagged visit retains it.
 Storage failure falls back to memory without affecting navigation.
 
-Events: existing global PageView, page-specific ViewContent, Contact for a group
-link click (hero/video/convite), and blackfriday_video_play for first playback.
-No Lead, Purchase or group membership event is emitted by this pressel.
+Events: existing global PageView, page-specific ViewContent, and
+blackfriday_video_play for first playback. No Contact, Lead, Purchase or group
+membership event is emitted by the buttons. Older callers' Contact requests are
+skipped (202, group_membership_not_confirmed) by both server layers.
+The current invitation does not provide a verified participant-join signal.
+Do not optimize or label Contact as a confirmed join. A future membership event
+must be emitted only from authenticated, verified membership evidence, with a
+deduplicated participant/group ID, never merely from a link click.
+
+Matching fix: wait up to 1.5 seconds for the real SDK _fbp cookie; use _fbc only
+from a real cookie or observed fbclid. Never fabricate email/phone/browser IDs.
+Both server layers skip (202, no Meta request) events without fbp/fbc + user
+agent. Browser Pixel remains independent when server matching is unavailable.
+Historical diagnostics/counts are not rewritten by this deployment.
+Regression checks: node scripts/check-blackfriday-tracking.cjs (no real Meta
+requests). Covers delayed SDK cookies, absent matching data, duplicate IDs,
+attribution persistence, both server layers and suppression of Contact clicks.
 Campaign parameters accompany the page-specific events and the /grupovip link.
 WhatsApp receives the original group invitation URL unchanged: this does not
 provide member-level attribution after the visitor leaves the website.

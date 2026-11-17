@@ -62,12 +62,9 @@ export function BlackFriday({ serifClass }: { serifClass: string }) {
     return () => observer.disconnect();
   }, []);
 
-  function track(place: string) {
-    // A click is contact intent, not proof of a lead or of group membership.
-    trackBlackFriday("Contact", place);
-  }
-
-  const cta = (place: string, label = "Quero entrar no grupo") => <a className={s.cta} data-bf-group href="/grupovip" onClick={event => { event.currentTarget.href = groupTrackingHref(); track(place); }}><WhatsApp /><span>{label}</span><Arrow /></a>;
+  // Opening an invitation cannot prove WhatsApp membership. No conversion is
+  // emitted here; a future join event must come from a verified membership source.
+  const cta = (place: string, label = "Quero entrar no grupo") => <a className={s.cta} data-bf-group data-position={place} href="/grupovip" onClick={event => { event.currentTarget.href = groupTrackingHref(); }}><WhatsApp /><span>{label}</span><Arrow /></a>;
 
   async function playVideo() {
     if (!video.current) return;
