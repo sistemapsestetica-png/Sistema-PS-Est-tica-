@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { trackMetaCustomEvent, trackMetaEvent } from "../../lib/meta-pixel";
 import { supabase } from "../../lib/supabase";
+import { sendLaserDayViewContent } from "./tracking";
+import { INVALID_EMAIL_MESSAGE, isValidEmail } from "./email";
 import { formatBrazilianWhatsapp, INVALID_WHATSAPP_MESSAGE, isValidBrazilianWhatsapp, whatsappDigits } from "../../lib/whatsapp";
 import { cpfDigits, formatCpf, INVALID_CPF_MESSAGE, isValidCpf } from "../../lib/cpf";
 import s from "../lavieen/lavieen.module.css";
@@ -67,7 +69,7 @@ export default function LaserDayPage() {
 
   // Guarda utm_* e fbclid da URL de chegada até o envio do lead (o Pixel cria _fbc a partir do fbclid).
   useEffect(() => { const p = new URLSearchParams(location.search); attribution.current = { utm_source: p.get("utm_source"), utm_medium: p.get("utm_medium"), utm_campaign: p.get("utm_campaign"), utm_content: p.get("utm_content"), utm_term: p.get("utm_term"), fbclid: p.get("fbclid") }; }, []);
-  function start() { if (!viewTracked.current) { viewTracked.current = true; trackMetaEvent("ViewContent", { content_name: "laserday", content_category: "laser", content_ids: ["laser"], content_type: "product" }, `laserday-viewcontent-${crypto.randomUUID()}`); } if (!startTracked.current) { startTracked.current = true; trackMetaCustomEvent("QuizStart", { content_name: "Quiz Laser Day", content_category: "laser", content_ids: ["laser"], content_type: "product" }); } setStep(1); setTimeout(() => document.getElementById("quiz-laser")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40); }
+  function start() { if (!viewTracked.current) { viewTracked.current = true; const viewContentId = `laserday-viewcontent-${crypto.randomUUID()}`; trackMetaEvent("ViewContent", { content_name: "laserday", content_category: "laser", content_ids: ["laser"], content_type: "product" }, viewContentId); void sendLaserDayViewContent(viewContentId, attribution.current); } if (!startTracked.current) { startTracked.current = true; trackMetaCustomEvent("QuizStart", { content_name: "Quiz Laser Day", content_category: "laser", content_ids: ["laser"], content_type: "product" }); } setStep(1); setTimeout(() => document.getElementById("quiz-laser")?.scrollIntoView({ behavior: "smooth", block: "start" }), 40); }
   function choose(value: string) { if (!current) return; setAnswers((old) => ({ ...old, [current.key]: value })); setLead(null); setTimeout(() => setStep((step + 1) as Step), 140); }
   function toggleRegion(region: string) { setSelectedRegions((current) => current.includes(region) ? current.filter((item) => item !== region) : [...current, region]); setLead(null); }
   function source() { const p = new URLSearchParams(location.search); return { landing_page: "laserday", quiz_answers: { ...answers, selected_regions: selectedRegions }, utm_source: attribution.current.utm_source ?? p.get("utm_source"), utm_medium: attribution.current.utm_medium ?? p.get("utm_medium"), utm_campaign: attribution.current.utm_campaign ?? p.get("utm_campaign"), utm_content: attribution.current.utm_content ?? p.get("utm_content"), utm_term: attribution.current.utm_term ?? p.get("utm_term"), fbclid: attribution.current.fbclid ?? p.get("fbclid"), referrer: document.referrer || null, fbp: cookie("_fbp"), fbc: cookie("_fbc") }; }
@@ -88,7 +90,7 @@ export default function LaserDayPage() {
   }
   function onWhatsappClick() { if (lead && step >= 5) trackLead(lead); }
   async function loadSlots() { const { data, error } = await supabase.rpc("list_open_slots", { p_service_slug: "laser" }); if (error) { setSlots([]); setNotice("Não foi possível consultar a agenda agora."); } else setSlots(((data ?? []) as Slot[]).slice(0, 8)); }
-  async function submitContact(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (loading) return; if (!isValidBrazilianWhatsapp(phone)) return setNotice(INVALID_WHATSAPP_MESSAGE); setLoading(true); setNotice(""); if (!await saveLead()) { setNotice("Não conseguimos registrar seus dados agora. Confira e tente novamente."); setLoading(false); return; } setStep(5); await loadSlots(); setLoading(false); }
+  async function submitContact(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (loading) return; if (!isValidBrazilianWhatsapp(phone)) return setNotice(INVALID_WHATSAPP_MESSAGE); if (!isValidEmail(email)) return setNotice(INVALID_EMAIL_MESSAGE); setLoading(true); setNotice(""); if (!await saveLead()) { setNotice("Não conseguimos registrar seus dados agora. Confira e tente novamente."); setLoading(false); return; } setStep(5); await loadSlots(); setLoading(false); }
   async function reserve(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!selected || loading) return; if (!isValidCpf(cpf)) { setNotice(INVALID_CPF_MESSAGE); return; } setLoading(true); setNotice(""); const session = await saveLead();
     if (!session) { setNotice("Não foi possível validar seus dados."); setLoading(false); return; }

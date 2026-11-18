@@ -52,3 +52,6 @@ content_path = "./supabase/templates/email-change.html"
 [auth.email.template.reauthentication]
 subject = "Seu código de segurança da PS Estética"
 content_path = "./supabase/templates/reauthentication.html"
+
+[functions.meta-laserday]
+verify_jwt = false
