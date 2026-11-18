@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 
 const allowedOrigins = new Set([
   "https://quiz.psestetica.com.br",
+  "https://painel.psestetica.com.br", // /laserday também é servido por este host
   "http://localhost:3000",
 ]);
 
@@ -81,6 +82,7 @@ Deno.serve(async (request) => {
     const landing: Record<string, { url: string; name: string }> = {
       lavieen: { url: "https://quiz.psestetica.com.br/lavieen", name: "Quiz Lavieen" },
       botox: { url: "https://quiz.psestetica.com.br/botox", name: "Quiz Botox" },
+      laser: { url: "https://quiz.psestetica.com.br/laserday", name: "laserday" },
     };
     const eventSourceUrl = landing[lead.service_slug]?.url ?? "https://quiz.psestetica.com.br";
     const response = await fetch(`https://graph.facebook.com/${graphVersion}/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`, {

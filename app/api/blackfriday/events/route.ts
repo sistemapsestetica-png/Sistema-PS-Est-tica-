@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
       console.info("meta_blackfriday_skipped", body.event_name, "missing_matching_data");
       return NextResponse.json({ ok: true, skipped: "missing_matching_data" }, { status: 202 });
     }
-    const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1633028891341714";
+    const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim();
+    if (token && !pixelId) return NextResponse.json({ error: "Server tracking not configured" }, { status: 503 });
     const endpoint = token ? `https://graph.facebook.com/${process.env.META_GRAPH_API_VERSION || "v23.0"}/${pixelId}/events` : `${supabaseUrl}/functions/v1/meta-blackfriday`;
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;

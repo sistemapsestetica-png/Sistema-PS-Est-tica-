@@ -13,7 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const configuredPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() || "1633028891341714";
+  // ID do dataset da Meta só pela variável de ambiente (sem valor fixo no código).
+  const configuredPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim();
   const pixelId = configuredPixelId && /^\d+$/.test(configuredPixelId) ? configuredPixelId : null;
 
   return (
