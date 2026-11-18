@@ -9,6 +9,8 @@ export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   const permittedOrigin = origin === canonicalOrigin || (process.env.NODE_ENV !== "production" && origin === request.nextUrl.origin);
   if (!permittedOrigin) return NextResponse.json({ error: "Origin not allowed" }, { status: 403 });
+  // Fora da produção (localhost em desenvolvimento) não repassa à Meta: evita evento real com URL de teste.
+  if (origin !== canonicalOrigin) return NextResponse.json({ ok: true, skipped: "non_production" }, { status: 202 });
   if (Number(request.headers.get("content-length")) > 8192) return NextResponse.json({ error: "Payload too large" }, { status: 413 });
   try {
     const raw = await request.text();

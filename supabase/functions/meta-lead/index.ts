@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 
+const productionOrigins = new Set(["https://quiz.psestetica.com.br", "https://painel.psestetica.com.br"]);
 const allowedOrigins = new Set([
   "https://quiz.psestetica.com.br",
   "https://painel.psestetica.com.br", // /laserday também é servido por este host
@@ -37,6 +38,10 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, origin);
   if (origin && !allowedOrigins.has(origin)) return json({ error: "Origin not allowed" }, 403, origin);
+  // Fora da produção (localhost etc.) nunca envia evento real: só com META_TEST_EVENT_CODE (vai como teste).
+  if (!origin || !productionOrigins.has(origin)) {
+    if (!Deno.env.get("META_TEST_EVENT_CODE")) return json({ ok: true, skipped: "non_production" }, 202, origin);
+  }
 
   try {
     const body = await request.json();
@@ -98,7 +103,8 @@ Deno.serve(async (request) => {
           user_data: userData,
           custom_data: { content_name: landing[lead.service_slug]?.name ?? "Quiz PS Estética", content_category: lead.service_slug },
         }],
-        ...(Deno.env.get("META_TEST_EVENT_CODE") ? { test_event_code: Deno.env.get("META_TEST_EVENT_CODE") } : {}),
+        // test_event_code só fora da produção: em produção o evento é sempre real.
+        ...((!origin || !productionOrigins.has(origin)) && Deno.env.get("META_TEST_EVENT_CODE") ? { test_event_code: Deno.env.get("META_TEST_EVENT_CODE") } : {}),
       }),
     });
     if (!response.ok) {

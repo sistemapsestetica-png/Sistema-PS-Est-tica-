@@ -6,6 +6,7 @@ const allowedOrigins = new Set([
   "https://painel.psestetica.com.br",
   "http://localhost:3000",
 ]);
+const productionOrigins = new Set(["https://quiz.psestetica.com.br", "https://painel.psestetica.com.br"]);
 const metaIdPattern = /^fb\.\d+\.\d{13}\.[A-Za-z0-9_.-]{1,512}$/;
 const eventIdPattern = /^laserday-viewcontent-[0-9a-f-]{36}$/i;
 const utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
@@ -28,6 +29,8 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, origin);
   if (!origin || !allowedOrigins.has(origin)) return json({ error: "Origin not allowed" }, 403, origin);
+  // Fora da produção (localhost etc.) nunca envia evento real: só com META_TEST_EVENT_CODE (vai como teste).
+  if (!productionOrigins.has(origin) && !Deno.env.get("META_TEST_EVENT_CODE")) return json({ ok: true, skipped: "non_production" }, 202, origin);
   if (Number(request.headers.get("content-length")) > 4096) return json({ error: "Payload too large" }, 413, origin);
 
   try {
@@ -80,7 +83,8 @@ Deno.serve(async (request) => {
           user_data: userData,
           custom_data: { content_name: "laserday", content_category: "laser", content_ids: ["laser"], content_type: "product" },
         }],
-        ...(Deno.env.get("META_TEST_EVENT_CODE") ? { test_event_code: Deno.env.get("META_TEST_EVENT_CODE") } : {}),
+        // test_event_code só fora da produção: em produção o evento é sempre real.
+        ...(!productionOrigins.has(origin) && Deno.env.get("META_TEST_EVENT_CODE") ? { test_event_code: Deno.env.get("META_TEST_EVENT_CODE") } : {}),
       }),
     });
     const result = await response.json().catch(() => ({}));
