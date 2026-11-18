@@ -39,7 +39,8 @@ Deno.serve(async (request) => {
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, origin);
   if (origin && !allowedOrigins.has(origin)) return json({ error: "Origin not allowed" }, 403, origin);
   // Fora da produção (localhost etc.) nunca envia evento real: só com META_TEST_EVENT_CODE (vai como teste).
-  if (!origin || !productionOrigins.has(origin)) {
+  // Pedido sem cabeçalho Origin segue como antes (aceito); localhost sempre manda Origin e cai aqui.
+  if (origin && !productionOrigins.has(origin)) {
     if (!Deno.env.get("META_TEST_EVENT_CODE")) return json({ ok: true, skipped: "non_production" }, 202, origin);
   }
 
@@ -104,7 +105,7 @@ Deno.serve(async (request) => {
           custom_data: { content_name: landing[lead.service_slug]?.name ?? "Quiz PS Estética", content_category: lead.service_slug },
         }],
         // test_event_code só fora da produção: em produção o evento é sempre real.
-        ...((!origin || !productionOrigins.has(origin)) && Deno.env.get("META_TEST_EVENT_CODE") ? { test_event_code: Deno.env.get("META_TEST_EVENT_CODE") } : {}),
+        ...((origin && !productionOrigins.has(origin)) && Deno.env.get("META_TEST_EVENT_CODE") ? { test_event_code: Deno.env.get("META_TEST_EVENT_CODE") } : {}),
       }),
     });
     if (!response.ok) {
