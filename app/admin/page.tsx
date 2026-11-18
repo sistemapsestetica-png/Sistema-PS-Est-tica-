@@ -260,11 +260,24 @@ export default function AdminPage() {
   const [newServicePrice, setNewServicePrice] = useState("");
   const [newServiceDuration, setNewServiceDuration] = useState("60");
 
+  async function fetchAllLeads() {
+    const pageSize = 1000;
+    const rows: Lead[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase.from("leads").select("*")
+        .order("created_at", { ascending: false }).order("id", { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) return { data: rows, error };
+      rows.push(...((data ?? []) as Lead[]));
+      if (!data || data.length < pageSize) return { data: rows, error: null };
+    }
+  }
+
   async function loadDashboard() {
     setLoading(true);
     const [serviceResult, leadResult, eventResult, slotResult, settingsResult, bookingResult, staffResult, inviteResult, assignmentResult, linkResult, accessResult] = await Promise.all([
       supabase.from("services").select("*").order("id"),
-      supabase.from("leads").select("*").order("created_at", { ascending: false }).limit(250),
+      fetchAllLeads(),
       supabase.from("lead_events").select("id,lead_id,event_type,created_at,metadata,booking_id").order("created_at", { ascending: false }).limit(2000),
       supabase.from("slots").select("id,service_id,professional_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
       supabase.from("clinic_settings").select("fixed_deposit_cents,reservation_expiry_minutes,reschedule_notice_hours,whatsapp,payment_provider,pix_enabled").eq("id", true).single(),
