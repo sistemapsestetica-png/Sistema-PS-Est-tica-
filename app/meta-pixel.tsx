@@ -28,6 +28,9 @@ export function MetaPixel({ pixelId }: MetaPixelProps) {
             var path = window.location.pathname;
             var adRoute = ${JSON.stringify(PUBLIC_AD_ROUTES)}.some(function (route) { return path === route || path.indexOf(route + '/') === 0; });
             if (internalHost && !adRoute) return;
+            // Site rodando no computador (testes): não carrega o Pixel, para nada chegar à Meta.
+            var host = window.location.hostname;
+            if (['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].indexOf(host) !== -1 || host.slice(-6) === '.local') return;
             !function(f,b,e,v,n,t,s)
             {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
             n.callMethod.apply(n,arguments):n.queue.push(arguments)};

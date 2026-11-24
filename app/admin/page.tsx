@@ -273,12 +273,25 @@ export default function AdminPage() {
     }
   }
 
+  async function fetchAllLeadEvents() {
+    const pageSize = 1000;
+    const rows: LeadEvent[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase.from("lead_events").select("id,lead_id,event_type,created_at,metadata,booking_id")
+        .order("created_at", { ascending: false }).order("id", { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) return { data: rows, error };
+      rows.push(...((data ?? []) as LeadEvent[]));
+      if (!data || data.length < pageSize) return { data: rows, error: null };
+    }
+  }
+
   async function loadDashboard() {
     setLoading(true);
     const [serviceResult, leadResult, eventResult, slotResult, settingsResult, bookingResult, staffResult, inviteResult, assignmentResult, linkResult, accessResult] = await Promise.all([
       supabase.from("services").select("*").order("id"),
       fetchAllLeads(),
-      supabase.from("lead_events").select("id,lead_id,event_type,created_at,metadata,booking_id").order("created_at", { ascending: false }).limit(2000),
+      fetchAllLeadEvents(),
       supabase.from("slots").select("id,service_id,professional_id,starts_at,ends_at,status,notes").gte("starts_at", new Date().toISOString()).order("starts_at").limit(100),
       supabase.from("clinic_settings").select("fixed_deposit_cents,reservation_expiry_minutes,reschedule_notice_hours,whatsapp,payment_provider,pix_enabled").eq("id", true).single(),
       supabase.from("bookings").select("id,status,created_at,lead_id,slot_id,leads(name,phone,email),services(name),slots(starts_at,ends_at),professional:staff_profiles!bookings_professional_id_fkey(full_name),payments(status)").order("created_at", { ascending: false }).limit(250),
