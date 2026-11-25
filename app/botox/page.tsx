@@ -356,7 +356,7 @@ export default function BotoxPage() {
 
     <section className={b.sec}><div className={`${b.split} ${b.mediaLeft}`}>
       <figure className={b.frame} data-reveal>
-        <Shot src="/botox/espelho.jpg" alt="Imagem ilustrativa: Priscila, proprietária da PS Estética, no espelho reparando nas linhas da testa" sizes="(max-width: 900px) 100vw, 480px" pos="50% 25%" />
+        <Shot src="/botox/espelho.jpg" alt="Imagem ilustrativa: Priscila, proprietária da PS Estética, no espelho reparando nas linhas da testa" sizes="(max-width: 900px) 100vw, 480px" pos="50% 30%" />
         <span className={b.tag}>Imagem ilustrativa</span>
       </figure>
       <div className={b.copy}>
@@ -390,9 +390,9 @@ export default function BotoxPage() {
     <section className={b.sec}>
       <div className={b.head} data-reveal><p className={s.eyebrow}>Onde pode ajudar</p><h2 className={b.title}>Onde o Botox pode ajudar</h2><p className={b.p}>Cada região é avaliada separadamente. Você só faz o que for indicado para o seu caso.</p></div>
       <div className={b.regions}>
-        <article data-reveal><figure><Shot src="/botox/testa.jpg" alt="Imagem ilustrativa: linhas horizontais da testa ao levantar as sobrancelhas" sizes="(max-width: 900px) 100vw, 400px" pos="50% 35%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>01</span><h3>Testa</h3><p>As linhas horizontais que aparecem quando você levanta a sobrancelha.</p></div></article>
-        <article data-reveal><figure><Shot src="/botox/glabela.jpg" alt="Imagem ilustrativa: linhas verticais entre as sobrancelhas ao franzir a testa" sizes="(max-width: 900px) 100vw, 400px" pos="50% 40%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>02</span><h3>Entre as sobrancelhas</h3><p>As linhas verticais que dão cara de cansaço ou de bravo.</p></div></article>
-        <article data-reveal><figure><Shot src="/botox/olhos.jpg" alt="Imagem ilustrativa: linhas ao redor dos olhos ao sorrir" sizes="(max-width: 900px) 100vw, 400px" pos="60% 45%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>03</span><h3>Ao redor dos olhos</h3><p>Os pés de galinha, que aparecem quando você sorri.</p></div></article>
+        <article data-reveal><figure><Shot src="/botox/testa.jpg" alt="Imagem ilustrativa: Priscila, proprietária da PS Estética, levantando as sobrancelhas e mostrando as linhas da testa" sizes="(max-width: 900px) 100vw, 400px" pos="50% 35%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>01</span><h3>Testa</h3><p>As linhas horizontais que aparecem quando você levanta a sobrancelha.</p></div></article>
+        <article data-reveal><figure><Shot src="/botox/glabela.jpg" alt="Imagem ilustrativa: Priscila, proprietária da PS Estética, franzindo a testa e mostrando as linhas entre as sobrancelhas" sizes="(max-width: 900px) 100vw, 400px" pos="50% 40%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>02</span><h3>Entre as sobrancelhas</h3><p>As linhas verticais que dão cara de cansaço ou de bravo.</p></div></article>
+        <article data-reveal><figure><Shot src="/botox/olhos.jpg" alt="Imagem ilustrativa: Priscila, proprietária da PS Estética, sorrindo e mostrando as linhas ao redor dos olhos" sizes="(max-width: 900px) 100vw, 400px" pos="60% 45%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>03</span><h3>Ao redor dos olhos</h3><p>Os pés de galinha, que aparecem quando você sorri.</p></div></article>
       </div>
       <div className={b.after}>{cta(false)}</div>
     </section>
@@ -477,7 +477,7 @@ export default function BotoxPage() {
         </div>
       </div>
     </section>
-    <footer className={`${s.footer} ${b.footerPad}`}><Image src="/ps-estetica-logo-oficial.png" width={246} height={80} alt="PS Estética" /><p>São Bernardo do Campo • ABC Paulista</p><small>O conteúdo desta página é informativo. A indicação de qualquer procedimento depende de avaliação individual por profissional habilitado, e os resultados variam de pessoa para pessoa.</small><small className={b.credit}>Imagens ilustrativas criadas com inteligência artificial. Algumas usam a imagem de Priscila, proprietária da PS Estética. Não mostram resultados de tratamento.</small>{/* TODO RESPONSÁVEL TÉCNICO no rodapé: "Responsável técnico: [[nome, registro profissional e RQE, se houver]]". Não renderizar sem o dado. */}</footer>
+    <footer className={`${s.footer} ${b.footerPad}`}><Image src="/ps-estetica-logo-oficial.png" width={246} height={80} alt="PS Estética" /><p>São Bernardo do Campo • ABC Paulista</p><small>O conteúdo desta página é informativo. A indicação de qualquer procedimento depende de avaliação individual por profissional habilitado, e os resultados variam de pessoa para pessoa.</small><small className={b.credit}>Imagens ilustrativas criadas com inteligência artificial a partir de fotos de Priscila, proprietária da PS Estética. Não mostram resultados de tratamento.</small>{/* TODO RESPONSÁVEL TÉCNICO no rodapé: "Responsável técnico: [[nome, registro profissional e RQE, se houver]]". Não renderizar sem o dado. */}</footer>
     <div className={`${b.sticky} ${stickyVisible ? b.stickyOn : ""}`} aria-hidden={!stickyVisible}><button type="button" className={s.primary} tabIndex={stickyVisible ? 0 : -1} onClick={goToQuiz}>{CTA_TEXT} <span>›</span></button></div>
   </main>;
 }
