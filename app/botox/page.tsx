@@ -346,7 +346,7 @@ export default function BotoxPage() {
         <a className={b.wa} href={whatsapp} target="_blank" rel="noreferrer">Prefere falar direto com a equipe? Chame no WhatsApp</a>
       </div>
       <figure className={`${b.frame} ${b.heroMedia} ${b.panelIn}`}>
-        <Shot src="/botox/hero.jpg" alt="Imagem ilustrativa: profissional de saúde aplicando toxina botulínica na testa de uma mulher" sizes="(max-width: 900px) 100vw, 520px" pos="50% 42%" priority />
+        <Shot src="/botox/hero.jpg" alt="Imagem ilustrativa: profissional de saúde aplicando toxina botulínica na testa de uma mulher" sizes="(max-width: 900px) 100vw, 520px" pos="50% 30%" priority />
         <span className={b.tag}>Imagem ilustrativa</span>
         <figcaption className={b.glass}><p><span className={b.liveDot} />Indicação inicial em 1 minuto</p><strong>5 perguntas</strong><small>Sem diagnóstico automático. Você será avaliado individualmente.</small></figcaption>
       </figure>
@@ -356,7 +356,7 @@ export default function BotoxPage() {
 
     <section className={b.sec}><div className={`${b.split} ${b.mediaLeft}`}>
       <figure className={b.frame} data-reveal>
-        <Shot src="/botox/espelho.jpg" alt="Imagem ilustrativa: mulher olhando o próprio rosto no espelho" sizes="(max-width: 900px) 100vw, 480px" pos="30% 50%" />
+        <Shot src="/botox/espelho.jpg" alt="Imagem ilustrativa: mulher no espelho reparando nas linhas da testa" sizes="(max-width: 900px) 100vw, 480px" pos="50% 22%" />
         <span className={b.tag}>Imagem ilustrativa</span>
       </figure>
       <div className={b.copy}>
@@ -382,7 +382,7 @@ export default function BotoxPage() {
         <p className={b.note} data-reveal>Cada pessoa responde de uma forma. Indicação, dose e protocolo são definidos individualmente por profissional habilitado, e os resultados não são garantidos.</p>
       </div>
       <figure className={b.frame} data-reveal>
-        <Shot src="/botox/mecanismo.jpg" alt="Imagem ilustrativa: aplicação de toxina botulínica com seringa fina na região da testa" sizes="(max-width: 900px) 100vw, 460px" pos="50% 40%" />
+        <Shot src="/botox/mecanismo.jpg" alt="Imagem ilustrativa: profissional marcando os pontos de aplicação na testa da paciente" sizes="(max-width: 900px) 100vw, 460px" pos="50% 28%" />
         <span className={b.tag}>Imagem ilustrativa</span>
       </figure>
     </div></section></div>
@@ -390,16 +390,16 @@ export default function BotoxPage() {
     <section className={b.sec}>
       <div className={b.head} data-reveal><p className={s.eyebrow}>Onde pode ajudar</p><h2 className={b.title}>Onde o Botox pode ajudar</h2><p className={b.p}>Cada região é avaliada separadamente. Você só faz o que for indicado para o seu caso.</p></div>
       <div className={b.regions}>
-        <article data-reveal><figure><Shot src="/botox/testa.jpg" alt="Imagem ilustrativa: aplicação na região da testa" sizes="(max-width: 900px) 100vw, 400px" pos="50% 30%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>01</span><h3>Testa</h3><p>As linhas horizontais que aparecem quando você levanta a sobrancelha.</p></div></article>
-        <article data-reveal><figure><Shot src="/botox/glabela.jpg" alt="Imagem ilustrativa: aplicação na região entre as sobrancelhas" sizes="(max-width: 900px) 100vw, 400px" pos="50% 42%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>02</span><h3>Entre as sobrancelhas</h3><p>As linhas verticais que dão cara de cansaço ou de bravo.</p></div></article>
-        <article data-reveal><figure><Shot src="/botox/olhos.jpg" alt="Imagem ilustrativa: aplicação ao redor dos olhos" sizes="(max-width: 900px) 100vw, 400px" pos="50% 22%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>03</span><h3>Ao redor dos olhos</h3><p>Os pés de galinha, que aparecem quando você sorri.</p></div></article>
+        <article data-reveal><figure><Shot src="/botox/testa.jpg" alt="Imagem ilustrativa: linhas horizontais da testa ao levantar as sobrancelhas" sizes="(max-width: 900px) 100vw, 400px" pos="50% 35%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>01</span><h3>Testa</h3><p>As linhas horizontais que aparecem quando você levanta a sobrancelha.</p></div></article>
+        <article data-reveal><figure><Shot src="/botox/glabela.jpg" alt="Imagem ilustrativa: linhas verticais entre as sobrancelhas ao franzir a testa" sizes="(max-width: 900px) 100vw, 400px" pos="50% 40%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>02</span><h3>Entre as sobrancelhas</h3><p>As linhas verticais que dão cara de cansaço ou de bravo.</p></div></article>
+        <article data-reveal><figure><Shot src="/botox/olhos.jpg" alt="Imagem ilustrativa: linhas ao redor dos olhos ao sorrir" sizes="(max-width: 900px) 100vw, 400px" pos="60% 45%" /><span className={b.tag}>Imagem ilustrativa</span></figure><div className={b.body}><span>03</span><h3>Ao redor dos olhos</h3><p>Os pés de galinha, que aparecem quando você sorri.</p></div></article>
       </div>
       <div className={b.after}>{cta(false)}</div>
     </section>
 
     <div className={b.band}><section className={b.sec}><div className={`${b.split} ${b.mediaLeft}`}>
       <figure className={b.frame} data-reveal>
-        <Shot src="/botox/avaliacao.jpg" alt="Imagem ilustrativa: profissional de saúde avaliando uma paciente em consultório" sizes="(max-width: 900px) 100vw, 480px" pos="62% 50%" />
+        <Shot src="/botox/avaliacao.jpg" alt="Imagem ilustrativa: profissional de saúde conversando com a paciente na avaliação" sizes="(max-width: 900px) 100vw, 480px" pos="50% 20%" />
         <span className={b.tag}>Imagem ilustrativa</span>
       </figure>
       <div className={b.copy}>
@@ -425,7 +425,7 @@ export default function BotoxPage() {
         <p className={b.note} data-reveal>Por isso a avaliação e o histórico de saúde vêm antes de qualquer aplicação.</p>
       </div>
       <figure className={b.frame} data-reveal>
-        <Shot src="/botox/natural.jpg" alt="Imagem ilustrativa: mulher com expressão natural e tranquila" sizes="(max-width: 900px) 100vw, 460px" pos="38% 40%" />
+        <Shot src="/botox/natural.jpg" alt="Imagem ilustrativa: mulher sorrindo com expressão natural, tomando café" sizes="(max-width: 900px) 100vw, 460px" pos="50% 15%" />
         <span className={b.tag}>Imagem ilustrativa</span>
       </figure>
     </div></section>
@@ -477,7 +477,7 @@ export default function BotoxPage() {
         </div>
       </div>
     </section>
-    <footer className={`${s.footer} ${b.footerPad}`}><Image src="/ps-estetica-logo-oficial.png" width={246} height={80} alt="PS Estética" /><p>São Bernardo do Campo • ABC Paulista</p><small>O conteúdo desta página é informativo. A indicação de qualquer procedimento depende de avaliação individual por profissional habilitado, e os resultados variam de pessoa para pessoa.</small><small className={b.credit}>Fotos ilustrativas do banco de imagens Pexels. As imagens não mostram pacientes nem resultados da PS Estética.</small>{/* TODO RESPONSÁVEL TÉCNICO no rodapé: "Responsável técnico: [[nome, registro profissional e RQE, se houver]]". Não renderizar sem o dado. */}</footer>
+    <footer className={`${s.footer} ${b.footerPad}`}><Image src="/ps-estetica-logo-oficial.png" width={246} height={80} alt="PS Estética" /><p>São Bernardo do Campo • ABC Paulista</p><small>O conteúdo desta página é informativo. A indicação de qualquer procedimento depende de avaliação individual por profissional habilitado, e os resultados variam de pessoa para pessoa.</small><small className={b.credit}>Imagens ilustrativas criadas com inteligência artificial. Não mostram pacientes nem resultados da PS Estética.</small>{/* TODO RESPONSÁVEL TÉCNICO no rodapé: "Responsável técnico: [[nome, registro profissional e RQE, se houver]]". Não renderizar sem o dado. */}</footer>
     <div className={`${b.sticky} ${stickyVisible ? b.stickyOn : ""}`} aria-hidden={!stickyVisible}><button type="button" className={s.primary} tabIndex={stickyVisible ? 0 : -1} onClick={goToQuiz}>{CTA_TEXT} <span>›</span></button></div>
   </main>;
 }
