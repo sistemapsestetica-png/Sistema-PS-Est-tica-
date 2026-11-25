@@ -99,7 +99,7 @@ export default function BotoxPage() {
   const city = cityChoice === "Outra cidade" ? otherCity.trim() : cityChoice;
   const phoneError = phoneTouched && !isValidBrazilianWhatsapp(phone);
   const moreRegionsOpen = showMoreRegions || selectedRegions.some((region) => regions.indexOf(region) >= primaryRegionCount);
-  const stickyVisible = scrolled && step === 0 && !quizInView;
+  const stickyVisible = scrolled && step <= 1 && !quizInView;
 
   function getLeadSessionToken() {
     leadSessionToken.current ??= window.crypto.randomUUID();
@@ -191,12 +191,23 @@ export default function BotoxPage() {
     return () => observer.disconnect();
   }, []);
 
+  // No celular o quiz é a primeira coisa da página: abre direto na 1ª pergunta, sem rolar nem mover o foco.
+  // O QuizStart só é enviado ao Pixel quando a pessoa responde (ver markQuizStart), para não contar quem só abriu a página.
+  useEffect(() => {
+    if (!window.matchMedia("(max-width: 620px)").matches) return;
+    previousStep.current = 1;
+    setStep((old) => (old === 0 ? 1 : old));
+  }, []);
+
+  function markQuizStart() {
+    if (trackedQuizStart.current) return;
+    trackedQuizStart.current = true;
+    trackMetaCustomEvent("QuizStart", trackingContent);
+  }
+
   function start() {
     if (step !== 0) return;
-    if (!trackedQuizStart.current) {
-      trackedQuizStart.current = true;
-      trackMetaCustomEvent("QuizStart", trackingContent);
-    }
+    markQuizStart();
     setStep(1);
   }
 
@@ -215,6 +226,7 @@ export default function BotoxPage() {
   );
 
   function toggleRegion(region: string) {
+    markQuizStart();
     setLead(null);
     setSelectedRegions((old) => {
       if (old.includes(region)) return old.filter((item) => item !== region);
@@ -331,7 +343,7 @@ export default function BotoxPage() {
   );
 
   return <main ref={rootRef} className={`${s.page} ${b.landing}`}>
-    <div className={b.bar} aria-hidden="true"><span ref={barRef} /></div>
+    <div className={`${b.bar} ${b.barFirst}`} aria-hidden="true"><span ref={barRef} /></div>
     <header className={`${s.header} ${b.headerBar}`}>
       <a href="#inicio" aria-label="PS Estética, início"><Image src="/ps-estetica-logo-oficial.png" width={246} height={80} alt="PS Estética Avançada" priority /></a>
       <a className={s.headerCta} href={whatsapp} target="_blank" rel="noreferrer">Falar com a equipe</a>
@@ -462,7 +474,7 @@ export default function BotoxPage() {
       <p className={b.closingNote} data-reveal>A avaliação vem antes de qualquer aplicação. Você só faz Botox se for indicado e se quiser.</p>
     </section>
 
-    <section className={s.quizSection} id="diagnostico" ref={quizSectionRef}>
+    <section className={`${s.quizSection} ${b.quizFirst}`} id="diagnostico" ref={quizSectionRef}>
       <div className={s.quizIntro}><p className={s.eyebrow}>Seu quiz de Botox</p><h2>Poucas respostas para uma conversa mais objetiva.</h2><p>Leva cerca de um minuto. Ao final, você pode escolher um horário para a avaliação ou falar com a equipe pelo WhatsApp.</p></div>
       <div className={`${s.quizCard} ${b.cardTop}`} ref={cardRef} aria-live="polite">
         <div className={s.quizTop}><span>{step === 0 ? "Pronto para começar" : step <= 5 ? `Pergunta ${step} de 5` : step === 6 ? "Seus dados" : step === 7 ? "Indicação e agenda" : "Pré-reserva"}</span><b>{progress}%</b></div><div className={s.progress}><span style={{ width: `${progress}%` }} /></div>

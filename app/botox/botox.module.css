@@ -237,7 +237,7 @@ main.landing .light::after { background: linear-gradient(105deg, transparent 38%
 }
 
 @media (max-width: 620px) {
-  /* No Lavieen o topo some no mobile (o quiz vem primeiro). Aqui ele fica, no mesmo estilo. */
+  /* O topo (hero) fica no mobile, mas abaixo do quiz (ver regra no fim do arquivo). */
   main.landing .heroOn { display: block; min-height: 0; padding: 30px 16px 54px; }
   main.landing .heroOn .heroMedia { margin-top: 34px; max-height: none; aspect-ratio: 4 / 4.6; }
   .glass { left: 12px; right: 12px; bottom: 12px; padding: 16px 18px 14px; }
@@ -283,4 +283,13 @@ main.landing .light::after { background: linear-gradient(105deg, transparent 38%
 
 @media (prefers-reduced-motion: reduce) {
   .sticky, .stickyOn { transition: none; }
+}
+
+/* Celular: o quiz vem logo abaixo do cabeçalho, antes de tudo (o resto da página segue embaixo, na ordem normal). */
+@media (max-width: 620px) {
+  main.landing { display: flex; flex-direction: column; }
+  main.landing > * { order: 0; }
+  main.landing > .barFirst, main.landing > .headerBar { order: -2; }
+  main.landing > .quizFirst { order: -1; }
+  main.landing > .quizFirst .cardTop { scroll-margin-top: 72px; }
 }
